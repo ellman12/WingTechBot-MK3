@@ -1,0 +1,59 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Skip during rebase operations
+if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
+  echo "⏩ Skipping post-merge hook during rebase"
+  exit 0
+fi
+
+echo "🔄 Post-merge hook running..."
+
+# Check what files changed in the merge
+CHANGED_FILES=$(git diff --name-only HEAD@{1} HEAD)
+
+# Function to check if dependency files changed
+deps_changed() {
+  echo "$CHANGED_FILES" | grep -E "(package\.json|pnpm-lock\.yaml|yarn\.lock|package-lock\.json)" > /dev/null
+}
+
+# Function to check if database files changed
+db_changed() {
+  echo "$CHANGED_FILES" | grep -E "(prisma/|\.sql$|migrations/|seeds/)" > /dev/null
+}
+
+# Function to check if build artifacts should be cleaned
+should_clean() {
+  echo "$CHANGED_FILES" | grep -E "(tsconfig|vite\.config|webpack\.config|babel\.config|\.env)" > /dev/null
+}
+
+# Install dependencies if package files changed
+if deps_changed; then
+  echo "📦 Package files changed, installing dependencies..."
+  pnpm install
+  
+  # Also rebuild types package since other packages might depend on it
+  echo "🔨 Rebuilding types package..."
+  pnpm build:types
+fi
+
+# Handle database changes if any
+if db_changed; then
+  echo "🗄️  Database files changed, running migrations..."
+  pnpm db:generate || echo "No db:generate script found, skipping..."
+  pnpm db:push || echo "No db:push script found, skipping..."
+fi
+
+# Clean build artifacts if configuration files changed
+if should_clean; then
+  echo "🧹 Configuration files changed, cleaning build artifacts..."
+  pnpm clean || echo "No clean script found, skipping..."
+fi
+
+# Clean common cache directories
+echo "🗑️  Cleaning cache directories..."
+find . -name "node_modules/.cache" -type d -exec rm -rf {} + 2>/dev/null || true
+find . -name "node_modules/.vite" -type d -exec rm -rf {} + 2>/dev/null || true
+find . -name ".next" -type d -exec rm -rf {} + 2>/dev/null || true
+
+echo "✅ Post-merge hook completed!" 

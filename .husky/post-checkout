@@ -1,0 +1,37 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔄 Post-checkout hook running..."
+
+# Check if package files have changed between the previous and current commit
+CHANGED_FILES=$(git diff --name-only HEAD@{1} HEAD 2>/dev/null || git diff --name-only HEAD~ HEAD 2>/dev/null || echo "")
+
+# Function to check if dependency files changed
+deps_changed() {
+  echo "$CHANGED_FILES" | grep -E "(package\.json|pnpm-lock\.yaml|yarn\.lock|package-lock\.json)" > /dev/null
+}
+
+# Function to check if build artifacts should be cleaned
+should_clean() {
+  echo "$CHANGED_FILES" | grep -E "(tsconfig|vite\.config|webpack\.config|babel\.config|\.env)" > /dev/null
+}
+
+# Install dependencies if package files changed
+if deps_changed; then
+  echo "📦 Package files changed, installing dependencies..."
+  pnpm install
+fi
+
+# Clean build artifacts if configuration files changed
+if should_clean; then
+  echo "🧹 Configuration files changed, cleaning build artifacts..."
+  pnpm clean || echo "No clean script found, skipping..."
+fi
+
+# Clean node_modules/.vite cache if it exists (common with Vite projects)
+if [ -d "packages/frontend/node_modules/.vite" ]; then
+  echo "🗑️  Cleaning Vite cache..."
+  rm -rf packages/frontend/node_modules/.vite
+fi
+
+echo "✅ Post-checkout hook completed!" 

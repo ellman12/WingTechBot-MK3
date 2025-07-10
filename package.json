@@ -1,0 +1,71 @@
+{
+  "name": "wingtechbot-mk3-monorepo",
+  "version": "1.0.0",
+  "description": "WingTechBot MK3 monorepo with backend and frontend",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:all": "pnpm --filter backend dev & pnpm --filter frontend dev",
+    "storybook": "pnpm --filter frontend storybook",
+    "build-storybook": "pnpm --filter frontend build-storybook",
+    "build": "pnpm -r build",
+    "build:backend": "pnpm --filter backend build",
+    "build:frontend": "pnpm --filter frontend build",
+    "build:types": "pnpm --filter @wingtechbot-mk3/types build",
+    "test": "pnpm -r test",
+    "test:backend": "pnpm --filter backend test",
+    "test:frontend": "pnpm --filter frontend test",
+    "lint": "pnpm -r lint",
+    "lint:fix": "pnpm -r lint:fix",
+    "format": "pnpm -r format",
+    "format:check": "pnpm -r format:check",
+    "format:fix": "prettier --write .",
+    "format:check:all": "prettier --check .",
+    "prepare": "husky",
+    "clean": "pnpm -r clean",
+    "db:generate": "pnpm --filter backend db:generate",
+    "db:push": "pnpm --filter backend db:push",
+    "db:studio": "pnpm --filter backend db:studio",
+    "db:migrate": "pnpm --filter backend db:migrate",
+    "docker:up": "pnpm --filter backend docker:up",
+    "docker:up:detached": "pnpm --filter backend docker:up:detached",
+    "docker:down": "pnpm --filter backend docker:down",
+    "docker:down:clean": "pnpm --filter backend docker:down:volumes",
+    "docker:logs": "pnpm --filter backend docker:logs",
+    "docker:restart": "pnpm --filter backend docker:restart",
+    "docker:clean": "pnpm --filter backend docker:clean",
+    "docker:db": "pnpm --filter backend docker:up postgres database-init && echo '🗄️ Database is ready at postgresql://wingtechbot:wingtechbot_password@localhost:5432/wingtechbot'",
+    "docker:full-reset": "pnpm --filter backend docker:clean && pnpm docker:up",
+    "dev:docker": "pnpm docker:up:detached && pnpm dev",
+    "dev:with-db": "pnpm docker:db && pnpm dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ellman12/WingTechBot-MK3.git"
+  },
+  "keywords": [
+    "monorepo",
+    "expressjs",
+    "react",
+    "typescript",
+    "discord",
+    "bot",
+    "vite",
+    "tailwind"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ellman12/WingTechBot-MK3/issues"
+  },
+  "homepage": "https://github.com/ellman12/WingTechBot-MK3#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "husky": "^9.1.7",
+    "prettier-plugin-tailwindcss": "^0.6.14"
+  }
+}

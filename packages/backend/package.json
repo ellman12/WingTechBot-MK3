@@ -1,0 +1,92 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "ExpressJS TypeScript backend with Discord bot functionality following hexagonal architecture",
+  "main": "dist/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "docs:generate": "tsx scripts/generate-openapi.ts",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:migrate": "prisma migrate dev",
+    "docker:build": "docker build -t wingtechbot-mk3 .",
+    "docker:run": "docker run -p 3000:3000 wingtechbot-mk3",
+    "docker:up": "docker compose -f docker-compose.dev.yaml up --build",
+    "docker:up:detached": "docker compose -f docker-compose.dev.yaml up --build -d",
+    "docker:down": "docker compose -f docker-compose.dev.yaml down",
+    "docker:down:volumes": "docker compose -f docker-compose.dev.yaml down -v",
+    "docker:logs": "docker compose -f docker-compose.dev.yaml logs -f",
+    "docker:restart": "docker compose -f docker-compose.dev.yaml restart",
+    "docker:clean": "docker compose -f docker-compose.dev.yaml down -v --remove-orphans && docker system prune -f"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ellman12/WingTechBot-MK3.git"
+  },
+  "keywords": [
+    "expressjs",
+    "typescript",
+    "discord",
+    "bot",
+    "hexagonal-architecture",
+    "backend"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ellman12/WingTechBot-MK3/issues"
+  },
+  "homepage": "https://github.com/ellman12/WingTechBot-MK3#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@dotenvx/dotenvx": "^1.47.3",
+    "@prisma/client": "^6.11.1",
+    "@wingtechbot-mk3/types": "file:../types",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "discord.js": "^14.21.0",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "kysely": "^0.28.2",
+    "morgan": "^1.10.0",
+    "pg": "^8.13.1",
+    "prisma": "^6.11.1",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^4.0.2",
+    "zod-openapi": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/compression": "^1.8.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.0.12",
+    "@types/pg": "^8.11.10",
+    "@types/swagger-ui-express": "^4.1.8",
+    "@typescript-eslint/eslint-plugin": "^8.36.0",
+    "@typescript-eslint/parser": "^8.36.0",
+    "@vitest/ui": "^3.2.4",
+    "eslint": "^9.30.1",
+    "lint-staged": "^16.1.2",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.6.2",
+    "prisma-kysely": "^1.8.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

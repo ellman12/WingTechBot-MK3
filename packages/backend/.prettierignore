@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.env*
+*.log
+*.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.DS_Store
+.vscode/
+.idea/
+*.config.js
+*.config.ts 
