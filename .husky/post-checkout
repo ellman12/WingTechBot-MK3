@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 echo "🔄 Post-checkout hook running..."
 
 # Check if package files have changed between the previous and current commit
