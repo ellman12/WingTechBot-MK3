@@ -35,4 +35,4 @@ jobs:
             documentation
           exempt-all-milestones: true
           exempt-all-assignees: true
-          exempt-all-reviewers: true 
+          exempt-all-reviewers: true

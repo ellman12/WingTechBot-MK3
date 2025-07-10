@@ -3,9 +3,9 @@ import {
   ApiSuccessResponseSchema,
 } from '@wingtechbot-mk3/types/api/v1/common';
 import {
+  ApiGuildSchema,
   CreateGuildRequestSchema,
   GuildParamsSchema,
-  GuildSchema,
   UpdateGuildRequestSchema,
 } from '@wingtechbot-mk3/types/api/v1/guilds';
 import type { Kysely } from 'kysely';
@@ -22,10 +22,10 @@ import type { DB } from '../../../generated/database/types.js';
 import type { RouteGroup } from '../../../infrastructure/http/api/types.js';
 
 // Response schemas for guild endpoints
-const GetGuildsV1ResponseSchema = ApiSuccessResponseSchema(z.array(GuildSchema));
-const GetGuildV1ResponseSchema = ApiSuccessResponseSchema(GuildSchema);
-const CreateGuildV1ResponseSchema = ApiSuccessResponseSchema(GuildSchema);
-const UpdateGuildV1ResponseSchema = ApiSuccessResponseSchema(GuildSchema);
+const GetGuildsV1ResponseSchema = ApiSuccessResponseSchema(z.array(ApiGuildSchema));
+const GetGuildV1ResponseSchema = ApiSuccessResponseSchema(ApiGuildSchema);
+const CreateGuildV1ResponseSchema = ApiSuccessResponseSchema(ApiGuildSchema);
+const UpdateGuildV1ResponseSchema = ApiSuccessResponseSchema(ApiGuildSchema);
 const DeleteGuildV1ResponseSchema = ApiMessageResponseSchema;
 
 /**

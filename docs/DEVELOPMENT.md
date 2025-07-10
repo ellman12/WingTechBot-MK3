@@ -88,11 +88,10 @@ WingTechBot-MK3/
    # Individual services
    pnpm dev              # Backend only
    pnpm dev:frontend     # Frontend only
-   
+
    ```
 
 2. **Work on features**
-
    - Create feature branch: `git checkout -b feature/your-feature`
    - Make changes in appropriate package
    - Add tests for new functionality

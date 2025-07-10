@@ -41,7 +41,6 @@ WingTechBot-MK3/
 - **Zustand** - State management
 - **TanStack Query** - Data fetching and caching
 
-
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -190,17 +189,17 @@ packages/frontend/src/
 
 The root `package.json` provides convenient scripts to manage the entire monorepo:
 
-| Script              | Description                                           |
-| ------------------- | ----------------------------------------------------- |
-| `pnpm dev`          | Start backend development server                      |
-| `pnpm dev:frontend` | Start frontend development server                     |
-| `pnpm dev:all`      | Start both backend and frontend                       |
-| `pnpm build`        | Build all packages                                    |
-| `pnpm test`         | Run tests for all packages                            |
-| `pnpm lint`         | Lint all packages                                     |
-| `pnpm format`       | Format all packages                                   |
+| Script              | Description                       |
+| ------------------- | --------------------------------- |
+| `pnpm dev`          | Start backend development server  |
+| `pnpm dev:frontend` | Start frontend development server |
+| `pnpm dev:all`      | Start both backend and frontend   |
+| `pnpm build`        | Build all packages                |
+| `pnpm test`         | Run tests for all packages        |
+| `pnpm lint`         | Lint all packages                 |
+| `pnpm format`       | Format all packages               |
 
-| `pnpm db:*`         | Database operations (generate, push, migrate, studio) |
+| `pnpm db:*` | Database operations (generate, push, migrate, studio) |
 
 ## 🐳 Docker Support
 

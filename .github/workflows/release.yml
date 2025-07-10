@@ -107,12 +107,12 @@ jobs:
               repo: context.repo.repo,
               tag: context.ref.replace('refs/tags/', '')
             });
-            
+
             const changelog = `${{ steps.changelog.outputs.changelog }}`;
-            
+
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: release.id,
               body: `## What's Changed\n\n${changelog}\n\n## Installation\n\nDownload the appropriate build for your platform from the assets above.`
-            }); 
+            });

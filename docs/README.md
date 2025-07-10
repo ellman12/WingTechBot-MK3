@@ -39,7 +39,7 @@ Welcome to the comprehensive documentation for WingTechBot MK3! This directory c
 
 1. Read [Frontend Guide](FRONTEND.md) for React development
 
-3. Follow component and styling guidelines
+2. Follow component and styling guidelines
 
 ### For Discord Bot Development
 
@@ -101,7 +101,6 @@ WingTechBot-MK3/
 - **Tailwind CSS** - Styling
 - **Zustand** - State management
 - **TanStack Query** - Data fetching
-
 
 ### Architecture
 

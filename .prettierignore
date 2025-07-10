@@ -13,6 +13,9 @@ out/
 *.js.map
 *.css.map
 
+# Prisma generated files
+packages/backend/src/generated/
+
 # Logs
 *.log
 npm-debug.log*

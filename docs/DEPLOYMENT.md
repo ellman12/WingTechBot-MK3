@@ -262,7 +262,6 @@ FRONTEND_URL=https://your-frontend-domain.com
 ### Security Best Practices
 
 1. **Use Secrets Management**
-
    - AWS Secrets Manager
    - Google Secret Manager
    - Azure Key Vault
@@ -468,19 +467,16 @@ const logger = winston.createLogger({
 ### Common Issues
 
 1. **Discord Bot Offline**
-
    - Check Discord token validity
    - Verify bot permissions in Discord Developer Portal
    - Check application logs for authentication errors
 
 2. **Database Connection Issues**
-
    - Verify DATABASE_URL format
    - Check network connectivity
    - Confirm database credentials
 
 3. **Frontend Not Loading**
-
    - Check static file serving configuration
    - Verify CORS settings if API calls fail
    - Check browser console for errors

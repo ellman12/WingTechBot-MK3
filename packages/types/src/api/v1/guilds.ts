@@ -23,7 +23,7 @@ export const GuildParamsSchema = z.object({
   id: z.string().min(1, 'Guild ID is required'),
 });
 
-export const GuildSchema = z.object({
+export const ApiGuildSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   ownerId: z.string().min(1),
@@ -41,7 +41,7 @@ export const GuildSchema = z.object({
 export type CreateGuildRequest = z.infer<typeof CreateGuildRequestSchema>;
 export type UpdateGuildRequest = z.infer<typeof UpdateGuildRequestSchema>;
 export type GuildParams = z.infer<typeof GuildParamsSchema>;
-export type Guild = z.infer<typeof GuildSchema>;
+export type ApiGuild = z.infer<typeof ApiGuildSchema>;
 
 // ============================================================================
 // Validation Functions

@@ -13,7 +13,6 @@ The frontend is a modern React application featuring:
 - **Zustand** for state management
 - **TanStack Query** for data fetching
 
-
 ## 🚀 Getting Started
 
 ### Development Setup
@@ -517,8 +516,6 @@ export function useBreakpoint() {
   return breakpoint;
 }
 ```
-
-
 
 ## 🧪 Testing
 

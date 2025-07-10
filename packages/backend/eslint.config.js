@@ -32,6 +32,13 @@ export default [
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', 'coverage/', '*.config.js', '*.config.ts', 'src/generated/'],
+    ignores: [
+      'dist/',
+      'node_modules/',
+      'coverage/',
+      '*.config.js',
+      '*.config.ts',
+      'src/generated/',
+    ],
   },
-]; 
+];

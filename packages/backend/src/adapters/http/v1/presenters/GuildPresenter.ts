@@ -1,4 +1,4 @@
-import type { Guild as ApiGuild } from '@wingtechbot-mk3/types/api/v1/guilds';
+import type { ApiGuild } from '@wingtechbot-mk3/types/api/v1/guilds';
 import type { Guild as DomainGuild } from '@wingtechbot-mk3/types/entities/guild';
 
 /**

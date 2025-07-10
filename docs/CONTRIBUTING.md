@@ -72,7 +72,6 @@ Welcome to WingTechBot MK3! We're excited that you want to contribute. This guid
    ```
 
 2. **Make Your Changes**
-
    - Follow the coding standards below
    - Add tests for new functionality
    - Update documentation if needed
@@ -93,7 +92,6 @@ Welcome to WingTechBot MK3! We're excited that you want to contribute. This guid
    ```
 
    Use conventional commit format:
-
    - `feat:` - New features
    - `fix:` - Bug fixes
    - `docs:` - Documentation changes
@@ -196,7 +194,6 @@ src/
 - JSDoc for public APIs
 - README files for package-specific information
 - `/docs` folder for comprehensive guides
-
 
 ## 🐛 Bug Reports
 

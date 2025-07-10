@@ -93,9 +93,52 @@ jobs:
       - name: Check TypeScript types
         run: pnpm build:types
 
-  # Test all packages
-  test:
+  # Build types package first (required by backend and frontend)
+  build-types:
     needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build types
+        run: pnpm build:types
+
+      - name: Upload types build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: types-build
+          path: packages/types/dist
+
+  # Test all packages (backend needs types built first)
+  test:
+    needs: [setup, build-types]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -129,6 +172,23 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Download types build artifacts
+        if: matrix.package != 'types'
+        uses: actions/download-artifact@v4
+        with:
+          name: types-build
+          path: packages/types/dist
+
+      - name: Build types (for types package test)
+        if: matrix.package == 'types'
+        run: pnpm build:types
+
+      - name: Generate Prisma client
+        if: matrix.package == 'backend'
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/dummy_db
+        run: pnpm --filter backend db:generate
 
       - name: Run tests for ${{ matrix.package }}
         run: pnpm --filter ${{ matrix.package }} test
@@ -141,13 +201,13 @@ jobs:
           flags: backend
           name: backend-coverage
 
-  # Build all packages
+  # Build backend and frontend packages (needs types built first)
   build:
-    needs: setup
+    needs: [setup, build-types]
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: [backend, frontend, types]
+        package: [backend, frontend]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -177,6 +237,18 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Download types build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: types-build
+          path: packages/types/dist
+
+      - name: Generate Prisma client
+        if: matrix.package == 'backend'
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/dummy_db
+        run: pnpm --filter backend db:generate
 
       - name: Build ${{ matrix.package }}
         run: pnpm build:${{ matrix.package }}
@@ -242,4 +314,4 @@ jobs:
         run: pnpm --filter backend db:generate
 
       - name: Check database migrations
-        run: pnpm --filter backend db:push --accept-data-loss 
+        run: pnpm --filter backend db:push --accept-data-loss

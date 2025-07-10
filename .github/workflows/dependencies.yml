@@ -53,7 +53,7 @@ jobs:
         run: |
           OUTDATED=$(pnpm outdated --format json || echo "[]")
           echo "outdated=$OUTDATED" >> $GITHUB_OUTPUT
-          
+
           # Count outdated packages
           COUNT=$(echo "$OUTDATED" | jq length)
           echo "count=$COUNT" >> $GITHUB_OUTPUT
@@ -63,7 +63,7 @@ jobs:
         run: |
           # Update all dependencies to latest
           pnpm update --latest
-          
+
           # Update lockfile
           pnpm install
 
@@ -83,31 +83,31 @@ jobs:
           title: '🔄 Update Dependencies'
           body: |
             ## 🔄 Dependency Updates
-            
+
             This PR updates the following dependencies to their latest versions:
-            
+
             <details>
             <summary>Updated Packages</summary>
-            
+
             ```json
             ${{ steps.check.outputs.outdated }}
             ```
-            
+
             </details>
-            
+
             ## ✅ Checks Completed
-            
+
             - [x] All tests passing
             - [x] Linting passed
             - [x] Formatting checked
             - [x] TypeScript compilation successful
-            
+
             ## 🚀 Ready to Merge
-            
+
             This PR is automatically generated and ready for review.
           branch: chore/update-dependencies
           delete-branch: true
           labels: |
             dependencies
             automated
-          assignees: ${{ github.repository_owner }} 
+          assignees: ${{ github.repository_owner }}
