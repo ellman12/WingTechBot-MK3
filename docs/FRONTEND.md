@@ -12,7 +12,7 @@ The frontend is a modern React application featuring:
 - **Tailwind CSS** for styling
 - **Zustand** for state management
 - **TanStack Query** for data fetching
-- **Storybook** for component development
+
 
 ## 🚀 Getting Started
 
@@ -27,8 +27,7 @@ pnpm install
 # Start development server
 pnpm dev
 
-# Start Storybook
-pnpm storybook
+
 ```
 
 ### Project Structure
@@ -46,7 +45,7 @@ packages/frontend/src/
 ├── stores/              # Zustand state stores
 ├── utils/               # Utility functions
 ├── types/               # Frontend-specific types
-├── stories/             # Storybook stories
+
 ├── App.tsx              # Main application
 └── main.tsx            # Application entry point
 ```
@@ -519,103 +518,7 @@ export function useBreakpoint() {
 }
 ```
 
-## 📖 Storybook Development
 
-### Component Stories
-
-```typescript
-// stories/GuildCard.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react';
-
-import { GuildCard } from '../components/features/GuildCard';
-
-const meta: Meta<typeof GuildCard> = {
-  title: 'Features/GuildCard',
-  component: GuildCard,
-  parameters: {
-    layout: 'centered',
-  },
-  tags: ['autodocs'],
-  argTypes: {
-    onSelect: { action: 'selected' },
-    onEdit: { action: 'edited' },
-    onDelete: { action: 'deleted' },
-  },
-};
-
-export default meta;
-type Story = StoryObj<typeof meta>;
-
-export const Default: Story = {
-  args: {
-    guild: {
-      id: '123456789012345678',
-      name: 'My Awesome Guild',
-      ownerId: '987654321098765432',
-      memberCount: 156,
-      isActive: true,
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-01'),
-    },
-  },
-};
-
-export const LargeGuild: Story = {
-  args: {
-    guild: {
-      ...Default.args.guild!,
-      name: 'Massive Gaming Community',
-      memberCount: 5420,
-    },
-  },
-};
-
-export const InactiveGuild: Story = {
-  args: {
-    guild: {
-      ...Default.args.guild!,
-      name: 'Inactive Guild',
-      isActive: false,
-      memberCount: 12,
-    },
-  },
-};
-
-export const WithActions: Story = {
-  args: {
-    ...Default.args,
-    onEdit: () => console.log('Edit clicked'),
-    onDelete: () => console.log('Delete clicked'),
-  },
-};
-```
-
-### Storybook Configuration
-
-```typescript
-// .storybook/main.ts
-import type { StorybookConfig } from '@storybook/react-vite';
-
-const config: StorybookConfig = {
-  stories: ['../src/**/*.stories.@(js|jsx|ts|tsx|mdx)'],
-  addons: [
-    '@storybook/addon-links',
-    '@storybook/addon-essentials',
-    '@storybook/addon-interactions',
-    '@storybook/addon-a11y',
-  ],
-  framework: {
-    name: '@storybook/react-vite',
-    options: {},
-  },
-  typescript: {
-    check: false,
-    reactDocgen: 'react-docgen-typescript',
-  },
-};
-
-export default config;
-```
 
 ## 🧪 Testing
 

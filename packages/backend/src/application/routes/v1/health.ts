@@ -16,7 +16,7 @@ export const createHealthRoutes = (): RouteGroup => ({
       summary: 'Health check endpoint',
       description: 'Returns the current health status of the API',
       tags: ['Health'],
-      handler: (_req, res) => {
+      handler: (_req, res): void => {
         const response = {
           status: 'ok' as const,
           timestamp: new Date().toISOString(),

@@ -6,7 +6,12 @@ export const ApiResponseSchema = z.object({
 });
 
 // Success response with data
-export const ApiSuccessResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
+export const ApiSuccessResponseSchema = <T extends z.ZodType>(
+  dataSchema: T
+): z.ZodObject<{
+  success: z.ZodLiteral<true>;
+  data: T;
+}> =>
   ApiResponseSchema.extend({
     success: z.literal(true),
     data: dataSchema,
@@ -27,7 +32,17 @@ export const ApiErrorResponseSchema = ApiResponseSchema.extend({
 });
 
 // List response with pagination
-export const ApiListResponseSchema = <T extends z.ZodType>(itemSchema: T) =>
+export const ApiListResponseSchema = <T extends z.ZodType>(
+  itemSchema: T
+): z.ZodObject<{
+  success: z.ZodLiteral<true>;
+  data: z.ZodObject<{
+    items: z.ZodArray<T>;
+    total: z.ZodNumber;
+    page: z.ZodOptional<z.ZodNumber>;
+    limit: z.ZodOptional<z.ZodNumber>;
+  }>;
+}> =>
   ApiSuccessResponseSchema(
     z.object({
       items: z.array(itemSchema),

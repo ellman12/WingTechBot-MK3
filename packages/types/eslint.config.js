@@ -11,10 +11,6 @@ export default [
         project: './tsconfig.json',
         tsconfigRootDir: import.meta.dirname,
       },
-      globals: {
-        console: 'readonly',
-        process: 'readonly',
-      },
     },
     plugins: {
       '@typescript-eslint': ts,
@@ -22,7 +18,7 @@ export default [
     rules: {
       // TODO: Re-enable unused vars checking after bootstrap phase
       'no-unused-vars': 'off', // Turn off base rule
-      '@typescript-eslint/no-unused-vars': 'off', // TODO: Re-enable after bootstrap
+      '@typescript-eslint/no-unused-vars': 'off', // TODO: Re-enable after bootstrap ['error', { argsIgnorePattern: '^_' }]
       '@typescript-eslint/explicit-function-return-type': 'error',
       '@typescript-eslint/no-explicit-any': 'off', // TODO: Re-enable after bootstrap
       'prefer-const': 'error',
@@ -32,6 +28,6 @@ export default [
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', 'coverage/', '*.config.js', '*.config.ts', 'src/generated/'],
+    ignores: ['dist/', 'node_modules/', 'coverage/', '*.config.js', '*.config.ts'],
   },
-]; 
+];

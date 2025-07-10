@@ -1,8 +1,9 @@
 import type { Application } from 'express';
 import swaggerUi from 'swagger-ui-express';
+import { OpenAPIGenerator } from 'zod-to-openapi';
 
 import { VersionedRouteRegistry } from './api/VersionedRouteRegistry.js';
-import type { ApiVersion, VersionedRouteRegistryEntry } from './api/types.js';
+import type { VersionedRouteRegistryEntry } from './api/types.js';
 
 export class VersionedOpenApiGenerator {
   public generateOpenApiSpec(): Record<string, unknown> {
@@ -219,12 +220,11 @@ export class VersionedOpenApiGenerator {
   }
 
   private zodSchemaToOpenApi(schema: any): Record<string, unknown> {
-    // This is a simplified implementation
-    // In a real scenario, you'd want to use a proper Zod to OpenAPI converter
-    return {
-      type: 'object',
-      description: 'Generated from Zod schema',
-    };
+    // Use zod-to-openapi for real conversion
+    const generator = new OpenAPIGenerator([schema]);
+    const schemas = generator.generate();
+    // Return the first schema (or you can use a name if you register with one)
+    return Object.values(schemas)[0] as Record<string, unknown>;
   }
 
   private generateComponents(routes: VersionedRouteRegistryEntry[]): Record<string, unknown> {

@@ -51,7 +51,7 @@ export class VersionedApiRouter {
     app.use('/api/v1', v1Router);
   }
 
-  private setupHealthCheckRoute(app: Application): void {
+  private setupHealthCheckRoute(_app: Application): void {
     // Health check route is now handled by the health routes configuration
     // No need to manually register it here since it's part of the v1 API configuration
   }
@@ -86,7 +86,7 @@ export class VersionedApiRouter {
   /**
    * Get the versioned route registry instance
    */
-  getRegistry() {
+  getRegistry(): typeof VersionedRouteRegistry {
     return VersionedRouteRegistry;
   }
 }

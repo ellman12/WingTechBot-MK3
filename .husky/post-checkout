@@ -1,3 +1,9 @@
+# Skip during rebase operations
+if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
+  echo "⏩ Skipping post-merge hook during rebase"
+  exit 0
+fi
+
 echo "🔄 Post-checkout hook running..."
 
 # Check if package files have changed between the previous and current commit

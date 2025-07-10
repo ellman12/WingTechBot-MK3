@@ -145,7 +145,7 @@ src/
 ├── components/       # Reusable UI components
 ├── hooks/           # Custom React hooks
 ├── stores/          # Zustand state management
-└── stories/         # Storybook stories
+
 ```
 
 ### Testing
@@ -168,7 +168,7 @@ src/
 ### Frontend Development
 
 - Build reusable components
-- Use Storybook for component development
+
 - Follow React best practices (hooks, functional components)
 - Use TypeScript strictly
 - Ensure responsive design with Tailwind CSS
@@ -196,7 +196,7 @@ src/
 - JSDoc for public APIs
 - README files for package-specific information
 - `/docs` folder for comprehensive guides
-- Storybook stories for UI components
+
 
 ## 🐛 Bug Reports
 

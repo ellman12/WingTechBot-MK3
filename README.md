@@ -40,7 +40,7 @@ WingTechBot-MK3/
 - **Tailwind CSS** - Utility-first styling
 - **Zustand** - State management
 - **TanStack Query** - Data fetching and caching
-- **Storybook** - Component development
+
 
 ## 🚀 Getting Started
 
@@ -77,8 +77,7 @@ pnpm dev
 # Frontend only (React app)
 pnpm dev:frontend
 
-# Storybook (component development)
-pnpm storybook
+
 ```
 
 #### Database Operations:
@@ -107,7 +106,7 @@ pnpm build
 pnpm build:backend
 pnpm build:frontend
 pnpm build:types
-pnpm build-storybook
+
 ```
 
 #### Code Quality:
@@ -174,7 +173,7 @@ A modern React application with state-of-the-art tooling for building user inter
 - Tailwind CSS for styling
 - Zustand for state management
 - TanStack Query for server state
-- Storybook for component development
+
 - Responsive design
 
 **Structure:**
@@ -200,7 +199,7 @@ The root `package.json` provides convenient scripts to manage the entire monorep
 | `pnpm test`         | Run tests for all packages                            |
 | `pnpm lint`         | Lint all packages                                     |
 | `pnpm format`       | Format all packages                                   |
-| `pnpm storybook`    | Start Storybook                                       |
+
 | `pnpm db:*`         | Database operations (generate, push, migrate, studio) |
 
 ## 🐳 Docker Support
@@ -219,7 +218,7 @@ pnpm docker:run
 ## 📚 Documentation
 
 - **Backend API**: See `packages/backend/README.md` for API documentation
-- **Frontend Components**: Run `npm run storybook` to explore components
+
 - **Database Schema**: Check `packages/backend/prisma/schema.prisma`
 
 ## 🤝 Contributing

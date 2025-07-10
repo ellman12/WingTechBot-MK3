@@ -4,7 +4,12 @@ import { z } from 'zod';
 // Common API Schemas
 // ============================================================================
 
-export const ApiSuccessResponseSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
+export const ApiSuccessResponseSchema = <T extends z.ZodTypeAny>(
+  dataSchema: T
+): z.ZodObject<{
+  success: z.ZodLiteral<true>;
+  data: T;
+}> =>
   z.object({
     success: z.literal(true),
     data: dataSchema,

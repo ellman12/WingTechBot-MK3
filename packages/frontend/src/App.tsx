@@ -83,7 +83,6 @@ function App() {
               <p>✅ Tailwind CSS</p>
               <p>✅ Zustand State Management</p>
               <p>✅ TanStack Query</p>
-              <p>✅ Storybook</p>
             </div>
           </div>
         </div>

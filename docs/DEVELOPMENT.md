@@ -65,7 +65,7 @@ WingTechBot-MK3/
 │   │   │   ├── components/   # UI components
 │   │   │   ├── hooks/        # Custom hooks
 │   │   │   ├── stores/       # State management
-│   │   │   └── stories/      # Storybook stories
+
 │   │   └── package.json
 │   └── types/                # Shared TypeScript types
 │       ├── src/
@@ -88,7 +88,7 @@ WingTechBot-MK3/
    # Individual services
    pnpm dev              # Backend only
    pnpm dev:frontend     # Frontend only
-   pnpm storybook        # Storybook only
+   
    ```
 
 2. **Work on features**
@@ -163,9 +163,7 @@ pnpm preview          # Preview production build
 pnpm test
 pnpm test:ui          # Run tests with UI
 
-# Storybook
-pnpm storybook        # Start Storybook
-pnpm build-storybook  # Build Storybook for deployment
+
 ```
 
 ## 🧪 Testing Strategy

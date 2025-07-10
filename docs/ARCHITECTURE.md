@@ -216,7 +216,7 @@ packages/frontend/src/
 │   └── uiStore.ts         # UI state (modals, theme, etc.)
 ├── types/                 # Frontend-specific types
 ├── utils/                 # Utility functions
-├── stories/               # Storybook stories
+
 └── App.tsx               # Main application component
 ```
 

@@ -38,7 +38,7 @@ Welcome to the comprehensive documentation for WingTechBot MK3! This directory c
 ### For Frontend Developers
 
 1. Read [Frontend Guide](FRONTEND.md) for React development
-2. Explore Storybook for component documentation
+
 3. Follow component and styling guidelines
 
 ### For Discord Bot Development
@@ -101,7 +101,7 @@ WingTechBot-MK3/
 - **Tailwind CSS** - Styling
 - **Zustand** - State management
 - **TanStack Query** - Data fetching
-- **Storybook** - Component development
+
 
 ### Architecture
 
@@ -116,7 +116,7 @@ WingTechBot-MK3/
 
 - **Local API**: http://localhost:3000
 - **Frontend Dev**: http://localhost:5173
-- **Storybook**: http://localhost:6006
+
 - **API Docs**: http://localhost:3000/api/docs
 
 ### Documentation Sources

@@ -4,3 +4,7 @@ node_modules
 
 /packages/backend/src/generated/prisma
 **/dist
+
+.idea
+.vscode
+.cursor
