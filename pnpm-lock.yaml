@@ -58,9 +58,6 @@ importers:
             "@dotenvx/dotenvx":
                 specifier: ^1.47.3
                 version: 1.47.3
-            "@wingtechbot-mk3/core":
-                specifier: workspace:*
-                version: link:../core
             "@wingtechbot-mk3/types":
                 specifier: workspace:*
                 version: link:../types
@@ -155,33 +152,6 @@ importers:
             vitest:
                 specifier: ^3.2.4
                 version: 3.2.4(@types/node@24.0.13)(@vitest/ui@3.2.4)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)(yaml@2.8.0)
-
-    packages/core:
-        devDependencies:
-            "@eslint/js":
-                specifier: ^9.30.1
-                version: 9.30.1
-            "@types/node":
-                specifier: ^24.0.13
-                version: 24.0.13
-            "@typescript-eslint/eslint-plugin":
-                specifier: ^8.36.0
-                version: 8.36.0(@typescript-eslint/parser@8.36.0(eslint@9.30.1(jiti@2.4.2))(typescript@5.8.3))(eslint@9.30.1(jiti@2.4.2))(typescript@5.8.3)
-            "@typescript-eslint/parser":
-                specifier: ^8.36.0
-                version: 8.36.0(eslint@9.30.1(jiti@2.4.2))(typescript@5.8.3)
-            eslint:
-                specifier: ^9.30.1
-                version: 9.30.1(jiti@2.4.2)
-            prettier:
-                specifier: ^3.6.2
-                version: 3.6.2
-            rimraf:
-                specifier: ^6.0.1
-                version: 6.0.1
-            typescript:
-                specifier: ^5.8.3
-                version: 5.8.3
 
     packages/frontend:
         dependencies:
