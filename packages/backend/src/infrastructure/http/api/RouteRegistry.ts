@@ -15,7 +15,7 @@ export class RouteRegistryClass {
         config.routes.forEach(route => {
             const fullPath = config.basePath + route.path;
 
-            const registryEntry: RouteRegistryEntry = { ...route, version: config.version, fullPath, basePath: config.basePath, deprecated: route.deprecated || config.deprecated };
+            const registryEntry: RouteRegistryEntry = { ...route, version: config.version, fullPath, basePath: config.basePath, deprecated: route.deprecated ?? config.deprecated ?? false };
 
             this.routes.get(config.version)?.push(registryEntry);
         });
