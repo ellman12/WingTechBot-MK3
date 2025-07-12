@@ -1,14 +1,10 @@
-import { z } from 'zod';
+import { z } from "zod/v4";
 
 // ============================================================================
 // Health API Schemas
 // ============================================================================
 
-export const HealthCheckResponseSchema = z.object({
-  status: z.literal('ok'),
-  timestamp: z.string(),
-  version: z.literal('v1'),
-});
+export const HealthCheckResponseSchema = z.object({ status: z.literal("ok"), timestamp: z.string(), version: z.literal("v1") });
 
 // ============================================================================
 // Health API Types (derived from schemas)

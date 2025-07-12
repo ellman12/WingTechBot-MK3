@@ -173,21 +173,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Download types build artifacts
-        if: matrix.package != 'types'
-        uses: actions/download-artifact@v4
-        with:
-          name: types-build
-          path: packages/types/dist
-
-      - name: Build types (for types package test)
-        if: matrix.package == 'types'
-        run: pnpm build:types
-
       - name: Generate Prisma client
         if: matrix.package == 'backend'
-        env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/dummy_db
         run: pnpm --filter backend db:generate
 
       - name: Run tests for ${{ matrix.package }}

@@ -1,87 +1,83 @@
 {
-  "name": "@wingtechbot-mk3/types",
-  "version": "1.0.0",
-  "description": "Shared TypeScript types for WingTechBot MK3 API",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "type": "module",
-  "scripts": {
-    "build": "tsc && node scripts/generate-exports.js",
-    "dev": "tsc --watch",
-    "clean": "rimraf dist",
-    "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\""
-  },
-  "keywords": [
-    "typescript",
-    "types",
-    "api",
-    "shared",
-    "wingtechbot"
-  ],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@eslint/js": "^9.30.1",
-    "@typescript-eslint/eslint-plugin": "^8.36.0",
-    "@typescript-eslint/parser": "^8.36.0",
-    "eslint": "^9.30.1",
-    "prettier": "^3.6.2",
-    "rimraf": "^6.0.1",
-    "typescript": "^5.8.3"
-  },
-  "dependencies": {
-    "zod": "^4.0.2"
-  },
-  "files": [
-    "dist"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+    "name": "@wingtechbot-mk3/types",
+    "version": "1.0.0",
+    "description": "Shared TypeScript types for WingTechBot MK3 API",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "module",
+    "scripts": {
+        "build": "tsc && node scripts/generate-exports.js",
+        "dev": "tsc --watch",
+        "clean": "rimraf dist"
     },
-    "./api/v1/common": {
-      "types": "./dist/api/v1/common.d.ts",
-      "import": "./dist/api/v1/common.js"
+    "keywords": [
+        "typescript",
+        "types",
+        "api",
+        "shared",
+        "wingtechbot"
+    ],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@eslint/js": "^9.30.1",
+        "@typescript-eslint/eslint-plugin": "^8.36.0",
+        "@typescript-eslint/parser": "^8.36.0",
+        "eslint": "^9.30.1",
+        "prettier": "^3.6.2",
+        "rimraf": "^6.0.1",
+        "typescript": "^5.8.3"
     },
-    "./api/v1/guilds": {
-      "types": "./dist/api/v1/guilds.d.ts",
-      "import": "./dist/api/v1/guilds.js"
+    "dependencies": {
+        "zod": "^4.0.2"
     },
-    "./api/v1/health": {
-      "types": "./dist/api/v1/health.d.ts",
-      "import": "./dist/api/v1/health.js"
-    },
-    "./api/v1/index": {
-      "types": "./dist/api/v1/index.d.ts",
-      "import": "./dist/api/v1/index.js"
-    },
-    "./common/api": {
-      "types": "./dist/common/api.d.ts",
-      "import": "./dist/common/api.js"
-    },
-    "./common/error": {
-      "types": "./dist/common/error.d.ts",
-      "import": "./dist/common/error.js"
-    },
-    "./entities/command": {
-      "types": "./dist/entities/command.d.ts",
-      "import": "./dist/entities/command.js"
-    },
-    "./entities/guild": {
-      "types": "./dist/entities/guild.d.ts",
-      "import": "./dist/entities/guild.js"
-    },
-    "./entities/guildMember": {
-      "types": "./dist/entities/guildMember.d.ts",
-      "import": "./dist/entities/guildMember.js"
-    },
-    "./entities/user": {
-      "types": "./dist/entities/user.d.ts",
-      "import": "./dist/entities/user.js"
+    "files": [
+        "dist"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./api/v1/common": {
+            "types": "./dist/api/v1/common.d.ts",
+            "import": "./dist/api/v1/common.js"
+        },
+        "./api/v1/guilds": {
+            "types": "./dist/api/v1/guilds.d.ts",
+            "import": "./dist/api/v1/guilds.js"
+        },
+        "./api/v1/health": {
+            "types": "./dist/api/v1/health.d.ts",
+            "import": "./dist/api/v1/health.js"
+        },
+        "./api/v1/index": {
+            "types": "./dist/api/v1/index.d.ts",
+            "import": "./dist/api/v1/index.js"
+        },
+        "./common/api": {
+            "types": "./dist/common/api.d.ts",
+            "import": "./dist/common/api.js"
+        },
+        "./common/error": {
+            "types": "./dist/common/error.d.ts",
+            "import": "./dist/common/error.js"
+        },
+        "./entities/command": {
+            "types": "./dist/entities/command.d.ts",
+            "import": "./dist/entities/command.js"
+        },
+        "./entities/guild": {
+            "types": "./dist/entities/guild.d.ts",
+            "import": "./dist/entities/guild.js"
+        },
+        "./entities/guildMember": {
+            "types": "./dist/entities/guildMember.d.ts",
+            "import": "./dist/entities/guildMember.js"
+        },
+        "./entities/user": {
+            "types": "./dist/entities/user.d.ts",
+            "import": "./dist/entities/user.js"
+        }
     }
-  }
 }
