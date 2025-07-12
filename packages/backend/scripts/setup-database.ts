@@ -2,7 +2,7 @@
 import "@dotenvx/dotenvx/config";
 import { execSync } from "node:child_process";
 
-import { runMigrations } from "../src/infrastructure/database/migrations.js";
+import { runMigrations } from "../database/migrations.js";
 
 async function setupDatabase() {
     console.log("🚀 Setting up database...");

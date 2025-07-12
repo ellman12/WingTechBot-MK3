@@ -1,3 +1,4 @@
+import type { DB } from "@db/types";
 import { setupSwaggerUI } from "@infrastructure/http/OpenApiGenerator.js";
 import { initializeApiRouter, setupRoutes as setupApiRoutes } from "@infrastructure/http/api/ApiRouter.js";
 import cors from "cors";
@@ -5,7 +6,6 @@ import express from "express";
 import type { Application } from "express";
 import helmet from "helmet";
 import type { Kysely } from "kysely";
-import type { DB } from "kysely-codegen";
 
 export interface ServerConfig {
     port: number;

@@ -7,9 +7,9 @@
         "rootDir": ".",
         "newLine": "lf",
         "baseUrl": ".",
-        "paths": { "@/*": ["src/*"], "@core/*": ["src/core/*"], "@infrastructure/*": ["src/infrastructure/*"], "@application/*": ["src/application/*"], "@adapters/*": ["src/adapters/*"] },
+        "paths": { "@/*": ["src/*"], "@core/*": ["src/core/*"], "@infrastructure/*": ["src/infrastructure/*"], "@application/*": ["src/application/*"], "@adapters/*": ["src/adapters/*"], "@db/*": ["database/*"] },
         "types": ["node", "vitest/globals"]
     },
-    "include": ["src/**/*", "tests/**/*"],
+    "include": ["src/**/*", "tests/**/*", "database/**/*"],
     "ts-node": { "esm": true, "experimentalSpecifierResolution": "node" }
 }

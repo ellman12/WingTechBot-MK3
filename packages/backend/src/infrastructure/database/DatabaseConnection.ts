@@ -1,5 +1,5 @@
+import type { DB } from "@db/types";
 import { Kysely, PostgresDialect } from "kysely";
-import type { DB } from "kysely-codegen";
 import { Pool } from "pg";
 
 // Private state using file-level constants

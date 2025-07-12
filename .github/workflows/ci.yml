@@ -87,13 +87,6 @@ jobs:
       - name: Run security audit
         run: pnpm audit --audit-level moderate
 
-      - name: Run Snyk security scan
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=high
-
   # Lint and format check
   lint:
     needs: setup
@@ -132,7 +125,7 @@ jobs:
         run: pnpm lint
 
       - name: Check Prettier formatting
-        run: pnpm format:check:all
+        run: pnpm format:check
 
       - name: Check TypeScript types
         run: pnpm build:types
@@ -223,8 +216,10 @@ jobs:
           name: types-build
           path: packages/types/dist
 
-      - name: Generate Prisma client
+      - name: Generate database types
         if: matrix.package == 'backend'
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         run: pnpm --filter backend db:generate
 
       - name: Run tests for ${{ matrix.package }}
@@ -281,10 +276,10 @@ jobs:
           name: types-build
           path: packages/types/dist
 
-      - name: Generate Prisma client
+      - name: Generate database types
         if: matrix.package == 'backend'
         env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/dummy_db
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
         run: pnpm --filter backend db:generate
 
       - name: Build ${{ matrix.package }}

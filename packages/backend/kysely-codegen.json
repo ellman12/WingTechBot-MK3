@@ -1,6 +1,6 @@
 {
-    "out": "./generated/database",
-    "dialect": "postgresql",
+    "out": "./database/types.ts",
+    "dialect": "postgres",
     "connection": { "url": "env(DATABASE_URL)" },
     "include": ["public"],
     "exclude": ["information_schema", "pg_catalog"],

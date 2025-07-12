@@ -1,7 +1,7 @@
 import type { CreateUserData, UpdateUserData, User } from "@core/entities/User.js";
 import type { UserRepository } from "@core/repositories/UserRepository.js";
+import type { DB, Users } from "@db/types";
 import type { Kysely, Selectable } from "kysely";
-import type { DB, Users } from "kysely-codegen";
 
 // Private state using file-level constants
 let dbInstance: Kysely<DB> | null = null;

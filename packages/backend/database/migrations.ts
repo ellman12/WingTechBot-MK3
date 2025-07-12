@@ -1,19 +1,15 @@
+import type { DB } from "@db/types";
 import { promises as fs } from "fs";
 import { Kysely, Migrator, PostgresDialect } from "kysely";
 import type { Migration } from "kysely";
 import { join } from "path";
 import { Pool } from "pg";
 
-// Temporary database interface for migrations
-interface Database {
-    users: { id: string; username: string; display_name: string | null; avatar: string | null; is_bot: boolean; created_at: Date; updated_at: Date };
-}
-
 // Create Kysely instance for migrations
-const createKyselyForMigrations = (): Kysely<Database> => {
+const createKyselyForMigrations = (): Kysely<DB> => {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-    return new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
+    return new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
 };
 
 // Migration provider

@@ -1,9 +1,9 @@
 import { initializeV1Routes } from "@application/routes/v1/routes.js";
+import type { DB } from "@db/types";
 import { getVersionRoutes } from "@infrastructure/http/api/RouteRegistry.js";
 import type { Application } from "express";
 import { Router } from "express";
 import type { Kysely } from "kysely";
-import type { DB } from "kysely-codegen";
 
 // Interface definition
 export interface RouteSetupService {

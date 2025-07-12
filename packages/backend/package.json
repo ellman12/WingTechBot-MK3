@@ -14,7 +14,7 @@
         "test:ui": "vitest --ui",
         "test:coverage": "vitest --coverage",
         "db:setup": "tsx -r @dotenvx/dotenvx/config scripts/setup-database.ts",
-        "db:generate": "tsx scripts/generate-types.ts",
+        "db:generate": "tsx -r @dotenvx/dotenvx/config scripts/generate-types.ts",
         "docs:generate": "tsx scripts/generate-openapi.ts",
         "docs:sync": "tsx scripts/sync-docs.ts",
         "db:migrate": "tsx -r @dotenvx/dotenvx/config scripts/run-migrations.ts",

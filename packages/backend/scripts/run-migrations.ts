@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import "@dotenvx/dotenvx/config";
 
-import { runMigrations } from "../src/infrastructure/database/migrations.js";
+import { runMigrations } from "../database/migrations.js";
 
 async function main() {
     try {

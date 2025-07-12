@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import "@dotenvx/dotenvx/config";
 
-import { rollbackMigrations } from "../src/infrastructure/database/migrations.js";
+import { rollbackMigrations } from "../database/migrations.js";
 
 async function main() {
     try {
