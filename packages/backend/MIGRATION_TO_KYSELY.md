@@ -75,20 +75,7 @@ export async function up(db: Kysely<Database>): Promise<void> {
         .addColumn("updated_at", "timestamp", col => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
         .execute();
 
-    // Create commands table
-    await db.schema
-        .createTable("commands")
-        .addColumn("id", "varchar(255)", col => col.primaryKey().defaultTo(sql`gen_random_uuid()::text`))
-        .addColumn("name", "varchar(255)", col => col.notNull())
-        .addColumn("description", "text")
-        .addColumn("user_id", "varchar(255)", col => col.notNull())
-        .addColumn("arguments", "text")
-        .addColumn("executed_at", "timestamp", col => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
-        .addColumn("success", "boolean", col => col.notNull())
-        .addColumn("error", "text")
-        .execute();
-
-    // Add foreign key and indexes...
+    // Add indexes...
 }
 ```
 
@@ -142,7 +129,7 @@ const transformUser = (dbUser: Database["users"]): User => {
 
 ## Next Steps
 
-1. **Update other repositories** (CommandRepository, etc.)
+1. **Update other repositories** as needed
 2. **Add more complex queries** using Kysely's SQL builder
 3. **Set up migrations** for production deployments
 4. **Add database seeding** scripts

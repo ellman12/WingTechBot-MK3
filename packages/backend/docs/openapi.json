@@ -2,45 +2,18 @@
     "openapi": "3.0.3",
     "info": {
         "title": "WingTechBot MK3 API",
-        "version": "1.0.0",
-        "description": "A robust Discord bot API built with Express.js, TypeScript, and hexagonal architecture",
+        "version": "multi-version",
+        "description": "A robust Discord bot API built with Express.js, TypeScript, and hexagonal architecture. This documentation includes all API versions.",
         "contact": { "name": "WingTechBot MK3", "url": "https://github.com/ellman12/WingTechBot-MK3" },
-        "license": { "name": "ISC", "url": "https://opensource.org/licenses/ISC" }
+        "license": { "name": "ISC", "url": "https://opensource.org/licenses/ISC" },
+        "x-api-versions": [{ "version": "v1", "basePath": "/api/v1", "deprecated": false }]
     },
-    "servers": [
-        { "url": "http://localhost:3000", "description": "Development server" },
-        { "url": "https://api.wingtechbot.com", "description": "Production server" }
-    ],
-    "tags": [{ "name": "Health", "description": "Health check endpoints" }],
-    "paths": {
-        "/health": {
-            "get": {
-                "summary": "Health check endpoint",
-                "tags": ["Health"],
-                "responses": {
-                    "200": {
-                        "description": "Successful response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "schema": { "type": "object", "properties": { "status": { "type": "string", "const": "ok" }, "timestamp": { "type": "string" } }, "required": ["status", "timestamp"], "additionalProperties": false },
-                                    "components": {}
-                                }
-                            }
-                        }
-                    },
-                    "400": { "description": "Validation error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
-                    "500": { "description": "Internal server error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
-                },
-                "description": "Returns the current health status of the API"
-            }
-        }
-    },
+    "servers": [{ "url": "http://localhost:4040", "description": "Development server" }],
+    "tags": [{ "name": "Health", "description": "API health and status endpoints" }],
     "components": {
         "schemas": {
             "ApiError": {
                 "type": "object",
-                "description": "Standard API error response",
                 "properties": {
                     "success": { "type": "boolean", "enum": [false] },
                     "error": { "type": "string", "description": "Error message" },
@@ -52,9 +25,29 @@
                 },
                 "required": ["success", "error"]
             },
-            "GetHealthResponse": {
-                "schema": { "type": "object", "properties": { "status": { "type": "string", "const": "ok" }, "timestamp": { "type": "string" } }, "required": ["status", "timestamp"], "additionalProperties": false },
-                "components": {}
+            "GetApiV1HealthResponse": {
+                "type": "object",
+                "properties": { "status": { "type": "string", "enum": ["ok"] }, "timestamp": { "type": "string" }, "version": { "type": "string", "enum": ["v1"] } },
+                "required": ["status", "timestamp", "version"],
+                "title": "HealthCheckResponse",
+                "description": "Health check response indicating API status"
+            }
+        },
+        "parameters": {}
+    },
+    "paths": {
+        "/api/v1/health": {
+            "get": {
+                "summary": "Health check endpoint",
+                "tags": ["Health"],
+                "responses": {
+                    "200": { "description": "Success", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GetApiV1HealthResponse" } } } },
+                    "400": { "description": "Bad Request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
+                    "500": { "description": "Internal Server Error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+                },
+                "operationId": "get_api_v1_health_v1",
+                "parameters": [],
+                "description": "Returns the current health status of the API"
             }
         }
     }

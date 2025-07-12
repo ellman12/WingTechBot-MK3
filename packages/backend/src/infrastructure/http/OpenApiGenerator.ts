@@ -4,10 +4,13 @@ import type { Application } from "express";
 import swaggerUi from "swagger-ui-express";
 import { z } from "zod/v4";
 
+import { getConfig } from "../config/Config.js";
 import { getAllRoutes, getSupportedVersions, getVersionConfig, getVersionRoutes } from "./api/RouteRegistry.js";
 import type { RouteRegistryEntry } from "./api/types.js";
 
 extendZodWithOpenApi(z);
+
+const config = getConfig();
 
 // Private state using file-level constants
 let registryInstance: OpenAPIRegistry | null = null;
@@ -21,10 +24,7 @@ const getRegistry = (): OpenAPIRegistry => {
 };
 
 const generateServers = (): Array<{ url: string; description: string }> => {
-    return [
-        { url: "http://localhost:3000", description: "Development server - supports all API versions" },
-        { url: "https://api.wingtechbot.com", description: "Production server - supports all API versions" },
-    ];
+    return [{ url: `http://localhost:${config.server.port}`, description: "Development server" }];
 };
 
 const generateTags = (routes: RouteRegistryEntry[]): Array<{ name: string; description?: string }> => {
@@ -329,9 +329,9 @@ export const setupSwaggerUI = (app: Application): void => {
     });
 
     console.log("📖 API Documentation available at:");
-    console.log("   📚 All Versions Swagger UI: http://localhost:3000/api/docs");
-    console.log("   📋 OpenAPI JSON: http://localhost:3000/api/docs/openapi.json");
-    console.log("   🔍 Version Overview: http://localhost:3000/api/versions");
+    console.log(`   📚 All Versions Swagger UI: http://localhost:${config.server.port}/api/docs`);
+    console.log(`   📋 OpenAPI JSON: http://localhost:${config.server.port}/api/docs/openapi.json`);
+    console.log(`   🔍 Version Overview: http://localhost:${config.server.port}/api/versions`);
 
     supportedVersions.forEach(version => {
         const versionConfig = getVersionConfig(version);

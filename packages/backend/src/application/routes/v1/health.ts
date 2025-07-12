@@ -1,7 +1,14 @@
-import { HealthCheckResponseSchema } from "@wingtechbot-mk3/types/api/v1/health";
+import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import type { Request, Response } from "express";
+import { z } from "zod";
 
 import type { RouteGroup } from "../../../infrastructure/http/api/types.js";
+
+// Extend Zod with OpenAPI functionality
+extendZodWithOpenApi(z);
+
+// Create OpenAPI-extended health response schema
+const HealthCheckResponseSchema = z.object({ status: z.literal("ok"), timestamp: z.string(), version: z.literal("v1") }).openapi({ title: "HealthCheckResponse", description: "Health check response indicating API status" });
 
 /**
  * Health check routes configuration for API v1

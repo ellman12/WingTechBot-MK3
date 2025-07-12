@@ -119,7 +119,34 @@ pnpm start
 
 ## 🔌 API Documentation
 
-The backend exposes a RESTful API under `/api/v1` with the following endpoints:
+The backend exposes a RESTful API under `/api/v1` with automatically generated OpenAPI documentation.
+
+### 📖 Viewing Documentation
+
+Once the server is running, you can view the API documentation at:
+
+- **Swagger UI**: `http://localhost:4040/api/docs`
+- **OpenAPI JSON**: `http://localhost:4040/api/docs/openapi.json`
+- **API Versions**: `http://localhost:4040/api/versions`
+
+### 🔧 Generating Documentation
+
+The OpenAPI documentation is automatically generated from your route definitions and Zod schemas:
+
+```bash
+# Generate fresh documentation
+pnpm run docs:generate
+
+# Sync documentation (only update if changes detected)
+pnpm run docs:sync
+
+# Build with documentation
+pnpm run build:with-docs
+```
+
+For detailed information about the documentation system, see [`docs/README.md`](docs/README.md).
+
+### Current Endpoints
 
 ### Health Check
 
@@ -169,7 +196,6 @@ The bot is configured through environment variables and starts automatically wit
 The application uses the following main entities:
 
 - **User**: Discord user information
-- **Command**: Command execution history
 
 ### Migrations
 

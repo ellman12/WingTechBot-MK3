@@ -1,12 +1,12 @@
 import { promises as fs } from "fs";
-import { Kysely, Migration, Migrator, PostgresDialect } from "kysely";
+import { Kysely, Migrator, PostgresDialect } from "kysely";
+import type { Migration } from "kysely";
 import { join } from "path";
 import { Pool } from "pg";
 
 // Temporary database interface for migrations
 interface Database {
     users: { id: string; username: string; display_name: string | null; avatar: string | null; is_bot: boolean; created_at: Date; updated_at: Date };
-    commands: { id: string; name: string; description: string | null; user_id: string; arguments: string | null; executed_at: Date; success: boolean; error: string | null };
 }
 
 // Create Kysely instance for migrations

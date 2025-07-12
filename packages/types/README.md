@@ -77,7 +77,6 @@ src/
 ├── api/            # API endpoint contracts
 │   └── v1/         # Version 1 API contracts
 │       ├── users.ts    # User API request/response types
-│       ├── commands.ts # Command API request/response types
 │       └── common.ts   # Common v1 API types
 └── index.ts        # Main export file
 ```
@@ -131,15 +130,6 @@ const apiResponse = usersToResponse(domainUsers);
 - `UsersResponse` - Multiple users response
 - `validateCreateUserRequest()` - Request validation
 - `userToResponse()` - Domain → API transformation
-
-### Command API
-
-- `CreateCommandRequest` - Command creation request
-- `UpdateCommandRequest` - Command update request
-- `CommandResponse` - Command API response
-- `CommandsResponse` - Multiple commands response
-- `validateCreateCommandRequest()` - Request validation
-- `commandToResponse()` - Domain → API transformation
 
 ### Common Types
 

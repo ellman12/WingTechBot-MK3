@@ -18,7 +18,7 @@ v1/
 Each file contains routes for a specific domain/feature:
 
 - **`health.ts`** - API health and status endpoints
-- **Future**: `users.ts`, `commands.ts`, etc.
+- **Feature**: `users.ts`, etc.
 
 ### **2. Single Responsibility**
 
@@ -131,7 +131,6 @@ As the API grows, you can easily add:
 ```typescript
 // Future route files:
 users.ts; // User management
-commands.ts; // Bot commands
 permissions.ts; // Permission management
 analytics.ts; // Usage analytics
 webhooks.ts; // Webhook endpoints

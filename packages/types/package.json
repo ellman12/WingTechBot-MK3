@@ -43,17 +43,13 @@
             "types": "./dist/api/v1/common.d.ts",
             "import": "./dist/api/v1/common.js"
         },
-        "./api/v1/guilds": {
-            "types": "./dist/api/v1/guilds.d.ts",
-            "import": "./dist/api/v1/guilds.js"
-        },
         "./api/v1/health": {
             "types": "./dist/api/v1/health.d.ts",
             "import": "./dist/api/v1/health.js"
         },
-        "./api/v1/index": {
-            "types": "./dist/api/v1/index.d.ts",
-            "import": "./dist/api/v1/index.js"
+        "./api/v1/users": {
+            "types": "./dist/api/v1/users.d.ts",
+            "import": "./dist/api/v1/users.js"
         },
         "./common/api": {
             "types": "./dist/common/api.d.ts",
@@ -62,22 +58,6 @@
         "./common/error": {
             "types": "./dist/common/error.d.ts",
             "import": "./dist/common/error.js"
-        },
-        "./entities/command": {
-            "types": "./dist/entities/command.d.ts",
-            "import": "./dist/entities/command.js"
-        },
-        "./entities/guild": {
-            "types": "./dist/entities/guild.d.ts",
-            "import": "./dist/entities/guild.js"
-        },
-        "./entities/guildMember": {
-            "types": "./dist/entities/guildMember.d.ts",
-            "import": "./dist/entities/guildMember.js"
-        },
-        "./entities/user": {
-            "types": "./dist/entities/user.d.ts",
-            "import": "./dist/entities/user.js"
         }
     }
 }
