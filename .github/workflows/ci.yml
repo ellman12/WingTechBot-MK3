@@ -216,11 +216,12 @@ jobs:
                   name: types-build
                   path: packages/types/dist
 
-            - name: Generate database types
-              if: matrix.package == 'backend'
-              env:
-                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
-              run: pnpm --filter backend db:generate
+            # Skip database type generation in CI - types should be pre-generated
+            # - name: Generate database types
+            #   if: matrix.package == 'backend'
+            #   env:
+            #       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+            #   run: pnpm --filter backend db:generate
 
             - name: Run tests for ${{ matrix.package }}
               run: pnpm --filter ${{ matrix.package }} test
@@ -276,11 +277,12 @@ jobs:
                   name: types-build
                   path: packages/types/dist
 
-            - name: Generate database types
-              if: matrix.package == 'backend'
-              env:
-                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
-              run: pnpm --filter backend db:generate
+            # Skip database type generation in CI - types should be pre-generated
+            # - name: Generate database types
+            #   if: matrix.package == 'backend'
+            #   env:
+            #       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+            #   run: pnpm --filter backend db:generate
 
             - name: Build ${{ matrix.package }}
               run: pnpm build:${{ matrix.package }}
