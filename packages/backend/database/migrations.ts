@@ -15,7 +15,7 @@ const createKyselyForMigrations = (): Kysely<DB> => {
 // Migration provider
 const migrationProvider = {
     async getMigrations() {
-        const migrationsPath = join(process.cwd(), "src", "infrastructure", "database", "migrations");
+        const migrationsPath = join(process.cwd(), "database", "migrations");
         const files = await fs.readdir(migrationsPath);
 
         const migrations: Record<string, Migration> = {};

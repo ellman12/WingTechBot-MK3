@@ -1,4 +1,4 @@
-import { Client, Events, GatewayIntentBits } from "discord.js";
+import { Client, type ClientEvents, Events, GatewayIntentBits } from "discord.js";
 
 import type { Config } from "../config/Config.js";
 
@@ -9,7 +9,7 @@ let isReady = false;
 
 // Private functions
 const createClient = (): Client => {
-    return new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers] });
+    return new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.DirectMessages] });
 };
 
 const setupEventHandlers = (client: Client): void => {
@@ -74,4 +74,12 @@ export const isDiscordBotReady = (): boolean => {
 
 export const getDiscordConfig = (): Config | null => {
     return configInstance;
+};
+
+export const registerEventHandler = <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>): void => {
+    if (!clientInstance) {
+        throw new Error("Discord bot not initialized. Call initializeDiscordBot first.");
+    }
+
+    clientInstance.on(event, handler);
 };

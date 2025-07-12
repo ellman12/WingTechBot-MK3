@@ -1,7 +1,8 @@
-import { routeSetupService } from "@application/services/RouteSetupService.js";
 import type { DB } from "@db/types";
 import type { Application } from "express";
 import type { Kysely } from "kysely";
+
+import { routeSetupService } from "../RouteSetupService.js";
 
 // Public interface - exported functions
 export const initializeApiRouter = (app: Application, db: Kysely<DB>): void => {
