@@ -2,7 +2,7 @@
 import "@dotenvx/dotenvx/config";
 import type { Application } from "express";
 
-import { initializeUserRepository } from "./adapters/repositories/UserRepository.js";
+import { createUserRepository } from "./adapters/repositories/UserRepository.js";
 import { getConfig } from "./infrastructure/config/Config.js";
 import { connect, disconnect, getKysely, healthCheck } from "./infrastructure/database/DatabaseConnection.js";
 import { initializeDiscordBot, startDiscordBot, stopDiscordBot } from "./infrastructure/discord/DiscordBot.js";
@@ -11,6 +11,7 @@ import { type ServerConfig, createExpressApp, startServer } from "./infrastructu
 interface AppDependencies {
     readonly config: ReturnType<typeof getConfig>;
     readonly expressApp: Application;
+    readonly userRepository: ReturnType<typeof createUserRepository>;
 }
 
 const createAppDependencies = async (): Promise<AppDependencies> => {
@@ -19,17 +20,18 @@ const createAppDependencies = async (): Promise<AppDependencies> => {
     // Connect to database
     await connect();
 
+    const db = getKysely();
     const serverConfig: ServerConfig = { port: config.server.port, nodeEnv: process.env.NODE_ENV || "development", corsOrigin: process.env.CORS_ORIGIN || false };
 
-    const expressApp = createExpressApp(getKysely(), serverConfig);
+    const expressApp = createExpressApp(db, serverConfig);
 
-    // Initialize repositories
-    initializeUserRepository(getKysely());
+    // Create repository instances
+    const userRepository = createUserRepository(db);
 
     // Initialize Discord bot
     initializeDiscordBot(config);
 
-    return { config, expressApp };
+    return { config, expressApp, userRepository };
 };
 
 const runMigrations = async (): Promise<void> => {

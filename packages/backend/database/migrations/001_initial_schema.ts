@@ -1,11 +1,7 @@
 import { Kysely, sql } from "kysely";
 
-// Temporary database interface for this migration
-interface Database {
-    users: { id: string; username: string; display_name: string | null; avatar: string | null; is_bot: boolean; created_at: Date; updated_at: Date };
-}
-
-export async function up(db: Kysely<Database>): Promise<void> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function up(db: Kysely<any>): Promise<void> {
     // Create users table
     await db.schema
         .createTable("users")
@@ -24,7 +20,8 @@ export async function up(db: Kysely<Database>): Promise<void> {
     await db.schema.createIndex("idx_users_created_at").on("users").column("created_at").execute();
 }
 
-export async function down(db: Kysely<Database>): Promise<void> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function down(db: Kysely<any>): Promise<void> {
     // Drop indexes
     await db.schema.dropIndex("idx_users_created_at").execute();
     await db.schema.dropIndex("idx_users_username").execute();
