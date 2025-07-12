@@ -125,24 +125,24 @@ Create slash commands for modern Discord interactions:
 ```typescript
 // Command definition
 const pingCommand = {
-  name: 'ping',
-  description: 'Replies with Pong!',
-  execute: async (interaction: ChatInputCommandInteraction) => {
-    await interaction.reply('Pong!');
-  },
+    name: "ping",
+    description: "Replies with Pong!",
+    execute: async (interaction: ChatInputCommandInteraction) => {
+        await interaction.reply("Pong!");
+    },
 };
 
 // Register commands
 const commands = [pingCommand];
 
 // In your bot initialization
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
+const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN!);
 
 try {
-  await rest.put(Routes.applicationCommands(process.env.DISCORD_CLIENT_ID!), { body: commands });
-  console.log('✅ Slash commands registered');
+    await rest.put(Routes.applicationCommands(process.env.DISCORD_CLIENT_ID!), { body: commands });
+    console.log("✅ Slash commands registered");
 } catch (error) {
-  console.error('❌ Error registering commands:', error);
+    console.error("❌ Error registering commands:", error);
 }
 ```
 
@@ -180,35 +180,20 @@ The bot automatically syncs Discord guild data with the database:
 ```typescript
 // Guild service functions
 export async function createGuild(db: Kysely<DB>, guildData: CreateGuildData): Promise<Guild> {
-  return await db
-    .insertInto('guilds')
-    .values({
-      id: guildData.id,
-      name: guildData.name,
-      ownerId: guildData.ownerId,
-      memberCount: guildData.memberCount,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
+    return await db
+        .insertInto("guilds")
+        .values({ id: guildData.id, name: guildData.name, ownerId: guildData.ownerId, memberCount: guildData.memberCount, isActive: true, createdAt: new Date(), updatedAt: new Date() })
+        .returningAll()
+        .executeTakeFirstOrThrow();
 }
 
-export async function updateGuild(
-  db: Kysely<DB>,
-  guildId: string,
-  updateData: UpdateGuildData
-): Promise<Guild> {
-  return await db
-    .updateTable('guilds')
-    .set({
-      ...updateData,
-      updatedAt: new Date(),
-    })
-    .where('id', '=', guildId)
-    .returningAll()
-    .executeTakeFirstOrThrow();
+export async function updateGuild(db: Kysely<DB>, guildId: string, updateData: UpdateGuildData): Promise<Guild> {
+    return await db
+        .updateTable("guilds")
+        .set({ ...updateData, updatedAt: new Date() })
+        .where("id", "=", guildId)
+        .returningAll()
+        .executeTakeFirstOrThrow();
 }
 ```
 
@@ -241,18 +226,14 @@ Enable debug logging:
 ```typescript
 // In your bot configuration
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-  ],
-  // Enable debug logging
-  rest: { version: '10' },
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+    // Enable debug logging
+    rest: { version: "10" },
 });
 
 // Log all events in development
-if (process.env.NODE_ENV === 'development') {
-  client.on('debug', console.log);
+if (process.env.NODE_ENV === "development") {
+    client.on("debug", console.log);
 }
 ```
 
@@ -288,21 +269,16 @@ private async onMessage(message: Message): Promise<void> {
 ```typescript
 // Track user joins
 client.on(Events.GuildMemberAdd, async member => {
-  console.log(`👋 ${member.user.tag} joined ${member.guild.name}`);
+    console.log(`👋 ${member.user.tag} joined ${member.guild.name}`);
 
-  // Save user to database
-  await createUser(db, {
-    id: member.id,
-    username: member.user.username,
-    discriminator: member.user.discriminator,
-    avatarUrl: member.user.displayAvatarURL(),
-  });
+    // Save user to database
+    await createUser(db, { id: member.id, username: member.user.username, discriminator: member.user.discriminator, avatarUrl: member.user.displayAvatarURL() });
 
-  // Send welcome message
-  const channel = member.guild.systemChannel;
-  if (channel) {
-    await channel.send(`Welcome to the server, ${member}!`);
-  }
+    // Send welcome message
+    const channel = member.guild.systemChannel;
+    if (channel) {
+        await channel.send(`Welcome to the server, ${member}!`);
+    }
 });
 ```
 
@@ -311,19 +287,19 @@ client.on(Events.GuildMemberAdd, async member => {
 ```typescript
 // Auto-moderation example
 client.on(Events.MessageCreate, async message => {
-  if (message.author.bot) return;
+    if (message.author.bot) return;
 
-  // Check for spam or inappropriate content
-  const bannedWords = ['spam', 'inappropriate'];
-  const hasViolation = bannedWords.some(word => message.content.toLowerCase().includes(word));
+    // Check for spam or inappropriate content
+    const bannedWords = ["spam", "inappropriate"];
+    const hasViolation = bannedWords.some(word => message.content.toLowerCase().includes(word));
 
-  if (hasViolation) {
-    await message.delete();
-    await message.author.send('Your message was removed for violating server rules.');
+    if (hasViolation) {
+        await message.delete();
+        await message.author.send("Your message was removed for violating server rules.");
 
-    // Log the incident
-    console.log(`🚨 Message removed from ${message.author.tag}: ${message.content}`);
-  }
+        // Log the incident
+        console.log(`🚨 Message removed from ${message.author.tag}: ${message.content}`);
+    }
 });
 ```
 
@@ -356,25 +332,22 @@ if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages)) {
 const userCooldowns = new Map();
 
 const executeCommand = async (interaction: ChatInputCommandInteraction) => {
-  const userId = interaction.user.id;
-  const now = Date.now();
-  const cooldownAmount = 5000; // 5 seconds
+    const userId = interaction.user.id;
+    const now = Date.now();
+    const cooldownAmount = 5000; // 5 seconds
 
-  if (userCooldowns.has(userId)) {
-    const expirationTime = userCooldowns.get(userId) + cooldownAmount;
+    if (userCooldowns.has(userId)) {
+        const expirationTime = userCooldowns.get(userId) + cooldownAmount;
 
-    if (now < expirationTime) {
-      const timeLeft = (expirationTime - now) / 1000;
-      await interaction.reply({
-        content: `Please wait ${timeLeft.toFixed(1)} seconds before using this command again.`,
-        ephemeral: true,
-      });
-      return;
+        if (now < expirationTime) {
+            const timeLeft = (expirationTime - now) / 1000;
+            await interaction.reply({ content: `Please wait ${timeLeft.toFixed(1)} seconds before using this command again.`, ephemeral: true });
+            return;
+        }
     }
-  }
 
-  userCooldowns.set(userId, now);
-  // Execute command...
+    userCooldowns.set(userId, now);
+    // Execute command...
 };
 ```
 
@@ -384,57 +357,38 @@ const executeCommand = async (interaction: ChatInputCommandInteraction) => {
 
 ```typescript
 interface BotLogContext {
-  event: string;
-  guildId?: string;
-  userId?: string;
-  commandName?: string;
-  error?: string;
+    event: string;
+    guildId?: string;
+    userId?: string;
+    commandName?: string;
+    error?: string;
 }
 
 const logBotEvent = (message: string, context: BotLogContext) => {
-  console.log(
-    JSON.stringify({
-      timestamp: new Date().toISOString(),
-      level: 'info',
-      service: 'discord-bot',
-      message,
-      ...context,
-    })
-  );
+    console.log(JSON.stringify({ timestamp: new Date().toISOString(), level: "info", service: "discord-bot", message, ...context }));
 };
 
 // Usage
-logBotEvent('Command executed', {
-  event: 'command_executed',
-  guildId: interaction.guildId,
-  userId: interaction.user.id,
-  commandName: interaction.commandName,
-});
+logBotEvent("Command executed", { event: "command_executed", guildId: interaction.guildId, userId: interaction.user.id, commandName: interaction.commandName });
 ```
 
 ### Health Monitoring
 
 ```typescript
 export class BotHealthChecker {
-  constructor(private client: Client) {}
+    constructor(private client: Client) {}
 
-  isHealthy(): boolean {
-    return (
-      this.client.isReady() &&
-      this.client.ws.status === 0 && // READY
-      this.client.guilds.cache.size > 0
-    );
-  }
+    isHealthy(): boolean {
+        return (
+            this.client.isReady() &&
+            this.client.ws.status === 0 && // READY
+            this.client.guilds.cache.size > 0
+        );
+    }
 
-  getStatus() {
-    return {
-      ready: this.client.isReady(),
-      wsStatus: this.client.ws.status,
-      guilds: this.client.guilds.cache.size,
-      ping: this.client.ws.ping,
-      uptime: this.client.uptime,
-    };
-  }
+    getStatus() {
+        return { ready: this.client.isReady(), wsStatus: this.client.ws.status, guilds: this.client.guilds.cache.size, ping: this.client.ws.ping, uptime: this.client.uptime };
+    }
 }
 ```
 
@@ -444,24 +398,24 @@ export class BotHealthChecker {
 
 ```typescript
 // Global error handlers
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't exit the process in production
+process.on("unhandledRejection", (reason, promise) => {
+    console.error("Unhandled Rejection at:", promise, "reason:", reason);
+    // Don't exit the process in production
 });
 
-process.on('uncaughtException', error => {
-  console.error('Uncaught Exception:', error);
-  // Graceful shutdown
-  process.exit(1);
+process.on("uncaughtException", error => {
+    console.error("Uncaught Exception:", error);
+    // Graceful shutdown
+    process.exit(1);
 });
 
 // Discord client error handling
 client.on(Events.Error, error => {
-  console.error('Discord client error:', error);
+    console.error("Discord client error:", error);
 });
 
 client.on(Events.Warn, warning => {
-  console.warn('Discord client warning:', warning);
+    console.warn("Discord client warning:", warning);
 });
 ```
 
@@ -469,15 +423,15 @@ client.on(Events.Warn, warning => {
 
 ```typescript
 client.on(Events.ShardDisconnect, (event, shardId) => {
-  console.log(`🔌 Shard ${shardId} disconnected:`, event);
+    console.log(`🔌 Shard ${shardId} disconnected:`, event);
 });
 
 client.on(Events.ShardReconnecting, shardId => {
-  console.log(`🔄 Shard ${shardId} reconnecting...`);
+    console.log(`🔄 Shard ${shardId} reconnecting...`);
 });
 
 client.on(Events.ShardReady, shardId => {
-  console.log(`✅ Shard ${shardId} ready!`);
+    console.log(`✅ Shard ${shardId} ready!`);
 });
 ```
 
@@ -494,22 +448,17 @@ client.on(Events.ShardReady, shardId => {
 
 ```typescript
 // Mock Discord interactions for testing
-describe('Discord Bot Commands', () => {
-  let mockInteraction: Partial<ChatInputCommandInteraction>;
+describe("Discord Bot Commands", () => {
+    let mockInteraction: Partial<ChatInputCommandInteraction>;
 
-  beforeEach(() => {
-    mockInteraction = {
-      commandName: 'ping',
-      reply: jest.fn(),
-      user: { id: '123', tag: 'TestUser#1234' },
-      guildId: '456',
-    };
-  });
+    beforeEach(() => {
+        mockInteraction = { commandName: "ping", reply: jest.fn(), user: { id: "123", tag: "TestUser#1234" }, guildId: "456" };
+    });
 
-  it('should respond to ping command', async () => {
-    await pingCommand.execute(mockInteraction as ChatInputCommandInteraction);
-    expect(mockInteraction.reply).toHaveBeenCalledWith('Pong!');
-  });
+    it("should respond to ping command", async () => {
+        await pingCommand.execute(mockInteraction as ChatInputCommandInteraction);
+        expect(mockInteraction.reply).toHaveBeenCalledWith("Pong!");
+    });
 });
 ```
 

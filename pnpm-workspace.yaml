@@ -1,9 +1,9 @@
 packages:
-  - packages/*
+    - packages/*
 
 ignoredBuiltDependencies:
-  - '@prisma/client'
-  - '@prisma/engines'
-  - esbuild
-  - pg
-  - prisma
+    - "@prisma/client"
+    - "@prisma/engines"
+    - esbuild
+    - pg
+    - prisma

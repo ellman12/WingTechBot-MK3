@@ -16,35 +16,35 @@ This guide covers development workflows, best practices, and tools for working o
 
 1. **Clone the repository**
 
-   ```bash
-   git clone https://github.com/ellman12/WingTechBot-MK3.git
-   cd WingTechBot-MK3
-   ```
+    ```bash
+    git clone https://github.com/ellman12/WingTechBot-MK3.git
+    cd WingTechBot-MK3
+    ```
 
 2. **Install dependencies**
 
-   ```bash
-   pnpm install
-   ```
+    ```bash
+    pnpm install
+    ```
 
 3. **Set up environment variables**
 
-   ```bash
-   cp packages/backend/.env.example packages/backend/.env
-   # Fill in your configuration values
-   ```
+    ```bash
+    cp packages/backend/.env.example packages/backend/.env
+    # Fill in your configuration values
+    ```
 
 4. **Set up database**
 
-   ```bash
-   pnpm db:generate
-   pnpm db:push
-   ```
+    ```bash
+    pnpm db:generate
+    pnpm db:push
+    ```
 
 5. **Start development servers**
-   ```bash
-   pnpm dev:all
-   ```
+    ```bash
+    pnpm dev:all
+    ```
 
 ## 🏗️ Project Structure
 
@@ -81,37 +81,37 @@ WingTechBot-MK3/
 
 1. **Start development servers**
 
-   ```bash
-   # All services
-   pnpm dev:all
+    ```bash
+    # All services
+    pnpm dev:all
 
-   # Individual services
-   pnpm dev              # Backend only
-   pnpm dev:frontend     # Frontend only
+    # Individual services
+    pnpm dev              # Backend only
+    pnpm dev:frontend     # Frontend only
 
-   ```
+    ```
 
 2. **Work on features**
-   - Create feature branch: `git checkout -b feature/your-feature`
-   - Make changes in appropriate package
-   - Add tests for new functionality
-   - Update documentation if needed
+    - Create feature branch: `git checkout -b feature/your-feature`
+    - Make changes in appropriate package
+    - Add tests for new functionality
+    - Update documentation if needed
 
 3. **Test your changes**
 
-   ```bash
-   pnpm test             # All tests
-   pnpm test:backend     # Backend tests
-   pnpm test:frontend    # Frontend tests
-   ```
+    ```bash
+    pnpm test             # All tests
+    pnpm test:backend     # Backend tests
+    pnpm test:frontend    # Frontend tests
+    ```
 
 4. **Code quality checks**
-   ```bash
-   pnpm lint             # Lint all packages
-   pnpm lint:fix         # Auto-fix linting issues
-   pnpm format           # Format code
-   pnpm format:check     # Check formatting
-   ```
+    ```bash
+    pnpm lint             # Lint all packages
+    pnpm lint:fix         # Auto-fix linting issues
+    pnpm format           # Format code
+    pnpm format:check     # Check formatting
+    ```
 
 ### Package-Specific Commands
 
@@ -178,52 +178,52 @@ pnpm test:ui          # Run tests with UI
 
 ```typescript
 // Unit test example
-describe('GuildService', () => {
-  let guildService: GuildService;
-  let mockRepository: jest.Mocked<GuildRepository>;
+describe("GuildService", () => {
+    let guildService: GuildService;
+    let mockRepository: jest.Mocked<GuildRepository>;
 
-  beforeEach(() => {
-    mockRepository = createMockRepository();
-    guildService = new GuildService(mockRepository);
-  });
-
-  describe('createGuild', () => {
-    it('should create a guild with valid data', async () => {
-      const guildData = createTestGuildData();
-      mockRepository.create.mockResolvedValue(guildData as Guild);
-
-      const result = await guildService.createGuild(guildData);
-
-      expect(result).toEqual(guildData);
-      expect(mockRepository.create).toHaveBeenCalledWith(guildData);
+    beforeEach(() => {
+        mockRepository = createMockRepository();
+        guildService = new GuildService(mockRepository);
     });
-  });
+
+    describe("createGuild", () => {
+        it("should create a guild with valid data", async () => {
+            const guildData = createTestGuildData();
+            mockRepository.create.mockResolvedValue(guildData as Guild);
+
+            const result = await guildService.createGuild(guildData);
+
+            expect(result).toEqual(guildData);
+            expect(mockRepository.create).toHaveBeenCalledWith(guildData);
+        });
+    });
 });
 
 // Integration test example
-describe('POST /api/guilds', () => {
-  let app: Express;
-  let db: TestDatabase;
+describe("POST /api/guilds", () => {
+    let app: Express;
+    let db: TestDatabase;
 
-  beforeAll(async () => {
-    ({ app, db } = await setupTestApp());
-  });
+    beforeAll(async () => {
+        ({ app, db } = await setupTestApp());
+    });
 
-  afterAll(async () => {
-    await db.cleanup();
-  });
+    afterAll(async () => {
+        await db.cleanup();
+    });
 
-  beforeEach(async () => {
-    await db.reset();
-  });
+    beforeEach(async () => {
+        await db.reset();
+    });
 
-  it('should create a guild', async () => {
-    const guildData = createTestGuildData();
+    it("should create a guild", async () => {
+        const guildData = createTestGuildData();
 
-    const response = await request(app).post('/api/guilds').send(guildData).expect(201);
+        const response = await request(app).post("/api/guilds").send(guildData).expect(201);
 
-    expect(response.body.data).toMatchObject(guildData);
-  });
+        expect(response.body.data).toMatchObject(guildData);
+    });
 });
 ```
 
@@ -357,24 +357,24 @@ const useGuilds = () => {
 ```css
 /* ✅ Good: Utility-first with Tailwind */
 .guild-card {
-  @apply rounded-lg bg-white p-4 shadow-md transition-shadow hover:shadow-lg;
+    @apply rounded-lg bg-white p-4 shadow-md transition-shadow hover:shadow-lg;
 }
 
 .guild-card-header {
-  @apply mb-2 flex items-center justify-between;
+    @apply mb-2 flex items-center justify-between;
 }
 
 .guild-card-title {
-  @apply text-lg font-semibold text-gray-900;
+    @apply text-lg font-semibold text-gray-900;
 }
 
 /* ✅ Good: Component-scoped styles when needed */
 .guild-card:hover .guild-card-actions {
-  @apply opacity-100;
+    @apply opacity-100;
 }
 
 .guild-card-actions {
-  @apply opacity-0 transition-opacity duration-200;
+    @apply opacity-0 transition-opacity duration-200;
 }
 ```
 
@@ -395,17 +395,7 @@ Recommended extensions:
 ### VS Code Settings
 
 ```json
-{
-  "editor.formatOnSave": true,
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
-  },
-  "typescript.preferences.importModuleSpecifier": "relative",
-  "emmet.includeLanguages": {
-    "typescript": "html",
-    "typescriptreact": "html"
-  }
-}
+{ "editor.formatOnSave": true, "editor.codeActionsOnSave": { "source.fixAll.eslint": true }, "typescript.preferences.importModuleSpecifier": "relative", "emmet.includeLanguages": { "typescript": "html", "typescriptreact": "html" } }
 ```
 
 ### Debug Configuration
@@ -414,19 +404,19 @@ Recommended extensions:
 
 ```json
 {
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Debug Backend",
-      "type": "node",
-      "request": "launch",
-      "program": "${workspaceFolder}/packages/backend/src/index.ts",
-      "outFiles": ["${workspaceFolder}/packages/backend/dist/**/*.js"],
-      "envFile": "${workspaceFolder}/packages/backend/.env",
-      "runtimeArgs": ["-r", "ts-node/register"],
-      "skipFiles": ["<node_internals>/**"]
-    }
-  ]
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Backend",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/packages/backend/src/index.ts",
+            "outFiles": ["${workspaceFolder}/packages/backend/dist/**/*.js"],
+            "envFile": "${workspaceFolder}/packages/backend/.env",
+            "runtimeArgs": ["-r", "ts-node/register"],
+            "skipFiles": ["<node_internals>/**"]
+        }
+    ]
 }
 ```
 
@@ -459,29 +449,29 @@ chore(deps): update dependencies
 
 1. **Create feature branch**
 
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
+    ```bash
+    git checkout -b feature/amazing-feature
+    ```
 
 2. **Make changes and commit**
 
-   ```bash
-   git add .
-   git commit -m "feat: add amazing feature"
-   ```
+    ```bash
+    git add .
+    git commit -m "feat: add amazing feature"
+    ```
 
 3. **Push and create PR**
 
-   ```bash
-   git push origin feature/amazing-feature
-   ```
+    ```bash
+    git push origin feature/amazing-feature
+    ```
 
 4. **PR Checklist**
-   - [ ] Code follows style guidelines
-   - [ ] Tests pass and coverage is adequate
-   - [ ] Documentation is updated
-   - [ ] No breaking changes (or clearly documented)
-   - [ ] PR description explains the changes
+    - [ ] Code follows style guidelines
+    - [ ] Tests pass and coverage is adequate
+    - [ ] Documentation is updated
+    - [ ] No breaking changes (or clearly documented)
+    - [ ] PR description explains the changes
 
 ## 🚀 Performance Guidelines
 
@@ -529,22 +519,22 @@ const selectActiveGuilds = createSelector(
 
 ```typescript
 // Add debug logging
-const debug = require('debug')('wingtechbot:guild');
+const debug = require("debug")("wingtechbot:guild");
 
-debug('Creating guild: %O', guildData);
+debug("Creating guild: %O", guildData);
 
 // Use debugger statements
 function processGuild(guild: Guild) {
-  debugger; // Will break in debugger when NODE_ENV=development
-  // Process guild...
+    debugger; // Will break in debugger when NODE_ENV=development
+    // Process guild...
 }
 
 // Monitor database queries
-if (process.env.NODE_ENV === 'development') {
-  kysely.on('query', event => {
-    console.log('SQL:', event.sql);
-    console.log('Parameters:', event.parameters);
-  });
+if (process.env.NODE_ENV === "development") {
+    kysely.on("query", event => {
+        console.log("SQL:", event.sql);
+        console.log("Parameters:", event.parameters);
+    });
 }
 ```
 
@@ -598,13 +588,7 @@ pnpm add -D --filter backend dependency-name
 - Document version choices in package.json comments
 
 ```json
-{
-  "dependencies": {
-    "discord.js": "14.13.0",
-    "express": "^4.18.2",
-    "prisma": "5.5.2"
-  }
-}
+{ "dependencies": { "discord.js": "14.13.0", "express": "^4.18.2", "prisma": "5.5.2" } }
 ```
 
 For additional development resources and troubleshooting, see the project's GitHub wiki and issues.

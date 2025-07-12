@@ -1,10 +1,10 @@
 import js from "@eslint/js";
+import prettier from "eslint-config-prettier";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import { globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
-import prettier from "eslint-config-prettier";
 
 export default tseslint.config([
     globalIgnores(["dist"]),
@@ -17,9 +17,6 @@ export default tseslint.config([
             reactRefresh.configs.vite,
             prettier, // disables formatting rules conflicting with Prettier
         ],
-        languageOptions: {
-            ecmaVersion: 2020,
-            globals: globals.browser,
-        },
+        languageOptions: { ecmaVersion: 2020, globals: globals.browser },
     },
 ]);

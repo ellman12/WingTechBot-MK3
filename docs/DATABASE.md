@@ -149,29 +149,29 @@ model GuildMember {
 
 1. **Start PostgreSQL**
 
-   ```bash
-   # Using Docker
-   docker run --name wingtechbot-postgres \
-     -e POSTGRES_PASSWORD=password \
-     -e POSTGRES_DB=wingtechbot \
-     -p 5432:5432 \
-     -d postgres:15
+    ```bash
+    # Using Docker
+    docker run --name wingtechbot-postgres \
+      -e POSTGRES_PASSWORD=password \
+      -e POSTGRES_DB=wingtechbot \
+      -p 5432:5432 \
+      -d postgres:15
 
-   # Or use existing PostgreSQL installation
-   ```
+    # Or use existing PostgreSQL installation
+    ```
 
 2. **Configure Environment**
 
-   ```bash
-   # .env
-   DATABASE_URL="postgresql://postgres:password@localhost:5432/wingtechbot"
-   ```
+    ```bash
+    # .env
+    DATABASE_URL="postgresql://postgres:password@localhost:5432/wingtechbot"
+    ```
 
 3. **Generate Client and Push Schema**
-   ```bash
-   pnpm db:generate   # Generate Prisma client
-   pnpm db:push       # Push schema to database
-   ```
+    ```bash
+    pnpm db:generate   # Generate Prisma client
+    pnpm db:push       # Push schema to database
+    ```
 
 ### Common Commands
 
@@ -242,92 +242,53 @@ npx prisma migrate reset
 ### Using Kysely (Recommended)
 
 ```typescript
-import { db } from '../infrastructure/database/connection';
+import { db } from "../infrastructure/database/connection";
 
 // Get all active guilds
-const activeGuilds = await db
-  .selectFrom('guilds')
-  .selectAll()
-  .where('is_active', '=', true)
-  .orderBy('created_at', 'desc')
-  .execute();
+const activeGuilds = await db.selectFrom("guilds").selectAll().where("is_active", "=", true).orderBy("created_at", "desc").execute();
 
 // Get guild with member count
 const guildWithMembers = await db
-  .selectFrom('guilds')
-  .leftJoin('guild_members', 'guilds.id', 'guild_members.guild_id')
-  .select([
-    'guilds.id',
-    'guilds.name',
-    db.fn.count('guild_members.user_id').as('actual_member_count'),
-  ])
-  .where('guilds.id', '=', guildId)
-  .groupBy(['guilds.id', 'guilds.name'])
-  .executeTakeFirst();
+    .selectFrom("guilds")
+    .leftJoin("guild_members", "guilds.id", "guild_members.guild_id")
+    .select(["guilds.id", "guilds.name", db.fn.count("guild_members.user_id").as("actual_member_count")])
+    .where("guilds.id", "=", guildId)
+    .groupBy(["guilds.id", "guilds.name"])
+    .executeTakeFirst();
 
 // Complex query with multiple joins
 const guildStats = await db
-  .selectFrom('guilds')
-  .leftJoin('guild_members', 'guilds.id', 'guild_members.guild_id')
-  .leftJoin('users', 'guild_members.user_id', 'users.id')
-  .select([
-    'guilds.id',
-    'guilds.name',
-    db.fn.count('guild_members.user_id').as('member_count'),
-    db.fn.max('guild_members.joined_at').as('last_join'),
-    db.fn
-      .avg(db.fn('extract', ['epoch', db.fn('age', ['guild_members.joined_at'])]))
-      .as('avg_member_age_seconds'),
-  ])
-  .where('guilds.is_active', '=', true)
-  .groupBy(['guilds.id', 'guilds.name'])
-  .orderBy('member_count', 'desc')
-  .execute();
+    .selectFrom("guilds")
+    .leftJoin("guild_members", "guilds.id", "guild_members.guild_id")
+    .leftJoin("users", "guild_members.user_id", "users.id")
+    .select([
+        "guilds.id",
+        "guilds.name",
+        db.fn.count("guild_members.user_id").as("member_count"),
+        db.fn.max("guild_members.joined_at").as("last_join"),
+        db.fn.avg(db.fn("extract", ["epoch", db.fn("age", ["guild_members.joined_at"])])).as("avg_member_age_seconds"),
+    ])
+    .where("guilds.is_active", "=", true)
+    .groupBy(["guilds.id", "guilds.name"])
+    .orderBy("member_count", "desc")
+    .execute();
 ```
 
 ### Using Prisma Client
 
 ```typescript
-import { prisma } from '../infrastructure/database/prisma';
+import { prisma } from "../infrastructure/database/prisma";
 
 // Get guilds with members
-const guildsWithMembers = await prisma.guild.findMany({
-  where: { isActive: true },
-  include: {
-    members: {
-      include: {
-        user: true,
-      },
-    },
-  },
-});
+const guildsWithMembers = await prisma.guild.findMany({ where: { isActive: true }, include: { members: { include: { user: true } } } });
 
 // Create guild with transaction
 const createGuildWithOwner = await prisma.$transaction(async tx => {
-  const user = await tx.user.upsert({
-    where: { id: ownerId },
-    update: {},
-    create: {
-      id: ownerId,
-      username: ownerUsername,
-    },
-  });
+    const user = await tx.user.upsert({ where: { id: ownerId }, update: {}, create: { id: ownerId, username: ownerUsername } });
 
-  const guild = await tx.guild.create({
-    data: {
-      id: guildId,
-      name: guildName,
-      ownerId: ownerId,
-      members: {
-        create: {
-          userId: ownerId,
-          roles: ['owner'],
-        },
-      },
-    },
-  });
+    const guild = await tx.guild.create({ data: { id: guildId, name: guildName, ownerId: ownerId, members: { create: { userId: ownerId, roles: ["owner"] } } } });
 
-  return guild;
+    return guild;
 });
 ```
 
@@ -337,46 +298,32 @@ const createGuildWithOwner = await prisma.$transaction(async tx => {
 
 ```typescript
 export class GuildService {
-  constructor(private readonly db: Kysely<DB>) {}
+    constructor(private readonly db: Kysely<DB>) {}
 
-  async createGuild(data: CreateGuildData): Promise<Guild> {
-    return await this.db
-      .insertInto('guilds')
-      .values({
-        id: data.id,
-        name: data.name,
-        owner_id: data.ownerId,
-        member_count: data.memberCount || 0,
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date(),
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
-  }
+    async createGuild(data: CreateGuildData): Promise<Guild> {
+        return await this.db
+            .insertInto("guilds")
+            .values({ id: data.id, name: data.name, owner_id: data.ownerId, member_count: data.memberCount || 0, is_active: true, created_at: new Date(), updated_at: new Date() })
+            .returningAll()
+            .executeTakeFirstOrThrow();
+    }
 
-  async getGuildById(id: string): Promise<Guild | null> {
-    return (
-      (await this.db.selectFrom('guilds').selectAll().where('id', '=', id).executeTakeFirst()) ||
-      null
-    );
-  }
+    async getGuildById(id: string): Promise<Guild | null> {
+        return (await this.db.selectFrom("guilds").selectAll().where("id", "=", id).executeTakeFirst()) || null;
+    }
 
-  async updateGuild(id: string, data: UpdateGuildData): Promise<Guild> {
-    return await this.db
-      .updateTable('guilds')
-      .set({
-        ...data,
-        updated_at: new Date(),
-      })
-      .where('id', '=', id)
-      .returningAll()
-      .executeTakeFirstOrThrow();
-  }
+    async updateGuild(id: string, data: UpdateGuildData): Promise<Guild> {
+        return await this.db
+            .updateTable("guilds")
+            .set({ ...data, updated_at: new Date() })
+            .where("id", "=", id)
+            .returningAll()
+            .executeTakeFirstOrThrow();
+    }
 
-  async deleteGuild(id: string): Promise<void> {
-    await this.db.deleteFrom('guilds').where('id', '=', id).execute();
-  }
+    async deleteGuild(id: string): Promise<void> {
+        await this.db.deleteFrom("guilds").where("id", "=", id).execute();
+    }
 }
 ```
 
@@ -386,77 +333,50 @@ export class GuildService {
 
 ```typescript
 // scripts/seed.ts
-import { db } from '../src/infrastructure/database/connection';
+import { db } from "../src/infrastructure/database/connection";
 
 async function seed() {
-  console.log('🌱 Seeding database...');
+    console.log("🌱 Seeding database...");
 
-  // Create test guilds
-  const testGuilds = [
-    {
-      id: '123456789012345678',
-      name: 'Test Guild 1',
-      owner_id: '987654321098765432',
-      member_count: 150,
-    },
-    {
-      id: '876543210987654321',
-      name: 'Test Guild 2',
-      owner_id: '456789012345678901',
-      member_count: 75,
-    },
-  ];
+    // Create test guilds
+    const testGuilds = [
+        { id: "123456789012345678", name: "Test Guild 1", owner_id: "987654321098765432", member_count: 150 },
+        { id: "876543210987654321", name: "Test Guild 2", owner_id: "456789012345678901", member_count: 75 },
+    ];
 
-  for (const guild of testGuilds) {
-    await db
-      .insertInto('guilds')
-      .values({
-        ...guild,
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date(),
-      })
-      .onConflict(oc => oc.column('id').doNothing())
-      .execute();
-  }
+    for (const guild of testGuilds) {
+        await db
+            .insertInto("guilds")
+            .values({ ...guild, is_active: true, created_at: new Date(), updated_at: new Date() })
+            .onConflict(oc => oc.column("id").doNothing())
+            .execute();
+    }
 
-  // Create test users
-  const testUsers = [
-    {
-      id: '987654321098765432',
-      username: 'testowner1',
-      global_name: 'Test Owner 1',
-    },
-    {
-      id: '456789012345678901',
-      username: 'testowner2',
-      global_name: 'Test Owner 2',
-    },
-  ];
+    // Create test users
+    const testUsers = [
+        { id: "987654321098765432", username: "testowner1", global_name: "Test Owner 1" },
+        { id: "456789012345678901", username: "testowner2", global_name: "Test Owner 2" },
+    ];
 
-  for (const user of testUsers) {
-    await db
-      .insertInto('users')
-      .values({
-        ...user,
-        created_at: new Date(),
-        updated_at: new Date(),
-      })
-      .onConflict(oc => oc.column('id').doNothing())
-      .execute();
-  }
+    for (const user of testUsers) {
+        await db
+            .insertInto("users")
+            .values({ ...user, created_at: new Date(), updated_at: new Date() })
+            .onConflict(oc => oc.column("id").doNothing())
+            .execute();
+    }
 
-  console.log('✅ Database seeded successfully');
+    console.log("✅ Database seeded successfully");
 }
 
 seed()
-  .catch(error => {
-    console.error('❌ Seeding failed:', error);
-    process.exit(1);
-  })
-  .finally(() => {
-    process.exit(0);
-  });
+    .catch(error => {
+        console.error("❌ Seeding failed:", error);
+        process.exit(1);
+    })
+    .finally(() => {
+        process.exit(0);
+    });
 ```
 
 ## 📈 Performance Optimization
@@ -481,24 +401,22 @@ CREATE INDEX idx_active_guilds ON guilds(created_at) WHERE is_active = true;
 
 ```typescript
 // database/connection.ts
-import { Kysely, PostgresDialect } from 'kysely';
-import { Pool } from 'pg';
+import { Kysely, PostgresDialect } from "kysely";
+import { Pool } from "pg";
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 20, // Maximum connections
-  idleTimeoutMillis: 30000, // Close idle connections after 30s
-  connectionTimeoutMillis: 2000, // Timeout for new connections
+    connectionString: process.env.DATABASE_URL,
+    max: 20, // Maximum connections
+    idleTimeoutMillis: 30000, // Close idle connections after 30s
+    connectionTimeoutMillis: 2000, // Timeout for new connections
 });
 
-export const db = new Kysely<DB>({
-  dialect: new PostgresDialect({ pool }),
-});
+export const db = new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
 
 // Graceful shutdown
-process.on('SIGINT', async () => {
-  await pool.end();
-  process.exit(0);
+process.on("SIGINT", async () => {
+    await pool.end();
+    process.exit(0);
 });
 ```
 
@@ -507,35 +425,23 @@ process.on('SIGINT', async () => {
 ```typescript
 // ✅ Good: Use indexes
 const recentGuilds = await db
-  .selectFrom('guilds')
-  .selectAll()
-  .where('is_active', '=', true) // Uses index
-  .orderBy('created_at', 'desc') // Uses index
-  .limit(10)
-  .execute();
+    .selectFrom("guilds")
+    .selectAll()
+    .where("is_active", "=", true) // Uses index
+    .orderBy("created_at", "desc") // Uses index
+    .limit(10)
+    .execute();
 
 // ✅ Good: Batch operations
-const updateMultipleGuilds = await db
-  .updateTable('guilds')
-  .set({ updated_at: new Date() })
-  .where('id', 'in', guildIds)
-  .execute();
+const updateMultipleGuilds = await db.updateTable("guilds").set({ updated_at: new Date() }).where("id", "in", guildIds).execute();
 
 // ❌ Bad: N+1 queries
 for (const guild of guilds) {
-  const members = await db
-    .selectFrom('guild_members')
-    .selectAll()
-    .where('guild_id', '=', guild.id)
-    .execute();
+    const members = await db.selectFrom("guild_members").selectAll().where("guild_id", "=", guild.id).execute();
 }
 
 // ✅ Good: Single query with join
-const guildsWithMembers = await db
-  .selectFrom('guilds')
-  .leftJoin('guild_members', 'guilds.id', 'guild_members.guild_id')
-  .selectAll()
-  .execute();
+const guildsWithMembers = await db.selectFrom("guilds").leftJoin("guild_members", "guilds.id", "guild_members.guild_id").selectAll().execute();
 ```
 
 ## 🧪 Testing Database
@@ -544,31 +450,22 @@ const guildsWithMembers = await db
 
 ```typescript
 // tests/setup/database.ts
-import { db } from '../../src/infrastructure/database/connection';
+import { db } from "../../src/infrastructure/database/connection";
 
 export async function setupTestDatabase() {
-  // Clean all tables
-  await db.deleteFrom('guild_members').execute();
-  await db.deleteFrom('guilds').execute();
-  await db.deleteFrom('users').execute();
+    // Clean all tables
+    await db.deleteFrom("guild_members").execute();
+    await db.deleteFrom("guilds").execute();
+    await db.deleteFrom("users").execute();
 }
 
 export async function teardownTestDatabase() {
-  await db.destroy();
+    await db.destroy();
 }
 
 // Test helpers
 export function createTestGuild(overrides = {}) {
-  return {
-    id: '123456789012345678',
-    name: 'Test Guild',
-    owner_id: '987654321098765432',
-    member_count: 100,
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date(),
-    ...overrides,
-  };
+    return { id: "123456789012345678", name: "Test Guild", owner_id: "987654321098765432", member_count: 100, is_active: true, created_at: new Date(), updated_at: new Date(), ...overrides };
 }
 ```
 
@@ -576,36 +473,32 @@ export function createTestGuild(overrides = {}) {
 
 ```typescript
 // tests/database/guild.test.ts
-describe('Guild Database Operations', () => {
-  beforeEach(async () => {
-    await setupTestDatabase();
-  });
-
-  afterAll(async () => {
-    await teardownTestDatabase();
-  });
-
-  describe('createGuild', () => {
-    it('should create a guild', async () => {
-      const guildData = createTestGuild();
-
-      const guild = await db
-        .insertInto('guilds')
-        .values(guildData)
-        .returningAll()
-        .executeTakeFirstOrThrow();
-
-      expect(guild).toMatchObject(guildData);
+describe("Guild Database Operations", () => {
+    beforeEach(async () => {
+        await setupTestDatabase();
     });
 
-    it('should enforce unique constraint', async () => {
-      const guildData = createTestGuild();
-
-      await db.insertInto('guilds').values(guildData).execute();
-
-      await expect(db.insertInto('guilds').values(guildData).execute()).rejects.toThrow();
+    afterAll(async () => {
+        await teardownTestDatabase();
     });
-  });
+
+    describe("createGuild", () => {
+        it("should create a guild", async () => {
+            const guildData = createTestGuild();
+
+            const guild = await db.insertInto("guilds").values(guildData).returningAll().executeTakeFirstOrThrow();
+
+            expect(guild).toMatchObject(guildData);
+        });
+
+        it("should enforce unique constraint", async () => {
+            const guildData = createTestGuild();
+
+            await db.insertInto("guilds").values(guildData).execute();
+
+            await expect(db.insertInto("guilds").values(guildData).execute()).rejects.toThrow();
+        });
+    });
 });
 ```
 
@@ -659,12 +552,12 @@ gunzip -c backup_20241201_120000.sql.gz | psql $DATABASE_URL
 
 ```typescript
 // Enable query logging in development
-if (process.env.NODE_ENV === 'development') {
-  db.on('query', event => {
-    console.log('SQL:', event.sql);
-    console.log('Duration:', event.duration, 'ms');
-    console.log('Parameters:', event.parameters);
-  });
+if (process.env.NODE_ENV === "development") {
+    db.on("query", event => {
+        console.log("SQL:", event.sql);
+        console.log("Duration:", event.duration, "ms");
+        console.log("Parameters:", event.parameters);
+    });
 }
 ```
 
@@ -672,24 +565,13 @@ if (process.env.NODE_ENV === 'development') {
 
 ```typescript
 export async function checkDatabaseHealth() {
-  try {
-    const result = await db
-      .selectFrom('guilds')
-      .select(db.fn.count('id').as('count'))
-      .executeTakeFirst();
+    try {
+        const result = await db.selectFrom("guilds").select(db.fn.count("id").as("count")).executeTakeFirst();
 
-    return {
-      status: 'healthy',
-      guilds: result?.count || 0,
-      timestamp: new Date().toISOString(),
-    };
-  } catch (error) {
-    return {
-      status: 'unhealthy',
-      error: error.message,
-      timestamp: new Date().toISOString(),
-    };
-  }
+        return { status: "healthy", guilds: result?.count || 0, timestamp: new Date().toISOString() };
+    } catch (error) {
+        return { status: "unhealthy", error: error.message, timestamp: new Date().toISOString() };
+    }
 }
 ```
 

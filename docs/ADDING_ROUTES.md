@@ -10,7 +10,7 @@ Instead of the old way:
 
 ```typescript
 // ❌ Old manual way
-apiRouter.get('/users', getUsersHandler(db));
+apiRouter.get("/users", getUsersHandler(db));
 ```
 
 Use the new automated way:
@@ -18,23 +18,23 @@ Use the new automated way:
 ```typescript
 // ✅ New automated way
 registerApiRoute(apiRouter, {
-  method: 'get',
-  path: '/users',
-  summary: 'Get all users',
-  description: 'Retrieve a list of all Discord users',
-  tags: ['Users'],
-  handler: getUsersHandler(db),
-  // Optional: Add schemas for automatic validation docs
-  responseSchema: GetUsersResponseSchema,
-  querySchema: GetUsersQuerySchema,
+    method: "get",
+    path: "/users",
+    summary: "Get all users",
+    description: "Retrieve a list of all Discord users",
+    tags: ["Users"],
+    handler: getUsersHandler(db),
+    // Optional: Add schemas for automatic validation docs
+    responseSchema: GetUsersResponseSchema,
+    querySchema: GetUsersQuerySchema,
 });
 ```
 
 ### 2. **For Non-API Routes** (like health checks)
 
 ```typescript
-registerHealthRoute(app, '/status', (req, res) => {
-  res.json({ status: 'healthy', uptime: process.uptime() });
+registerHealthRoute(app, "/status", (req, res) => {
+    res.json({ status: "healthy", uptime: process.uptime() });
 });
 ```
 
@@ -46,54 +46,19 @@ Here's how you'd add a complete set of user management endpoints:
 // In your route setup file (ExpressApp.ts)
 
 // Get all users
-registerApiRoute(apiRouter, {
-  method: 'get',
-  path: '/users',
-  summary: 'Get all users',
-  description: 'Retrieve a list of all Discord users',
-  tags: ['Users'],
-  handler: getUsersHandler(db),
-});
+registerApiRoute(apiRouter, { method: "get", path: "/users", summary: "Get all users", description: "Retrieve a list of all Discord users", tags: ["Users"], handler: getUsersHandler(db) });
 
 // Get user by ID
-registerApiRoute(apiRouter, {
-  method: 'get',
-  path: '/users/{id}',
-  summary: 'Get user by ID',
-  description: 'Retrieve a specific Discord user by their ID',
-  tags: ['Users'],
-  handler: getUserByIdHandler(db),
-});
+registerApiRoute(apiRouter, { method: "get", path: "/users/{id}", summary: "Get user by ID", description: "Retrieve a specific Discord user by their ID", tags: ["Users"], handler: getUserByIdHandler(db) });
 
 // Create new user
-registerApiRoute(apiRouter, {
-  method: 'post',
-  path: '/users',
-  summary: 'Create a new user',
-  description: 'Create a new Discord user entry',
-  tags: ['Users'],
-  handler: createUserHandler(db),
-});
+registerApiRoute(apiRouter, { method: "post", path: "/users", summary: "Create a new user", description: "Create a new Discord user entry", tags: ["Users"], handler: createUserHandler(db) });
 
 // Update user
-registerApiRoute(apiRouter, {
-  method: 'put',
-  path: '/users/{id}',
-  summary: 'Update a user',
-  description: 'Update an existing Discord user',
-  tags: ['Users'],
-  handler: updateUserHandler(db),
-});
+registerApiRoute(apiRouter, { method: "put", path: "/users/{id}", summary: "Update a user", description: "Update an existing Discord user", tags: ["Users"], handler: updateUserHandler(db) });
 
 // Delete user
-registerApiRoute(apiRouter, {
-  method: 'delete',
-  path: '/users/{id}',
-  summary: 'Delete a user',
-  description: 'Remove a Discord user entry',
-  tags: ['Users'],
-  handler: deleteUserHandler(db),
-});
+registerApiRoute(apiRouter, { method: "delete", path: "/users/{id}", summary: "Delete a user", description: "Remove a Discord user entry", tags: ["Users"], handler: deleteUserHandler(db) });
 ```
 
 ## 🔧 **Path Parameters**
@@ -106,11 +71,11 @@ The system automatically handles path parameters:
 
 ```typescript
 registerApiRoute(apiRouter, {
-  method: 'get',
-  path: '/guilds/{guildId}/members/{userId}', // OpenAPI format
-  summary: 'Get guild member',
-  tags: ['Guild Members'],
-  handler: getGuildMemberHandler(db),
+    method: "get",
+    path: "/guilds/{guildId}/members/{userId}", // OpenAPI format
+    summary: "Get guild member",
+    tags: ["Guild Members"],
+    handler: getGuildMemberHandler(db),
 });
 // Automatically becomes: router.get('/guilds/:guildId/members/:userId', handler)
 ```
@@ -120,18 +85,18 @@ registerApiRoute(apiRouter, {
 For complete type safety and documentation:
 
 ```typescript
-import { CreateUserRequestSchema, GetUsersResponseSchema } from '@wingtechbot-mk3/types';
+import { CreateUserRequestSchema, GetUsersResponseSchema } from "@wingtechbot-mk3/types";
 
 registerApiRoute(apiRouter, {
-  method: 'post',
-  path: '/users',
-  summary: 'Create a new user',
-  tags: ['Users'],
-  handler: createUserHandler(db),
-  requestSchema: CreateUserRequestSchema, // Validates request body
-  responseSchema: GetUsersResponseSchema, // Documents response format
-  paramsSchema: CreateUserParamsSchema, // Validates path parameters
-  querySchema: CreateUserQuerySchema, // Validates query parameters
+    method: "post",
+    path: "/users",
+    summary: "Create a new user",
+    tags: ["Users"],
+    handler: createUserHandler(db),
+    requestSchema: CreateUserRequestSchema, // Validates request body
+    responseSchema: GetUsersResponseSchema, // Documents response format
+    paramsSchema: CreateUserParamsSchema, // Validates path parameters
+    querySchema: CreateUserQuerySchema, // Validates query parameters
 });
 ```
 
@@ -160,9 +125,9 @@ After adding routes:
 Group related endpoints with consistent tags:
 
 ```typescript
-tags: ['Users']; // All user operations
-tags: ['Guilds']; // All guild operations
-tags: ['Commands']; // All command operations
+tags: ["Users"]; // All user operations
+tags: ["Guilds"]; // All guild operations
+tags: ["Commands"]; // All command operations
 ```
 
 ### Descriptions
@@ -194,28 +159,16 @@ To migrate existing routes:
 1. **Before**:
 
 ```typescript
-apiRouter.get('/guilds', getGuildsHandler(db));
-apiRouter.post('/guilds', createGuildHandler(db));
+apiRouter.get("/guilds", getGuildsHandler(db));
+apiRouter.post("/guilds", createGuildHandler(db));
 ```
 
 2. **After**:
 
 ```typescript
-registerApiRoute(apiRouter, {
-  method: 'get',
-  path: '/guilds',
-  summary: 'Get all guilds',
-  tags: ['Guilds'],
-  handler: getGuildsHandler(db),
-});
+registerApiRoute(apiRouter, { method: "get", path: "/guilds", summary: "Get all guilds", tags: ["Guilds"], handler: getGuildsHandler(db) });
 
-registerApiRoute(apiRouter, {
-  method: 'post',
-  path: '/guilds',
-  summary: 'Create a new guild',
-  tags: ['Guilds'],
-  handler: createGuildHandler(db),
-});
+registerApiRoute(apiRouter, { method: "post", path: "/guilds", summary: "Create a new guild", tags: ["Guilds"], handler: createGuildHandler(db) });
 ```
 
 That's it! Your documentation is now automatically generated and always stays in sync with your code. 🎉

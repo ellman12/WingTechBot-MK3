@@ -15,44 +15,44 @@ Welcome to WingTechBot MK3! We're excited that you want to contribute. This guid
 
 1. **Fork and Clone**
 
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/WingTechBot-MK3.git
-   cd WingTechBot-MK3
-   ```
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/WingTechBot-MK3.git
+    cd WingTechBot-MK3
+    ```
 
 2. **Install Dependencies**
 
-   ```bash
-   pnpm install
-   ```
+    ```bash
+    pnpm install
+    ```
 
 3. **Environment Setup**
 
-   ```bash
-   # Copy environment template
-   cp packages/backend/.env.example packages/backend/.env
+    ```bash
+    # Copy environment template
+    cp packages/backend/.env.example packages/backend/.env
 
-   # Fill in your Discord bot token and database URL
-   # See DISCORD_BOT.md for help setting up a Discord application
-   ```
+    # Fill in your Discord bot token and database URL
+    # See DISCORD_BOT.md for help setting up a Discord application
+    ```
 
 4. **Database Setup**
 
-   ```bash
-   pnpm db:generate
-   pnpm db:push
-   ```
+    ```bash
+    pnpm db:generate
+    pnpm db:push
+    ```
 
 5. **Start Development**
 
-   ```bash
-   # Start both backend and frontend
-   pnpm dev:all
+    ```bash
+    # Start both backend and frontend
+    pnpm dev:all
 
-   # Or start individually
-   pnpm dev          # Backend only
-   pnpm dev:frontend # Frontend only
-   ```
+    # Or start individually
+    pnpm dev          # Backend only
+    pnpm dev:frontend # Frontend only
+    ```
 
 ## 📋 Development Workflow
 
@@ -67,46 +67,46 @@ Welcome to WingTechBot MK3! We're excited that you want to contribute. This guid
 
 1. **Create a Branch**
 
-   ```bash
-   git checkout -b feature/your-amazing-feature
-   ```
+    ```bash
+    git checkout -b feature/your-amazing-feature
+    ```
 
 2. **Make Your Changes**
-   - Follow the coding standards below
-   - Add tests for new functionality
-   - Update documentation if needed
+    - Follow the coding standards below
+    - Add tests for new functionality
+    - Update documentation if needed
 
 3. **Test Your Changes**
 
-   ```bash
-   pnpm test
-   pnpm lint
-   pnpm format:check
-   ```
+    ```bash
+    pnpm test
+    pnpm lint
+    pnpm format:check
+    ```
 
 4. **Commit Your Changes**
 
-   ```bash
-   git add .
-   git commit -m "feat: add amazing new feature"
-   ```
+    ```bash
+    git add .
+    git commit -m "feat: add amazing new feature"
+    ```
 
-   Use conventional commit format:
-   - `feat:` - New features
-   - `fix:` - Bug fixes
-   - `docs:` - Documentation changes
-   - `style:` - Code style changes
-   - `refactor:` - Code refactoring
-   - `test:` - Test additions/changes
-   - `chore:` - Build process or auxiliary tool changes
+    Use conventional commit format:
+    - `feat:` - New features
+    - `fix:` - Bug fixes
+    - `docs:` - Documentation changes
+    - `style:` - Code style changes
+    - `refactor:` - Code refactoring
+    - `test:` - Test additions/changes
+    - `chore:` - Build process or auxiliary tool changes
 
 5. **Push and Create PR**
 
-   ```bash
-   git push origin feature/your-amazing-feature
-   ```
+    ```bash
+    git push origin feature/your-amazing-feature
+    ```
 
-   Then create a Pull Request on GitHub.
+    Then create a Pull Request on GitHub.
 
 ## 🎯 Coding Standards
 

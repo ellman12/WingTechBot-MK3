@@ -171,63 +171,50 @@ export const GuildCard = {
 ```typescript
 // hooks/api/useGuilds.ts
 export function useGuilds() {
-  const { data, error, isLoading, refetch } = useQuery({
-    queryKey: ['guilds'],
-    queryFn: async () => {
-      const response = await fetch('/api/guilds');
-      if (!response.ok) throw new Error('Failed to fetch guilds');
-      return response.json();
-    },
-  });
+    const { data, error, isLoading, refetch } = useQuery({
+        queryKey: ["guilds"],
+        queryFn: async () => {
+            const response = await fetch("/api/guilds");
+            if (!response.ok) throw new Error("Failed to fetch guilds");
+            return response.json();
+        },
+    });
 
-  return {
-    guilds: data?.data || [],
-    error,
-    isLoading,
-    refetch,
-  };
+    return { guilds: data?.data || [], error, isLoading, refetch };
 }
 
 // hooks/api/useGuildMutations.ts
 export function useGuildMutations() {
-  const queryClient = useQueryClient();
+    const queryClient = useQueryClient();
 
-  const createGuild = useMutation({
-    mutationFn: async (guildData: CreateGuildData) => {
-      const response = await fetch('/api/guilds', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(guildData),
-      });
-      if (!response.ok) throw new Error('Failed to create guild');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['guilds'] });
-      toast.success('Guild created successfully!');
-    },
-    onError: error => {
-      toast.error(`Failed to create guild: ${error.message}`);
-    },
-  });
+    const createGuild = useMutation({
+        mutationFn: async (guildData: CreateGuildData) => {
+            const response = await fetch("/api/guilds", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(guildData) });
+            if (!response.ok) throw new Error("Failed to create guild");
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["guilds"] });
+            toast.success("Guild created successfully!");
+        },
+        onError: error => {
+            toast.error(`Failed to create guild: ${error.message}`);
+        },
+    });
 
-  const updateGuild = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateGuildData }) => {
-      const response = await fetch(`/api/guilds/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to update guild');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['guilds'] });
-      toast.success('Guild updated successfully!');
-    },
-  });
+    const updateGuild = useMutation({
+        mutationFn: async ({ id, data }: { id: string; data: UpdateGuildData }) => {
+            const response = await fetch(`/api/guilds/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+            if (!response.ok) throw new Error("Failed to update guild");
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["guilds"] });
+            toast.success("Guild updated successfully!");
+        },
+    });
 
-  return { createGuild, updateGuild };
+    return { createGuild, updateGuild };
 }
 ```
 
@@ -236,38 +223,24 @@ export function useGuildMutations() {
 ```typescript
 // hooks/form/useGuildForm.ts
 export function useGuildForm(initialData?: Partial<Guild>) {
-  const form = useForm<GuildFormData>({
-    defaultValues: {
-      name: initialData?.name || '',
-      memberCount: initialData?.memberCount || 0,
-    },
-    resolver: zodResolver(guildFormSchema),
-  });
+    const form = useForm<GuildFormData>({ defaultValues: { name: initialData?.name || "", memberCount: initialData?.memberCount || 0 }, resolver: zodResolver(guildFormSchema) });
 
-  const { createGuild, updateGuild } = useGuildMutations();
+    const { createGuild, updateGuild } = useGuildMutations();
 
-  const onSubmit = async (data: GuildFormData) => {
-    try {
-      if (initialData?.id) {
-        await updateGuild.mutateAsync({ id: initialData.id, data });
-      } else {
-        await createGuild.mutateAsync({
-          ...data,
-          id: generateGuildId(),
-          ownerId: getCurrentUserId(),
-        });
-      }
-      form.reset();
-    } catch (error) {
-      // Error handling is done in mutations
-    }
-  };
+    const onSubmit = async (data: GuildFormData) => {
+        try {
+            if (initialData?.id) {
+                await updateGuild.mutateAsync({ id: initialData.id, data });
+            } else {
+                await createGuild.mutateAsync({ ...data, id: generateGuildId(), ownerId: getCurrentUserId() });
+            }
+            form.reset();
+        } catch (error) {
+            // Error handling is done in mutations
+        }
+    };
 
-  return {
-    form,
-    onSubmit: form.handleSubmit(onSubmit),
-    isSubmitting: createGuild.isPending || updateGuild.isPending,
-  };
+    return { form, onSubmit: form.handleSubmit(onSubmit), isSubmitting: createGuild.isPending || updateGuild.isPending };
 }
 ```
 
@@ -276,41 +249,41 @@ export function useGuildForm(initialData?: Partial<Guild>) {
 ```typescript
 // hooks/ui/useModal.ts
 export function useModal() {
-  const [isOpen, setIsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
 
-  const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
-  const toggle = useCallback(() => setIsOpen(prev => !prev), []);
+    const open = useCallback(() => setIsOpen(true), []);
+    const close = useCallback(() => setIsOpen(false), []);
+    const toggle = useCallback(() => setIsOpen(prev => !prev), []);
 
-  return { isOpen, open, close, toggle };
+    return { isOpen, open, close, toggle };
 }
 
 // hooks/ui/useLocalStorage.ts
 export function useLocalStorage<T>(key: string, initialValue: T) {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error);
-      return initialValue;
-    }
-  });
+    const [storedValue, setStoredValue] = useState<T>(() => {
+        try {
+            const item = window.localStorage.getItem(key);
+            return item ? JSON.parse(item) : initialValue;
+        } catch (error) {
+            console.error(`Error reading localStorage key "${key}":`, error);
+            return initialValue;
+        }
+    });
 
-  const setValue = useCallback(
-    (value: T | ((val: T) => T)) => {
-      try {
-        const valueToStore = value instanceof Function ? value(storedValue) : value;
-        setStoredValue(valueToStore);
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
-      } catch (error) {
-        console.error(`Error setting localStorage key "${key}":`, error);
-      }
-    },
-    [key, storedValue]
-  );
+    const setValue = useCallback(
+        (value: T | ((val: T) => T)) => {
+            try {
+                const valueToStore = value instanceof Function ? value(storedValue) : value;
+                setStoredValue(valueToStore);
+                window.localStorage.setItem(key, JSON.stringify(valueToStore));
+            } catch (error) {
+                console.error(`Error setting localStorage key "${key}":`, error);
+            }
+        },
+        [key, storedValue]
+    );
 
-  return [storedValue, setValue] as const;
+    return [storedValue, setValue] as const;
 }
 ```
 
@@ -321,70 +294,48 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
 ```typescript
 // stores/guildStore.ts
 interface GuildStore {
-  // State
-  selectedGuild: Guild | null;
-  filters: GuildFilters;
+    // State
+    selectedGuild: Guild | null;
+    filters: GuildFilters;
 
-  // Actions
-  selectGuild: (guild: Guild | null) => void;
-  setFilters: (filters: Partial<GuildFilters>) => void;
-  resetFilters: () => void;
+    // Actions
+    selectGuild: (guild: Guild | null) => void;
+    setFilters: (filters: Partial<GuildFilters>) => void;
+    resetFilters: () => void;
 }
 
 export const useGuildStore = create<GuildStore>(set => ({
-  selectedGuild: null,
-  filters: {
-    search: '',
-    isActive: true,
-    sortBy: 'name',
-    sortOrder: 'asc',
-  },
+    selectedGuild: null,
+    filters: { search: "", isActive: true, sortBy: "name", sortOrder: "asc" },
 
-  selectGuild: guild => set({ selectedGuild: guild }),
+    selectGuild: guild => set({ selectedGuild: guild }),
 
-  setFilters: newFilters =>
-    set(state => ({
-      filters: { ...state.filters, ...newFilters },
-    })),
+    setFilters: newFilters => set(state => ({ filters: { ...state.filters, ...newFilters } })),
 
-  resetFilters: () =>
-    set({
-      filters: {
-        search: '',
-        isActive: true,
-        sortBy: 'name',
-        sortOrder: 'asc',
-      },
-    }),
+    resetFilters: () => set({ filters: { search: "", isActive: true, sortBy: "name", sortOrder: "asc" } }),
 }));
 
 // stores/uiStore.ts
 interface UIStore {
-  theme: 'light' | 'dark';
-  sidebarOpen: boolean;
+    theme: "light" | "dark";
+    sidebarOpen: boolean;
 
-  toggleTheme: () => void;
-  setSidebarOpen: (open: boolean) => void;
+    toggleTheme: () => void;
+    setSidebarOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIStore>()(
-  persist(
-    set => ({
-      theme: 'light',
-      sidebarOpen: true,
+    persist(
+        set => ({
+            theme: "light",
+            sidebarOpen: true,
 
-      toggleTheme: () =>
-        set(state => ({
-          theme: state.theme === 'light' ? 'dark' : 'light',
-        })),
+            toggleTheme: () => set(state => ({ theme: state.theme === "light" ? "dark" : "light" })),
 
-      setSidebarOpen: open => set({ sidebarOpen: open }),
-    }),
-    {
-      name: 'ui-settings',
-      storage: createJSONStorage(() => localStorage),
-    }
-  )
+            setSidebarOpen: open => set({ sidebarOpen: open }),
+        }),
+        { name: "ui-settings", storage: createJSONStorage(() => localStorage) }
+    )
 );
 ```
 
@@ -394,38 +345,16 @@ export const useUIStore = create<UIStore>()(
 
 ```typescript
 // utils/cn.ts (class name utility)
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+    return twMerge(clsx(inputs));
 }
 
 // Design tokens in tailwind.config.js
 module.exports = {
-  theme: {
-    extend: {
-      colors: {
-        primary: {
-          50: '#eff6ff',
-          500: '#3b82f6',
-          900: '#1e3a8a',
-        },
-        gray: {
-          50: '#f9fafb',
-          500: '#6b7280',
-          900: '#111827',
-        },
-      },
-      fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-      },
-      spacing: {
-        '18': '4.5rem',
-        '88': '22rem',
-      },
-    },
-  },
+    theme: { extend: { colors: { primary: { 50: "#eff6ff", 500: "#3b82f6", 900: "#1e3a8a" }, gray: { 50: "#f9fafb", 500: "#6b7280", 900: "#111827" } }, fontFamily: { sans: ["Inter", "sans-serif"] }, spacing: { "18": "4.5rem", "88": "22rem" } } },
 };
 ```
 
@@ -691,37 +620,15 @@ export const VirtualizedGuildList = ({ guilds }: { guilds: Guild[] }) => {
 
 ```typescript
 // vite.config.ts
-import react from '@vitejs/plugin-react';
-import path from 'path';
-import { defineConfig } from 'vite';
+import react from "@vitejs/plugin-react";
+import path from "path";
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
-        },
-      },
-    },
-  },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-    },
-  },
+    plugins: [react()],
+    resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
+    build: { outDir: "dist", sourcemap: true, rollupOptions: { output: { manualChunks: { vendor: ["react", "react-dom"], ui: ["@radix-ui/react-dialog", "@radix-ui/react-dropdown-menu"] } } } },
+    server: { proxy: { "/api": { target: "http://localhost:3000", changeOrigin: true } } },
 });
 ```
 
@@ -729,11 +636,7 @@ export default defineConfig({
 
 ```typescript
 // src/config/env.ts
-const env = {
-  API_URL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
-  APP_ENV: import.meta.env.MODE,
-  ENABLE_ANALYTICS: import.meta.env.VITE_ENABLE_ANALYTICS === 'true',
-} as const;
+const env = { API_URL: import.meta.env.VITE_API_URL || "http://localhost:3000", APP_ENV: import.meta.env.MODE, ENABLE_ANALYTICS: import.meta.env.VITE_ENABLE_ANALYTICS === "true" } as const;
 
 export default env;
 ```

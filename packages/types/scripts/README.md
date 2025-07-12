@@ -34,18 +34,13 @@ This will:
 For each TypeScript file `src/api/v1/guilds.ts`, the script generates:
 
 ```json
-{
-  "./api/v1/guilds": {
-    "types": "./dist/api/v1/guilds.d.ts",
-    "import": "./dist/api/v1/guilds.js"
-  }
-}
+{ "./api/v1/guilds": { "types": "./dist/api/v1/guilds.d.ts", "import": "./dist/api/v1/guilds.js" } }
 ```
 
 This allows consumers to import like:
 
 ```typescript
-import { Guild } from '@wingtechbot-mk3/types/api/v1/guilds';
+import { Guild } from "@wingtechbot-mk3/types/api/v1/guilds";
 ```
 
 ## Manual execution

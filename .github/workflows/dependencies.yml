@@ -1,113 +1,113 @@
 name: Update Dependencies
 
 on:
-  schedule:
-    # Run every Monday at 9 AM UTC
-    - cron: '0 9 * * 1'
-  workflow_dispatch: # Allow manual trigger
+    schedule:
+        # Run every Monday at 9 AM UTC
+        - cron: "0 9 * * 1"
+    workflow_dispatch: # Allow manual trigger
 
 env:
-  NODE_VERSION: '18'
-  PNPM_VERSION: '10'
+    NODE_VERSION: "18"
+    PNPM_VERSION: "10"
 
 jobs:
-  update-deps:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+    update-deps:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: write
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: ${{ env.PNPM_VERSION }}
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v2
+              with:
+                  version: ${{ env.PNPM_VERSION }}
 
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+            - name: Get pnpm store directory
+              shell: bash
+              run: |
+                  echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            - name: Setup pnpm cache
+              uses: actions/cache@v4
+              with:
+                  path: ${{ env.STORE_PATH }}
+                  key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pnpm-store-
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
 
-      - name: Check for outdated dependencies
-        id: check
-        run: |
-          OUTDATED=$(pnpm outdated --format json || echo "[]")
-          echo "outdated=$OUTDATED" >> $GITHUB_OUTPUT
+            - name: Check for outdated dependencies
+              id: check
+              run: |
+                  OUTDATED=$(pnpm outdated --format json || echo "[]")
+                  echo "outdated=$OUTDATED" >> $GITHUB_OUTPUT
 
-          # Count outdated packages
-          COUNT=$(echo "$OUTDATED" | jq length)
-          echo "count=$COUNT" >> $GITHUB_OUTPUT
+                  # Count outdated packages
+                  COUNT=$(echo "$OUTDATED" | jq length)
+                  echo "count=$COUNT" >> $GITHUB_OUTPUT
 
-      - name: Update dependencies
-        if: steps.check.outputs.count != '0'
-        run: |
-          # Update all dependencies to latest
-          pnpm update --latest
+            - name: Update dependencies
+              if: steps.check.outputs.count != '0'
+              run: |
+                  # Update all dependencies to latest
+                  pnpm update --latest
 
-          # Update lockfile
-          pnpm install
+                  # Update lockfile
+                  pnpm install
 
-      - name: Run tests after update
-        if: steps.check.outputs.count != '0'
-        run: |
-          pnpm test
-          pnpm lint
-          pnpm format:check:all
+            - name: Run tests after update
+              if: steps.check.outputs.count != '0'
+              run: |
+                  pnpm test
+                  pnpm lint
+                  pnpm format:check:all
 
-      - name: Create Pull Request
-        if: steps.check.outputs.count != '0'
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore(deps): update dependencies to latest versions'
-          title: '🔄 Update Dependencies'
-          body: |
-            ## 🔄 Dependency Updates
+            - name: Create Pull Request
+              if: steps.check.outputs.count != '0'
+              uses: peter-evans/create-pull-request@v5
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  commit-message: "chore(deps): update dependencies to latest versions"
+                  title: "🔄 Update Dependencies"
+                  body: |
+                      ## 🔄 Dependency Updates
 
-            This PR updates the following dependencies to their latest versions:
+                      This PR updates the following dependencies to their latest versions:
 
-            <details>
-            <summary>Updated Packages</summary>
+                      <details>
+                      <summary>Updated Packages</summary>
 
-            ```json
-            ${{ steps.check.outputs.outdated }}
-            ```
+                      ```json
+                      ${{ steps.check.outputs.outdated }}
+                      ```
 
-            </details>
+                      </details>
 
-            ## ✅ Checks Completed
+                      ## ✅ Checks Completed
 
-            - [x] All tests passing
-            - [x] Linting passed
-            - [x] Formatting checked
-            - [x] TypeScript compilation successful
+                      - [x] All tests passing
+                      - [x] Linting passed
+                      - [x] Formatting checked
+                      - [x] TypeScript compilation successful
 
-            ## 🚀 Ready to Merge
+                      ## 🚀 Ready to Merge
 
-            This PR is automatically generated and ready for review.
-          branch: chore/update-dependencies
-          delete-branch: true
-          labels: |
-            dependencies
-            automated
-          assignees: ${{ github.repository_owner }}
+                      This PR is automatically generated and ready for review.
+                  branch: chore/update-dependencies
+                  delete-branch: true
+                  labels: |
+                      dependencies
+                      automated
+                  assignees: ${{ github.repository_owner }}

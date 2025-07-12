@@ -44,19 +44,19 @@ mkdir -p src/infrastructure/http/api/v2
 Create `v2/schemas.ts`:
 
 ```typescript
-import { z } from 'zod';
+import { z } from "zod";
 
 // v2 might have enhanced Guild schema with new fields
 export const GuildV2Schema = z.object({
-  id: z.string(),
-  name: z.string(),
-  ownerId: z.string(),
-  memberCount: z.number(),
-  prefix: z.string(),
-  isActive: z.boolean(),
-  features: z.array(z.string()), // New in v2
-  createdAt: z.string(),
-  updatedAt: z.string(),
+    id: z.string(),
+    name: z.string(),
+    ownerId: z.string(),
+    memberCount: z.number(),
+    prefix: z.string(),
+    isActive: z.boolean(),
+    features: z.array(z.string()), // New in v2
+    createdAt: z.string(),
+    updatedAt: z.string(),
 });
 
 export type GuildV2 = z.infer<typeof GuildV2Schema>;
@@ -67,22 +67,22 @@ export type GuildV2 = z.infer<typeof GuildV2Schema>;
 Create `v2/controllers.ts`:
 
 ```typescript
-import type { RequestHandler } from 'express';
-import type { Kysely } from 'kysely';
+import type { RequestHandler } from "express";
+import type { Kysely } from "kysely";
 
-import type { DB } from '../../../../generated/database/types.js';
+import type { DB } from "../../../../generated/database/types.js";
 
 // Transform domain entity to v2 API representation
 const transformGuildToV2 = (guild: Guild): GuildV2 => ({
-  // ... existing fields ...
-  features: guild.features || [], // New field in v2
+    // ... existing fields ...
+    features: guild.features || [], // New field in v2
 });
 
 export const getGuildsV2Handler =
-  (db: Kysely<DB>): RequestHandler =>
-  async (_req, res) => {
-    // Implementation with v2 transformations
-  };
+    (db: Kysely<DB>): RequestHandler =>
+    async (_req, res) => {
+        // Implementation with v2 transformations
+    };
 ```
 
 ### 4. Configure Routes
@@ -90,23 +90,20 @@ export const getGuildsV2Handler =
 Create `v2/routes.ts`:
 
 ```typescript
-import type { ApiVersionConfiguration } from '../types.js';
+import type { ApiVersionConfiguration } from "../types.js";
 
 export const createV2ApiConfiguration = (db: Kysely<DB>): ApiVersionConfiguration => ({
-  config: {
-    version: 'v2',
-    basePath: '/api/v2',
-  },
-  groups: [
-    {
-      name: 'guilds',
-      basePath: '/guilds',
-      tags: ['Guilds'],
-      routes: [
-        // Define v2 routes here
-      ],
-    },
-  ],
+    config: { version: "v2", basePath: "/api/v2" },
+    groups: [
+        {
+            name: "guilds",
+            basePath: "/guilds",
+            tags: ["Guilds"],
+            routes: [
+                // Define v2 routes here
+            ],
+        },
+    ],
 });
 ```
 
@@ -115,7 +112,7 @@ export const createV2ApiConfiguration = (db: Kysely<DB>): ApiVersionConfiguratio
 Update `VersionedApiRouter.ts`:
 
 ```typescript
-import { createV2ApiConfiguration } from './v2/routes.js';
+import { createV2ApiConfiguration } from "./v2/routes.js";
 
 // In setupRoutes method:
 const v2Config = createV2ApiConfiguration(this.db);
@@ -129,14 +126,8 @@ Mark a version as deprecated:
 
 ```typescript
 export const createV1ApiConfiguration = (db: Kysely<DB>): ApiVersionConfiguration => ({
-  config: {
-    version: 'v1',
-    basePath: '/api/v1',
-    deprecated: true,
-    deprecationDate: new Date('2024-01-01'),
-    sunsetDate: new Date('2024-06-01'),
-  },
-  // ... rest of config
+    config: { version: "v1", basePath: "/api/v1", deprecated: true, deprecationDate: new Date("2024-01-01"), sunsetDate: new Date("2024-06-01") },
+    // ... rest of config
 });
 ```
 

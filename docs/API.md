@@ -65,20 +65,7 @@ Authorization: Bearer <token>
 **Response:**
 
 ```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "123456789012345678",
-      "name": "My Discord Server",
-      "ownerId": "987654321098765432",
-      "memberCount": 150,
-      "isActive": true,
-      "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-01T00:00:00.000Z"
-    }
-  ]
-}
+{ "success": true, "data": [{ "id": "123456789012345678", "name": "My Discord Server", "ownerId": "987654321098765432", "memberCount": 150, "isActive": true, "createdAt": "2024-01-01T00:00:00.000Z", "updatedAt": "2024-01-01T00:00:00.000Z" }] }
 ```
 
 ### Get Guild by ID
@@ -95,18 +82,7 @@ Authorization: Bearer <token>
 **Response:**
 
 ```json
-{
-  "success": true,
-  "data": {
-    "id": "123456789012345678",
-    "name": "My Discord Server",
-    "ownerId": "987654321098765432",
-    "memberCount": 150,
-    "isActive": true,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  }
-}
+{ "success": true, "data": { "id": "123456789012345678", "name": "My Discord Server", "ownerId": "987654321098765432", "memberCount": 150, "isActive": true, "createdAt": "2024-01-01T00:00:00.000Z", "updatedAt": "2024-01-01T00:00:00.000Z" } }
 ```
 
 ### Create Guild
@@ -127,18 +103,7 @@ Content-Type: application/json
 **Response:**
 
 ```json
-{
-  "success": true,
-  "data": {
-    "id": "123456789012345678",
-    "name": "My Discord Server",
-    "ownerId": "987654321098765432",
-    "memberCount": 150,
-    "isActive": true,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  }
-}
+{ "success": true, "data": { "id": "123456789012345678", "name": "My Discord Server", "ownerId": "987654321098765432", "memberCount": 150, "isActive": true, "createdAt": "2024-01-01T00:00:00.000Z", "updatedAt": "2024-01-01T00:00:00.000Z" } }
 ```
 
 ### Update Guild
@@ -201,10 +166,7 @@ GET /health
 **Response:**
 
 ```json
-{
-  "status": "ok",
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+{ "status": "ok", "timestamp": "2024-01-01T00:00:00.000Z" }
 ```
 
 ### Detailed Health Check
@@ -218,26 +180,10 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "status": "ok",
-  "timestamp": "2024-01-01T00:00:00.000Z",
-  "services": {
-    "database": {
-      "status": "ok",
-      "responseTime": "5ms"
-    },
-    "discord": {
-      "status": "ok",
-      "connected": true,
-      "guilds": 15
-    }
-  },
-  "system": {
-    "uptime": "24h 30m 15s",
-    "memory": {
-      "used": "125MB",
-      "total": "512MB"
-    }
-  }
+    "status": "ok",
+    "timestamp": "2024-01-01T00:00:00.000Z",
+    "services": { "database": { "status": "ok", "responseTime": "5ms" }, "discord": { "status": "ok", "connected": true, "guilds": 15 } },
+    "system": { "uptime": "24h 30m 15s", "memory": { "used": "125MB", "total": "512MB" } }
 }
 ```
 
@@ -268,9 +214,9 @@ Returns Prometheus-formatted metrics for monitoring.
 
 - **Rate Limit**: 100 requests per 15 minutes per IP
 - **Headers**:
-  - `X-RateLimit-Limit`: Total requests allowed
-  - `X-RateLimit-Remaining`: Requests remaining
-  - `X-RateLimit-Reset`: Time when limit resets
+    - `X-RateLimit-Limit`: Total requests allowed
+    - `X-RateLimit-Remaining`: Requests remaining
+    - `X-RateLimit-Reset`: Time when limit resets
 
 ## 📖 OpenAPI Documentation
 
@@ -301,69 +247,54 @@ curl -X POST \
 ```javascript
 // API client helper
 class ApiClient {
-  constructor(baseUrl, token) {
-    this.baseUrl = baseUrl;
-    this.token = token;
-  }
-
-  async request(endpoint, options = {}) {
-    const url = `${this.baseUrl}${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error?.message || 'API request failed');
+    constructor(baseUrl, token) {
+        this.baseUrl = baseUrl;
+        this.token = token;
     }
 
-    return data;
-  }
+    async request(endpoint, options = {}) {
+        const url = `${this.baseUrl}${endpoint}`;
+        const response = await fetch(url, { ...options, headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json", ...options.headers } });
 
-  // Guild methods
-  async getGuilds() {
-    return this.request('/api/guilds');
-  }
+        const data = await response.json();
 
-  async getGuild(id) {
-    return this.request(`/api/guilds/${id}`);
-  }
+        if (!response.ok) {
+            throw new Error(data.error?.message || "API request failed");
+        }
 
-  async createGuild(guildData) {
-    return this.request('/api/guilds', {
-      method: 'POST',
-      body: JSON.stringify(guildData),
-    });
-  }
+        return data;
+    }
 
-  async updateGuild(id, updateData) {
-    return this.request(`/api/guilds/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updateData),
-    });
-  }
+    // Guild methods
+    async getGuilds() {
+        return this.request("/api/guilds");
+    }
 
-  async deleteGuild(id) {
-    return this.request(`/api/guilds/${id}`, {
-      method: 'DELETE',
-    });
-  }
+    async getGuild(id) {
+        return this.request(`/api/guilds/${id}`);
+    }
+
+    async createGuild(guildData) {
+        return this.request("/api/guilds", { method: "POST", body: JSON.stringify(guildData) });
+    }
+
+    async updateGuild(id, updateData) {
+        return this.request(`/api/guilds/${id}`, { method: "PUT", body: JSON.stringify(updateData) });
+    }
+
+    async deleteGuild(id) {
+        return this.request(`/api/guilds/${id}`, { method: "DELETE" });
+    }
 }
 
 // Usage
-const api = new ApiClient('http://localhost:3000', 'your-jwt-token');
+const api = new ApiClient("http://localhost:3000", "your-jwt-token");
 
 try {
-  const guilds = await api.getGuilds();
-  console.log('Guilds:', guilds.data);
+    const guilds = await api.getGuilds();
+    console.log("Guilds:", guilds.data);
 } catch (error) {
-  console.error('API Error:', error.message);
+    console.error("API Error:", error.message);
 }
 ```
 
@@ -424,17 +355,17 @@ GET /api/guilds?isActive=true&memberCount[gte]=100
 
 ```javascript
 async function handleApiCall() {
-  try {
-    const response = await api.getGuilds();
-    return response.data;
-  } catch (error) {
-    if (error.code === 'RATE_LIMITED') {
-      // Wait and retry
-      await new Promise(resolve => setTimeout(resolve, 60000));
-      return handleApiCall();
+    try {
+        const response = await api.getGuilds();
+        return response.data;
+    } catch (error) {
+        if (error.code === "RATE_LIMITED") {
+            // Wait and retry
+            await new Promise(resolve => setTimeout(resolve, 60000));
+            return handleApiCall();
+        }
+        throw error;
     }
-    throw error;
-  }
 }
 ```
 

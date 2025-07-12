@@ -106,21 +106,21 @@ The innermost layer containing pure business logic:
 ```typescript
 // Example: Guild entity
 export interface Guild {
-  readonly id: string;
-  readonly name: string;
-  readonly ownerId: string;
-  readonly memberCount: number;
-  readonly isActive: boolean;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
+    readonly id: string;
+    readonly name: string;
+    readonly ownerId: string;
+    readonly memberCount: number;
+    readonly isActive: boolean;
+    readonly createdAt: Date;
+    readonly updatedAt: Date;
 }
 
 // Example: Repository port
 export interface GuildRepository {
-  findById(id: string): Promise<Guild | null>;
-  create(guild: CreateGuildData): Promise<Guild>;
-  update(id: string, data: UpdateGuildData): Promise<Guild>;
-  delete(id: string): Promise<void>;
+    findById(id: string): Promise<Guild | null>;
+    create(guild: CreateGuildData): Promise<Guild>;
+    update(id: string, data: UpdateGuildData): Promise<Guild>;
+    delete(id: string): Promise<void>;
 }
 ```
 
@@ -131,24 +131,24 @@ Contains application-specific business rules and orchestrates domain objects:
 ```typescript
 // Example: Use case
 export class CreateGuildUseCase {
-  constructor(
-    private readonly guildRepository: GuildRepository,
-    private readonly logger: Logger
-  ) {}
+    constructor(
+        private readonly guildRepository: GuildRepository,
+        private readonly logger: Logger
+    ) {}
 
-  async execute(data: CreateGuildData): Promise<Guild> {
-    // Validation and business logic
-    const existingGuild = await this.guildRepository.findById(data.id);
-    if (existingGuild) {
-      throw new Error('Guild already exists');
+    async execute(data: CreateGuildData): Promise<Guild> {
+        // Validation and business logic
+        const existingGuild = await this.guildRepository.findById(data.id);
+        if (existingGuild) {
+            throw new Error("Guild already exists");
+        }
+
+        // Create guild
+        const guild = await this.guildRepository.create(data);
+        this.logger.info(`Guild created: ${guild.name}`);
+
+        return guild;
     }
-
-    // Create guild
-    const guild = await this.guildRepository.create(data);
-    this.logger.info(`Guild created: ${guild.name}`);
-
-    return guild;
-  }
 }
 ```
 
@@ -159,19 +159,15 @@ Implements the ports defined in the core layer:
 ```typescript
 // Example: Database adapter
 export class KyselyGuildRepository implements GuildRepository {
-  constructor(private readonly db: Kysely<DB>) {}
+    constructor(private readonly db: Kysely<DB>) {}
 
-  async findById(id: string): Promise<Guild | null> {
-    const result = await this.db
-      .selectFrom('guilds')
-      .selectAll()
-      .where('id', '=', id)
-      .executeTakeFirst();
+    async findById(id: string): Promise<Guild | null> {
+        const result = await this.db.selectFrom("guilds").selectAll().where("id", "=", id).executeTakeFirst();
 
-    return result ? this.mapToEntity(result) : null;
-  }
+        return result ? this.mapToEntity(result) : null;
+    }
 
-  // ... other implementations
+    // ... other implementations
 }
 ```
 
@@ -182,19 +178,19 @@ Contains framework-specific code and configuration:
 ```typescript
 // Example: Express controller
 export class GuildController {
-  constructor(
-    private readonly createGuildUseCase: CreateGuildUseCase,
-    private readonly getGuildUseCase: GetGuildUseCase
-  ) {}
+    constructor(
+        private readonly createGuildUseCase: CreateGuildUseCase,
+        private readonly getGuildUseCase: GetGuildUseCase
+    ) {}
 
-  async createGuild(req: Request, res: Response): Promise<void> {
-    try {
-      const guild = await this.createGuildUseCase.execute(req.body);
-      res.status(201).json(guild);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
+    async createGuild(req: Request, res: Response): Promise<void> {
+        try {
+            const guild = await this.createGuildUseCase.execute(req.body);
+            res.status(201).json(guild);
+        } catch (error) {
+            res.status(400).json({ error: error.message });
+        }
     }
-  }
 }
 ```
 
@@ -262,36 +258,36 @@ Using Zustand for predictable state management:
 ```typescript
 // Example: Guild store
 interface GuildStore {
-  guilds: Guild[];
-  selectedGuild: Guild | null;
-  isLoading: boolean;
-  error: string | null;
+    guilds: Guild[];
+    selectedGuild: Guild | null;
+    isLoading: boolean;
+    error: string | null;
 
-  // Actions
-  fetchGuilds: () => Promise<void>;
-  selectGuild: (guild: Guild) => void;
-  createGuild: (data: CreateGuildData) => Promise<void>;
-  updateGuild: (id: string, data: UpdateGuildData) => Promise<void>;
-  deleteGuild: (id: string) => Promise<void>;
+    // Actions
+    fetchGuilds: () => Promise<void>;
+    selectGuild: (guild: Guild) => void;
+    createGuild: (data: CreateGuildData) => Promise<void>;
+    updateGuild: (id: string, data: UpdateGuildData) => Promise<void>;
+    deleteGuild: (id: string) => Promise<void>;
 }
 
 export const useGuildStore = create<GuildStore>((set, get) => ({
-  guilds: [],
-  selectedGuild: null,
-  isLoading: false,
-  error: null,
+    guilds: [],
+    selectedGuild: null,
+    isLoading: false,
+    error: null,
 
-  fetchGuilds: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const guilds = await guildApi.getGuilds();
-      set({ guilds, isLoading: false });
-    } catch (error) {
-      set({ error: error.message, isLoading: false });
-    }
-  },
+    fetchGuilds: async () => {
+        set({ isLoading: true, error: null });
+        try {
+            const guilds = await guildApi.getGuilds();
+            set({ guilds, isLoading: false });
+        } catch (error) {
+            set({ error: error.message, isLoading: false });
+        }
+    },
 
-  // ... other actions
+    // ... other actions
 }));
 ```
 
@@ -369,49 +365,36 @@ Using a simple dependency injection pattern:
 ```typescript
 // Container setup
 export class DIContainer {
-  private services = new Map<string, any>();
+    private services = new Map<string, any>();
 
-  register<T>(key: string, factory: () => T): void {
-    this.services.set(key, factory);
-  }
-
-  resolve<T>(key: string): T {
-    const factory = this.services.get(key);
-    if (!factory) {
-      throw new Error(`Service ${key} not registered`);
+    register<T>(key: string, factory: () => T): void {
+        this.services.set(key, factory);
     }
-    return factory();
-  }
+
+    resolve<T>(key: string): T {
+        const factory = this.services.get(key);
+        if (!factory) {
+            throw new Error(`Service ${key} not registered`);
+        }
+        return factory();
+    }
 }
 
 // Service registration
 const container = new DIContainer();
 
 // Infrastructure
-container.register('database', () => createDatabaseConnection());
-container.register('logger', () => createLogger());
+container.register("database", () => createDatabaseConnection());
+container.register("logger", () => createLogger());
 
 // Repositories
-container.register(
-  'guildRepository',
-  () => new KyselyGuildRepository(container.resolve('database'))
-);
+container.register("guildRepository", () => new KyselyGuildRepository(container.resolve("database")));
 
 // Use Cases
-container.register(
-  'createGuildUseCase',
-  () => new CreateGuildUseCase(container.resolve('guildRepository'), container.resolve('logger'))
-);
+container.register("createGuildUseCase", () => new CreateGuildUseCase(container.resolve("guildRepository"), container.resolve("logger")));
 
 // Controllers
-container.register(
-  'guildController',
-  () =>
-    new GuildController(
-      container.resolve('createGuildUseCase'),
-      container.resolve('getGuildUseCase')
-    )
-);
+container.register("guildController", () => new GuildController(container.resolve("createGuildUseCase"), container.resolve("getGuildUseCase")));
 ```
 
 ## 📊 Database Architecture
@@ -458,22 +441,22 @@ CREATE INDEX idx_guild_members_user_id ON guild_members(user_id);
 ```typescript
 // Example migration
 export const migration_001_create_guilds = {
-  up: async (db: Kysely<any>) => {
-    await db.schema
-      .createTable('guilds')
-      .addColumn('id', 'varchar(20)', col => col.primaryKey())
-      .addColumn('name', 'varchar(255)', col => col.notNull())
-      .addColumn('owner_id', 'varchar(20)', col => col.notNull())
-      .addColumn('member_count', 'integer', col => col.defaultTo(0))
-      .addColumn('is_active', 'boolean', col => col.defaultTo(true))
-      .addColumn('created_at', 'timestamp', col => col.defaultTo(sql`CURRENT_TIMESTAMP`))
-      .addColumn('updated_at', 'timestamp', col => col.defaultTo(sql`CURRENT_TIMESTAMP`))
-      .execute();
-  },
+    up: async (db: Kysely<any>) => {
+        await db.schema
+            .createTable("guilds")
+            .addColumn("id", "varchar(20)", col => col.primaryKey())
+            .addColumn("name", "varchar(255)", col => col.notNull())
+            .addColumn("owner_id", "varchar(20)", col => col.notNull())
+            .addColumn("member_count", "integer", col => col.defaultTo(0))
+            .addColumn("is_active", "boolean", col => col.defaultTo(true))
+            .addColumn("created_at", "timestamp", col => col.defaultTo(sql`CURRENT_TIMESTAMP`))
+            .addColumn("updated_at", "timestamp", col => col.defaultTo(sql`CURRENT_TIMESTAMP`))
+            .execute();
+    },
 
-  down: async (db: Kysely<any>) => {
-    await db.schema.dropTable('guilds').execute();
-  },
+    down: async (db: Kysely<any>) => {
+        await db.schema.dropTable("guilds").execute();
+    },
 };
 ```
 
@@ -500,65 +483,56 @@ tests/
 
 ```typescript
 // Unit test - Domain service
-describe('GuildService', () => {
-  let guildService: GuildService;
-  let mockRepository: jest.Mocked<GuildRepository>;
+describe("GuildService", () => {
+    let guildService: GuildService;
+    let mockRepository: jest.Mocked<GuildRepository>;
 
-  beforeEach(() => {
-    mockRepository = {
-      findById: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    };
-    guildService = new GuildService(mockRepository);
-  });
-
-  describe('createGuild', () => {
-    it('should create a guild with valid data', async () => {
-      // Arrange
-      const guildData = { id: '123', name: 'Test Guild', ownerId: '456' };
-      mockRepository.create.mockResolvedValue(guildData as Guild);
-
-      // Act
-      const result = await guildService.createGuild(guildData);
-
-      // Assert
-      expect(result).toEqual(guildData);
-      expect(mockRepository.create).toHaveBeenCalledWith(guildData);
+    beforeEach(() => {
+        mockRepository = { findById: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() };
+        guildService = new GuildService(mockRepository);
     });
-  });
+
+    describe("createGuild", () => {
+        it("should create a guild with valid data", async () => {
+            // Arrange
+            const guildData = { id: "123", name: "Test Guild", ownerId: "456" };
+            mockRepository.create.mockResolvedValue(guildData as Guild);
+
+            // Act
+            const result = await guildService.createGuild(guildData);
+
+            // Assert
+            expect(result).toEqual(guildData);
+            expect(mockRepository.create).toHaveBeenCalledWith(guildData);
+        });
+    });
 });
 
 // Integration test - API endpoint
-describe('POST /api/guilds', () => {
-  let app: Express;
-  let db: Kysely<DB>;
+describe("POST /api/guilds", () => {
+    let app: Express;
+    let db: Kysely<DB>;
 
-  beforeAll(async () => {
-    db = await createTestDatabase();
-    app = createTestApp(db);
-  });
+    beforeAll(async () => {
+        db = await createTestDatabase();
+        app = createTestApp(db);
+    });
 
-  afterAll(async () => {
-    await db.destroy();
-  });
+    afterAll(async () => {
+        await db.destroy();
+    });
 
-  beforeEach(async () => {
-    await clearDatabase(db);
-  });
+    beforeEach(async () => {
+        await clearDatabase(db);
+    });
 
-  it('should create a guild', async () => {
-    const guildData = {
-      id: '123456789',
-      name: 'Test Guild',
-      ownerId: '987654321',
-    };
+    it("should create a guild", async () => {
+        const guildData = { id: "123456789", name: "Test Guild", ownerId: "987654321" };
 
-    const response = await request(app).post('/api/guilds').send(guildData).expect(201);
+        const response = await request(app).post("/api/guilds").send(guildData).expect(201);
 
-    expect(response.body).toMatchObject(guildData);
-  });
+        expect(response.body).toMatchObject(guildData);
+    });
 });
 ```
 
@@ -616,19 +590,14 @@ describe('POST /api/guilds', () => {
 
 ```typescript
 interface LogContext {
-  userId?: string;
-  guildId?: string;
-  action: string;
-  metadata?: Record<string, any>;
+    userId?: string;
+    guildId?: string;
+    action: string;
+    metadata?: Record<string, any>;
 }
 
 // Structured logging
-logger.info('Guild created', {
-  guildId: guild.id,
-  guildName: guild.name,
-  ownerId: guild.ownerId,
-  action: 'guild.create',
-});
+logger.info("Guild created", { guildId: guild.id, guildName: guild.name, ownerId: guild.ownerId, action: "guild.create" });
 ```
 
 ### Metrics Collection
@@ -642,20 +611,12 @@ logger.info('Guild created', {
 
 ```typescript
 // Health check endpoint
-app.get('/health', async (req, res) => {
-  const health = {
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    services: {
-      database: await checkDatabase(),
-      discord: checkDiscordBot(),
-      memory: process.memoryUsage(),
-    },
-  };
+app.get("/health", async (req, res) => {
+    const health = { status: "ok", timestamp: new Date().toISOString(), services: { database: await checkDatabase(), discord: checkDiscordBot(), memory: process.memoryUsage() } };
 
-  const isHealthy = Object.values(health.services).every(service => service.status === 'ok');
+    const isHealthy = Object.values(health.services).every(service => service.status === "ok");
 
-  res.status(isHealthy ? 200 : 503).json(health);
+    res.status(isHealthy ? 200 : 503).json(health);
 });
 ```
 
