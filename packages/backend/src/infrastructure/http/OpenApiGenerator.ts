@@ -4,8 +4,8 @@ import type { Application } from "express";
 import swaggerUi from "swagger-ui-express";
 import { z } from "zod/v4";
 
-import { VersionedRouteRegistry } from "./api/VersionedRouteRegistry.js";
-import type { VersionedRouteRegistryEntry } from "./api/types.js";
+import { RouteRegistry } from "./api/RouteRegistry.js";
+import type { RouteRegistryEntry } from "./api/types.js";
 
 extendZodWithOpenApi(z);
 
@@ -14,10 +14,10 @@ type ZodSchemaType = unknown;
 type ZodCheck = { kind: string; value?: number; message?: string; inclusive?: boolean };
 type ZodDef = { typeName?: string; checks?: ZodCheck[]; minLength?: { value: number }; maxLength?: { value: number }; type?: unknown; values?: unknown[]; innerType?: unknown; defaultValue?: () => unknown; options?: unknown[] };
 
-export class VersionedOpenApiGenerator {
+export class OpenApiGenerator {
     public generateOpenApiSpec(): Record<string, unknown> {
-        const allRoutes = VersionedRouteRegistry.getAllRoutes();
-        const supportedVersions = VersionedRouteRegistry.getSupportedVersions();
+        const allRoutes = RouteRegistry.getAllRoutes();
+        const supportedVersions = RouteRegistry.getSupportedVersions();
 
         return {
             openapi: "3.0.3",
@@ -28,7 +28,7 @@ export class VersionedOpenApiGenerator {
                 contact: { name: "WingTechBot MK3", url: "https://github.com/ellman12/WingTechBot-MK3" },
                 license: { name: "ISC", url: "https://opensource.org/licenses/ISC" },
                 "x-api-versions": supportedVersions.map(version => {
-                    const config = VersionedRouteRegistry.getVersionConfig(version);
+                    const config = RouteRegistry.getVersionConfig(version);
                     return { version, basePath: config?.basePath, deprecated: config?.deprecated, deprecationDate: config?.deprecationDate?.toISOString(), sunsetDate: config?.sunsetDate?.toISOString() };
                 }),
             },
@@ -46,7 +46,7 @@ export class VersionedOpenApiGenerator {
         ];
     }
 
-    private generateTags(routes: VersionedRouteRegistryEntry[]): Array<Record<string, unknown>> {
+    private generateTags(routes: RouteRegistryEntry[]): Array<Record<string, unknown>> {
         const tagMap = new Map<string, { name: string; description?: string }>();
 
         routes.forEach(route => {
@@ -71,7 +71,7 @@ export class VersionedOpenApiGenerator {
         return Array.from(tagMap.values());
     }
 
-    private generatePaths(routes: VersionedRouteRegistryEntry[]): Record<string, Record<string, unknown>> {
+    private generatePaths(routes: RouteRegistryEntry[]): Record<string, Record<string, unknown>> {
         const paths: Record<string, Record<string, unknown>> = {};
 
         routes.forEach(route => {
@@ -86,7 +86,7 @@ export class VersionedOpenApiGenerator {
         return paths;
     }
 
-    private generateOperation(route: VersionedRouteRegistryEntry): Record<string, unknown> {
+    private generateOperation(route: RouteRegistryEntry): Record<string, unknown> {
         const operation: Record<string, unknown> = { summary: route.summary, tags: route.tags, responses: this.generateResponses(route), operationId: this.generateOperationId(route), parameters: [] };
 
         if (route.description) {
@@ -118,7 +118,7 @@ export class VersionedOpenApiGenerator {
         return operation;
     }
 
-    private generateOperationId(route: VersionedRouteRegistryEntry): string {
+    private generateOperationId(route: RouteRegistryEntry): string {
         const method = route.method;
         const pathParts = route.fullPath.split("/").filter(Boolean);
         const pathString = pathParts.map(part => part.replace(/[{}]/g, "").replace(/^:/, "")).join("_");
@@ -126,7 +126,7 @@ export class VersionedOpenApiGenerator {
         return `${method}_${pathString}_${route.version}`;
     }
 
-    private generateResponses(route: VersionedRouteRegistryEntry): Record<string, Record<string, unknown>> {
+    private generateResponses(route: RouteRegistryEntry): Record<string, Record<string, unknown>> {
         const responses: Record<string, Record<string, unknown>> = {
             "400": { description: "Bad Request", content: { "application/json": { schema: { $ref: "#/components/schemas/ApiError" } } } },
             "500": { description: "Internal Server Error", content: { "application/json": { schema: { $ref: "#/components/schemas/ApiError" } } } },
@@ -511,7 +511,7 @@ export class VersionedOpenApiGenerator {
         return { type: "object", properties: {}, additionalProperties: true };
     }
 
-    private generateComponents(routes: VersionedRouteRegistryEntry[]): Record<string, unknown> {
+    private generateComponents(routes: RouteRegistryEntry[]): Record<string, unknown> {
         const schemas: Record<string, Record<string, unknown>> = {
             ApiError: {
                 type: "object",
@@ -588,7 +588,7 @@ export class VersionedOpenApiGenerator {
 
     public setupSwaggerUI(app: Application): void {
         const openApiSpec = this.generateOpenApiSpec();
-        const supportedVersions = VersionedRouteRegistry.getSupportedVersions();
+        const supportedVersions = RouteRegistry.getSupportedVersions();
 
         // Serve the comprehensive OpenAPI spec as JSON
         app.get("/api/docs/openapi.json", (_req, res) => {
@@ -607,8 +607,7 @@ export class VersionedOpenApiGenerator {
         // Setup API version overview endpoint
         app.get("/api/versions", (_req, res) => {
             const versions = supportedVersions.map(version => {
-                const config = VersionedRouteRegistry.getVersionConfig(version);
-                // const routes = VersionedRouteRegistry.getVersionRoutes(version);
+                const config = RouteRegistry.getVersionConfig(version);
 
                 return {
                     version,
@@ -616,8 +615,8 @@ export class VersionedOpenApiGenerator {
                     deprecated: config?.deprecated,
                     deprecationDate: config?.deprecationDate?.toISOString(),
                     sunsetDate: config?.sunsetDate?.toISOString(),
-                    routeCount: VersionedRouteRegistry.getVersionRoutes(version).length,
-                    endpoints: VersionedRouteRegistry.getVersionRoutes(version).map(route => ({ method: route.method.toUpperCase(), path: route.fullPath, summary: route.summary, deprecated: route.deprecated })),
+                    routeCount: RouteRegistry.getVersionRoutes(version).length,
+                    endpoints: RouteRegistry.getVersionRoutes(version).map(route => ({ method: route.method.toUpperCase(), path: route.fullPath, summary: route.summary, deprecated: route.deprecated })),
                 };
             });
 
@@ -630,8 +629,8 @@ export class VersionedOpenApiGenerator {
         console.log("   🔍 Version Overview: http://localhost:3000/api/versions");
 
         supportedVersions.forEach(version => {
-            const versionConfig = VersionedRouteRegistry.getVersionConfig(version);
-            const routes = VersionedRouteRegistry.getVersionRoutes(version);
+            const versionConfig = RouteRegistry.getVersionConfig(version);
+            const routes = RouteRegistry.getVersionRoutes(version);
             console.log(`   📌 ${version.toUpperCase()}: ${routes.length} endpoints at ${versionConfig?.basePath}${versionConfig?.deprecated ? " (DEPRECATED)" : ""}`);
         });
     }
