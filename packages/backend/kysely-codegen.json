@@ -1,0 +1,9 @@
+{
+    "out": "./generated/database",
+    "dialect": "postgresql",
+    "connection": { "url": "env(DATABASE_URL)" },
+    "include": ["public"],
+    "exclude": ["information_schema", "pg_catalog"],
+    "case": "snake_case",
+    "migration": { "directory": "./database/migrations", "tableName": "kysely_migrations" }
+}

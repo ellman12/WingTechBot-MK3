@@ -1,74 +1,69 @@
-import { Kysely, PostgresDialect } from 'kysely';
-import { Pool } from 'pg';
+import { Kysely, PostgresDialect } from "kysely";
+import type { DB } from "kysely-codegen";
+import { Pool } from "pg";
 
-import type { DB } from '../../generated/database/types.js';
-import { PrismaClient } from '../../generated/prisma/index.js';
+// Private state using file-level constants
+let kyselyInstance: Kysely<DB> | null = null;
+let isConnected = false;
 
-export class DatabaseConnection {
-  private static instance: DatabaseConnection;
-  private readonly prisma: PrismaClient;
-  private readonly kysely: Kysely<DB>;
+// Private functions
+const createKyselyClient = (): Kysely<DB> => {
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-  private constructor() {
-    this.prisma = new PrismaClient({
-      log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
-    });
+    return new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
+};
 
-    // Create Kysely instance with PostgreSQL
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
+// Public interface - exported functions
+export const getKysely = (): Kysely<DB> => {
+    if (!kyselyInstance) {
+        kyselyInstance = createKyselyClient();
+    }
+    return kyselyInstance;
+};
 
-    this.kysely = new Kysely<DB>({
-      dialect: new PostgresDialect({
-        pool,
-      }),
-    });
-  }
-
-  public static getInstance(): DatabaseConnection {
-    if (!DatabaseConnection.instance) {
-      DatabaseConnection.instance = new DatabaseConnection();
+export const connect = async (): Promise<void> => {
+    if (isConnected) {
+        console.log("✅ Database already connected");
+        return;
     }
 
-    return DatabaseConnection.instance;
-  }
-
-  public getPrisma(): PrismaClient {
-    return this.prisma;
-  }
-
-  public getKysely(): Kysely<DB> {
-    return this.kysely;
-  }
-
-  public async connect(): Promise<void> {
     try {
-      await this.prisma.$connect();
-      console.log('✅ Database connected successfully');
+        const kysely = getKysely();
+
+        // Test connection
+        await kysely.selectFrom("users").select("id").limit(1).execute();
+
+        isConnected = true;
+        console.log("✅ Database connected successfully");
     } catch (error) {
-      console.error('❌ Database connection failed:', error);
-      throw error;
+        console.error("❌ Database connection failed:", error);
+        throw error;
     }
-  }
+};
 
-  public async disconnect(): Promise<void> {
+export const disconnect = async (): Promise<void> => {
     try {
-      await this.prisma.$disconnect();
-      await this.kysely.destroy();
-      console.log('✅ Database disconnected successfully');
+        const kysely = getKysely();
+        await kysely.destroy();
+
+        isConnected = false;
+        console.log("✅ Database disconnected successfully");
     } catch (error) {
-      console.error('❌ Database disconnection failed:', error);
-      throw error;
+        console.error("❌ Database disconnection failed:", error);
+        throw error;
     }
-  }
+};
 
-  public async healthCheck(): Promise<boolean> {
+export const healthCheck = async (): Promise<boolean> => {
     try {
-      await this.prisma.$queryRaw`SELECT 1`;
-      return true;
+        const kysely = getKysely();
+        await kysely.selectFrom("users").select("id").limit(1).execute();
+        return true;
     } catch {
-      return false;
+        return false;
     }
-  }
-}
+};
+
+export const isDatabaseConnected = (): boolean => {
+    return isConnected;
+};

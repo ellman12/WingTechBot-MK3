@@ -7,7 +7,6 @@ This directory contains the route configurations for API v1, organized by featur
 ```
 v1/
 ├── routes.ts          # Main route configuration (orchestrates all route groups)
-├── guilds.ts          # Guild-related routes (/api/v1/guilds/*)
 ├── health.ts          # Health check routes (/health)
 └── README.md          # This documentation
 ```
@@ -18,9 +17,8 @@ v1/
 
 Each file contains routes for a specific domain/feature:
 
-- **`guilds.ts`** - Discord guild management
 - **`health.ts`** - API health and status endpoints
-- **Future**: `users.ts`, `channels.ts`, `commands.ts`, etc.
+- **Future**: `users.ts`, `commands.ts`, etc.
 
 ### **2. Single Responsibility**
 
@@ -41,24 +39,24 @@ Adding new features is straightforward:
 ## 📋 **Route File Template**
 
 ```typescript
-import type { Kysely } from 'kysely';
+import type { Kysely } from "kysely";
 
-import '../../../adapters/http/v1/controllers/FeatureController.js';
-import type { DB } from '../../../generated/database/types.js';
-import type { RouteGroup } from '../../../infrastructure/http/api/types.js';
-import '../../contracts/v1/requests.js';
-import '../../contracts/v1/responses.js';
+import "../../../adapters/http/v1/controllers/FeatureController.js";
+import type { DB } from "../../../generated/database/types.js";
+import type { RouteGroup } from "../../../infrastructure/http/api/types.js";
+import "../../contracts/v1/requests.js";
+import "../../contracts/v1/responses.js";
 
 /**
  * Feature routes configuration for API v1
  */
 export const createFeatureRoutes = (db: Kysely<DB>): RouteGroup => ({
-  name: 'feature',
-  basePath: '/feature',
-  tags: ['Feature'],
-  routes: [
-    // Route definitions...
-  ],
+    name: "feature",
+    basePath: "/feature",
+    tags: ["Feature"],
+    routes: [
+        // Route definitions...
+    ],
 });
 ```
 
@@ -76,12 +74,12 @@ touch src/application/routes/v1/users.ts
 ```typescript
 // users.ts
 export const createUserRoutes = (db: Kysely<DB>): RouteGroup => ({
-  name: 'users',
-  basePath: '/users',
-  tags: ['Users'],
-  routes: [
-    // User CRUD operations...
-  ],
+    name: "users",
+    basePath: "/users",
+    tags: ["Users"],
+    routes: [
+        // User CRUD operations...
+    ],
 });
 ```
 
@@ -89,24 +87,22 @@ export const createUserRoutes = (db: Kysely<DB>): RouteGroup => ({
 
 ```typescript
 // routes.ts
-import { createUserRoutes } from './users.js';
+import { createUserRoutes } from "./users.js";
 
 export const createV1ApiConfiguration = (db: Kysely<DB>): ApiVersionConfiguration => ({
-  config: { version: 'v1', basePath: '/api/v1' },
-  groups: [
-    createGuildRoutes(db),
-    createHealthRoutes(),
-    createUserRoutes(db), // Add new route group
-  ],
+    config: { version: "v1", basePath: "/api/v1" },
+    groups: [
+        createHealthRoutes(),
+        createUserRoutes(db), // Add new route group
+    ],
 });
 ```
 
 ## 📊 **Current Route Groups**
 
-| File        | Base Path        | Description              | Endpoints           |
-| ----------- | ---------------- | ------------------------ | ------------------- |
-| `guilds.ts` | `/api/v1/guilds` | Discord guild management | 5 (CRUD operations) |
-| `health.ts` | `/health`        | API health checks        | 1 (health status)   |
+| File        | Base Path | Description       | Endpoints         |
+| ----------- | --------- | ----------------- | ----------------- |
+| `health.ts` | `/health` | API health checks | 1 (health status) |
 
 ## 🎯 **Benefits**
 
@@ -134,7 +130,7 @@ As the API grows, you can easily add:
 
 ```typescript
 // Future route files:
-channels.ts; // Channel management
+users.ts; // User management
 commands.ts; // Bot commands
 permissions.ts; // Permission management
 analytics.ts; // Usage analytics

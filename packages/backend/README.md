@@ -1,6 +1,6 @@
 # WingTechBot MK3 - Backend
 
-A robust Express.js backend service with Discord bot functionality, built with TypeScript and following hexagonal architecture principles.
+A robust Express.js backend service with Discord bot functionality, built with TypeScript and following hexagonal architecture principles. Designed for single-server Discord bots.
 
 ## 🏗️ Architecture
 
@@ -49,41 +49,41 @@ src/
 
 1. **Clone and Install Dependencies**
 
-   ```bash
-   # From project root
-   pnpm install
-   ```
+    ```bash
+    # From project root
+    pnpm install
+    ```
 
 2. **Environment Variables**
    Create a `.env` file in the backend directory:
 
-   ```env
-   # Server Configuration
-   PORT=3000
-   NODE_ENV=development
-   CORS_ORIGIN=http://localhost:5173
+    ```env
+    # Server Configuration
+    PORT=3000
+    NODE_ENV=development
+    CORS_ORIGIN=http://localhost:5173
 
-   # Database
-   DATABASE_URL="postgresql://wingtechbot:wingtechbot_password@localhost:5432/wingtechbot"
+    # Database
+    DATABASE_URL="postgresql://wingtechbot:wingtechbot_password@localhost:5432/wingtechbot"
 
-   # Discord Bot Configuration
-   DISCORD_TOKEN=your_discord_bot_token
-   DISCORD_CLIENT_ID=your_discord_client_id
-   DISCORD_GUILD_ID=your_test_guild_id  # Optional: for guild-specific commands
-   ```
+    # Discord Bot Configuration
+    DISCORD_TOKEN=your_discord_bot_token
+    DISCORD_CLIENT_ID=your_discord_client_id
+    DISCORD_GUILD_ID=your_guild_id  # The single server your bot will operate in
+    ```
 
 3. **Database Setup**
 
-   ```bash
-   # Generate Prisma client and database types
-   pnpm db:generate
+    ```bash
+    # Generate Prisma client and database types
+    pnpm db:generate
 
-   # Apply database schema
-   pnpm db:push
+    # Apply database schema
+    pnpm db:push
 
-   # Open Prisma Studio (optional)
-   pnpm db:studio
-   ```
+    # Open Prisma Studio (optional)
+    pnpm db:studio
+    ```
 
 ### Development
 
@@ -129,155 +129,10 @@ GET /health
 
 Returns server health status.
 
-### Guild Management
-
-#### Get All Guilds
-
-```http
-GET /api/v1/guilds
-```
-
 **Response:**
 
 ```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "guild_id",
-      "name": "Guild Name",
-      "ownerId": "owner_user_id",
-      "memberCount": 150,
-      "prefix": "!",
-      "isActive": true,
-      "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-01T00:00:00.000Z"
-    }
-  ]
-}
-```
-
-#### Get Guild by ID
-
-```http
-GET /api/v1/guilds/:id
-```
-
-**Parameters:**
-
-- `id` (string): Guild ID
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "guild_id",
-    "name": "Guild Name",
-    "ownerId": "owner_user_id",
-    "memberCount": 150,
-    "prefix": "!",
-    "isActive": true,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  }
-}
-```
-
-#### Create Guild
-
-```http
-POST /api/v1/guilds
-```
-
-**Request Body:**
-
-```json
-{
-  "id": "guild_id",
-  "name": "New Guild",
-  "ownerId": "owner_user_id",
-  "memberCount": 1,
-  "prefix": "!",
-  "isActive": true
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "guild_id",
-    "name": "New Guild",
-    "ownerId": "owner_user_id",
-    "memberCount": 1,
-    "prefix": "!",
-    "isActive": true,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T00:00:00.000Z"
-  }
-}
-```
-
-#### Update Guild
-
-```http
-PUT /api/v1/guilds/:id
-```
-
-**Parameters:**
-
-- `id` (string): Guild ID
-
-**Request Body (all fields optional):**
-
-```json
-{
-  "name": "Updated Guild Name",
-  "memberCount": 200,
-  "prefix": "?",
-  "isActive": false
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "guild_id",
-    "name": "Updated Guild Name",
-    "ownerId": "owner_user_id",
-    "memberCount": 200,
-    "prefix": "?",
-    "isActive": false,
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-01T12:00:00.000Z"
-  }
-}
-```
-
-#### Delete Guild
-
-```http
-DELETE /api/v1/guilds/:id
-```
-
-**Parameters:**
-
-- `id` (string): Guild ID
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Guild deleted successfully"
-}
+{ "status": "ok", "timestamp": "2024-01-01T00:00:00.000Z" }
 ```
 
 ### Error Responses
@@ -285,25 +140,13 @@ DELETE /api/v1/guilds/:id
 All endpoints may return error responses with the following format:
 
 ```json
-{
-  "success": false,
-  "error": "Error message",
-  "details": [
-    {
-      "path": "field.name",
-      "message": "Validation error message"
-    }
-  ]
-}
+{ "success": false, "error": "Error message", "details": [{ "path": "field.name", "message": "Validation error message" }] }
 ```
 
 **HTTP Status Codes:**
 
 - `200` - Success
-- `201` - Created
 - `400` - Bad Request (validation errors)
-- `404` - Not Found
-- `409` - Conflict (duplicate resources)
 - `500` - Internal Server Error
 
 ## 🤖 Discord Bot
@@ -313,7 +156,7 @@ The backend includes a fully integrated Discord bot that:
 - Connects to Discord using the provided bot token
 - Handles Discord events and commands
 - Integrates with the database for persistent data
-- Shares the same domain logic as the REST API
+- Designed for single-server operation
 
 ### Bot Configuration
 
@@ -325,9 +168,7 @@ The bot is configured through environment variables and starts automatically wit
 
 The application uses the following main entities:
 
-- **Guild**: Discord server information
 - **User**: Discord user information
-- **GuildMember**: User membership in guilds
 - **Command**: Command execution history
 
 ### Migrations
@@ -444,6 +285,7 @@ Production deployment requires:
 - `DATABASE_URL`: Production database connection
 - `DISCORD_TOKEN`: Discord bot token
 - `DISCORD_CLIENT_ID`: Discord application client ID
+- `DISCORD_GUILD_ID`: The single Discord server ID
 - `PORT`: Server port (default: 3000)
 - `NODE_ENV`: Set to `production`
 - `CORS_ORIGIN`: Frontend domain for CORS

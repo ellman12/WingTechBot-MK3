@@ -26,9 +26,7 @@ src/
 │   └── http/                     # HTTP adapters
 │       └── v1/                   # Version 1 HTTP adapters
 │           ├── controllers/      # HTTP input adapters
-│           │   └── GuildController.ts
 │           └── presenters/       # Domain → API transformations
-│               └── GuildPresenter.ts
 │
 └── infrastructure/               # Infrastructure Layer (Technical Mechanisms)
     ├── http/                     # HTTP infrastructure
@@ -147,10 +145,10 @@ mkdir -p src/application/routes/v2
 
 ```typescript
 // In VersionedApiRouter.ts
-import { createV2ApiConfiguration } from '../../../application/routes/v2/routes.js';
+import { createV2ApiConfiguration } from "../../../application/routes/v2/routes.js";
 
 // Register v2 configuration
-const v2Config = createV2ApiConfiguration(this.db);
+const v2Config = createV2ApiConfiguration();
 VersionedRouteRegistry.registerVersion(v2Config);
 ```
 

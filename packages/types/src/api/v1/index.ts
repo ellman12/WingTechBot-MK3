@@ -3,8 +3,8 @@
 // ============================================================================
 
 // Common types and schemas
-export * from './common.js';
+export * from "./common.js";
 
-// Feature-specific contracts
-export * from './guilds.js';
-export * from './health.js';
+// Feature-specific API contracts
+export * from "./users.js";
+export * from "./commands.js";

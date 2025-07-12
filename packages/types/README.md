@@ -13,50 +13,57 @@ pnpm add @wingtechbot-mk3/types
 
 This package provides:
 
-- **Runtime validation** with Zod schemas
+- **API contracts** with request/response validation
 - **Type safety** across frontend and backend
-- **Consistent API contracts** between services
-- **Auto-complete** and IntelliSense support
+- **Runtime validation** with Zod schemas
+- **Transformation functions** between domain and API layers
 
 ## 📚 Usage
 
-### Import Types
+### Import API Types
 
 ```typescript
-import {
-  ApiErrorResponse,
-  CreateGuildData,
-  GetGuildsResponse,
-  Guild,
-} from '@wingtechbot-mk3/types';
+import { CreateUserRequest, UserResponse, userToResponse, validateCreateUserRequest } from "@wingtechbot-mk3/types";
 ```
 
 ### Backend Usage
 
 ```typescript
-import { validateCreateGuildData } from '@wingtechbot-mk3/types';
+import { UserEntity } from "@wingtechbot-mk3/core/entities/User";
+import { userToResponse, validateCreateUserRequest } from "@wingtechbot-mk3/types";
 
 // In your controller
-export const createGuildHandler = (req: Request, res: Response) => {
-  try {
-    const guildData = validateCreateGuildData(req.body);
-    // guildData is now type-safe and validated
-  } catch (error) {
-    // Handle validation error
-  }
+export const createUserHandler = (req: Request, res: Response) => {
+    try {
+        // Validate API request
+        const apiRequest = validateCreateUserRequest(req.body);
+
+        // Convert to domain data
+        const domainData = { id: apiRequest.id, username: apiRequest.username, displayName: apiRequest.displayName, avatar: apiRequest.avatar, isBot: apiRequest.isBot };
+
+        // Create domain entity
+        const user = UserEntity.create(domainData);
+
+        // Transform to API response
+        const response = userToResponse(user);
+        res.json(response);
+    } catch (error) {
+        // Handle validation error
+    }
 };
 ```
 
 ### Frontend Usage
 
 ```typescript
-import type { GetGuildsResponse, Guild } from '@wingtechbot-mk3/types';
+import type { CreateUserRequest, UserResponse } from "@wingtechbot-mk3/types";
 
 // Type-safe API calls
-const fetchGuilds = async (): Promise<Guild[]> => {
-  const response = await fetch('/api/v1/guilds');
-  const data: GetGuildsResponse = await response.json();
-  return data.data;
+const createUser = async (userData: CreateUserRequest): Promise<UserResponse> => {
+    const response = await fetch("/api/v1/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(userData) });
+
+    const data: UserResponse = await response.json();
+    return data;
 };
 ```
 
@@ -67,14 +74,11 @@ src/
 ├── common/           # Common API types
 │   ├── api.ts       # Base API response types
 │   └── error.ts     # Error types and HTTP status codes
-├── entities/        # Domain entity types
-│   ├── guild.ts     # Guild entity and validation
-│   ├── user.ts      # User entity and validation
-│   ├── guildMember.ts
-│   └── command.ts
-├── api/            # API endpoint types
-│   ├── guild.ts    # Guild API request/response types
-│   └── user.ts     # User API request/response types
+├── api/            # API endpoint contracts
+│   └── v1/         # Version 1 API contracts
+│       ├── users.ts    # User API request/response types
+│       ├── commands.ts # Command API request/response types
+│       └── common.ts   # Common v1 API types
 └── index.ts        # Main export file
 ```
 
@@ -85,10 +89,10 @@ src/
 All schemas provide runtime validation using Zod:
 
 ```typescript
-import { CreateGuildDataSchema } from '@wingtechbot-mk3/types';
+import { CreateUserRequestSchema } from "@wingtechbot-mk3/types";
 
 // Validates at runtime and provides TypeScript types
-const result = CreateGuildDataSchema.parse(unknownData);
+const result = CreateUserRequestSchema.parse(unknownData);
 ```
 
 ### API Response Types
@@ -97,62 +101,51 @@ Consistent response format across all endpoints:
 
 ```typescript
 // Success response
-type ApiSuccessResponse<T> = {
-  success: true;
-  data: T;
-};
+type ApiSuccessResponse<T> = { success: true; data: T };
 
 // Error response
-type ApiErrorResponse = {
-  success: false;
-  error: string;
-  details?: ValidationError[];
-};
+type ApiErrorResponse = { success: false; error: string; details?: ValidationError[] };
 ```
 
-### Entity Validation
+### Transformation Functions
 
-Each entity has comprehensive validation rules:
+Convert between domain entities and API representations:
 
 ```typescript
-// Guild validation
-const GuildSchema = z.object({
-  id: z.string().min(1, 'Guild ID is required'),
-  name: z.string().min(1, 'Guild name is required'),
-  ownerId: z.string().min(1, 'Guild owner ID is required'),
-  memberCount: z.number().int().min(0, 'Member count must be non-negative'),
-  prefix: z
-    .string()
-    .max(5, 'Guild prefix cannot be longer than 5 characters')
-    .regex(/^\S+$/, 'Guild prefix cannot contain spaces'),
-  isActive: z.boolean(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-});
+import { userToResponse, usersToResponse } from '@wingtechbot-mk3/types';
+
+// Single user transformation
+const apiResponse = userToResponse(domainUser);
+
+// Multiple users transformation
+const apiResponse = usersToResponse(domainUsers);
 ```
 
-## 🔌 Available Types
+## 🔌 Available API Contracts
 
-### Entities
+### User API
 
-- `Guild` - Discord server information
-- `User` - Discord user information
-- `GuildMember` - User membership in guilds
-- `Command` - Command execution history
+- `CreateUserRequest` - User creation request
+- `UpdateUserRequest` - User update request
+- `UserResponse` - User API response
+- `UsersResponse` - Multiple users response
+- `validateCreateUserRequest()` - Request validation
+- `userToResponse()` - Domain → API transformation
 
-### API Types
+### Command API
 
-- Guild endpoints: `GetGuildsResponse`, `CreateGuildRequest`, etc.
-- User endpoints: `GetUsersResponse`, `CreateUserRequest`, etc.
-- Common: `ApiResponse`, `ApiErrorResponse`, `HealthCheckResponse`
+- `CreateCommandRequest` - Command creation request
+- `UpdateCommandRequest` - Command update request
+- `CommandResponse` - Command API response
+- `CommandsResponse` - Multiple commands response
+- `validateCreateCommandRequest()` - Request validation
+- `commandToResponse()` - Domain → API transformation
 
-### Error Types
+### Common Types
 
-- `GuildNotFoundError`
-- `UserNotFoundError`
-- `ValidationFailedError`
-- `ConflictError`
-- `HTTP_STATUS` constants
+- `ApiResponse` - Base API response format
+- `ApiErrorResponse` - Error response format
+- `HttpStatus` - HTTP status code constants
 
 ## 🚀 Development
 
@@ -184,66 +177,55 @@ pnpm format:check
 
 ## 📋 Best Practices
 
-1. **Always use validation functions** for external data
+1. **Use validation functions** for all external data
 2. **Import types, not schemas** in frontend code (unless you need validation)
-3. **Use discriminated unions** for API responses
+3. **Use transformation functions** to convert between domain and API layers
 4. **Leverage TypeScript's type inference** with Zod
+5. **Keep API contracts separate** from domain entities
 
-### Example: Type-safe API Client
+### Example: Complete API Flow
 
 ```typescript
-import type {
-  ApiErrorResponse,
-  CreateGuildRequest,
-  CreateGuildResponse,
-  GetGuildsResponse,
-  Guild,
-} from '@wingtechbot-mk3/types';
+// 1. API Request Validation
+const apiRequest = validateCreateUserRequest(req.body);
 
-class GuildApiClient {
-  async getGuilds(): Promise<Guild[]> {
-    const response = await fetch('/api/v1/guilds');
-    const data: GetGuildsResponse | ApiErrorResponse = await response.json();
+// 2. Convert to Domain Data
+const domainData = { id: apiRequest.id, username: apiRequest.username, displayName: apiRequest.displayName, avatar: apiRequest.avatar, isBot: apiRequest.isBot };
 
-    if (!data.success) {
-      throw new Error(data.error);
-    }
+// 3. Create Domain Entity
+const user = UserEntity.create(domainData);
 
-    return data.data;
-  }
+// 4. Save to Repository
+const savedUser = await userRepository.create(user);
 
-  async createGuild(guild: CreateGuildRequest): Promise<Guild> {
-    const response = await fetch('/api/v1/guilds', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(guild),
-    });
-
-    const data: CreateGuildResponse | ApiErrorResponse = await response.json();
-
-    if (!data.success) {
-      throw new Error(data.error);
-    }
-
-    return data.data;
-  }
-}
+// 5. Transform to API Response
+const response = userToResponse(savedUser);
+res.json(response);
 ```
 
 ## 🔄 Versioning
 
 This package follows semantic versioning:
 
-- **Major**: Breaking changes to type definitions
-- **Minor**: New types or non-breaking additions
+- **Major**: Breaking changes to API contracts
+- **Minor**: New API endpoints or non-breaking additions
 - **Patch**: Bug fixes and documentation updates
 
 ## 🤝 Contributing
 
-When adding new types:
+When adding new API contracts:
 
-1. **Add entity schemas** in `entities/` with full validation
-2. **Create API types** in `api/` for request/response shapes
-3. **Export from index.ts** for easy importing
-4. **Update this README** with new types
-5. **Ensure backward compatibility** when possible
+1. **Define request schemas** with proper validation
+2. **Create response schemas** with consistent format
+3. **Add transformation functions** for domain → API conversion
+4. **Export from index files** for easy importing
+5. **Update this README** with new contracts
+6. **Ensure backward compatibility** when possible
+
+## 🎯 Design Principles
+
+- **API-First**: Contracts define the API interface
+- **Type Safety**: Full TypeScript support with runtime validation
+- **Transformation**: Clear separation between domain and API layers
+- **Consistency**: Uniform response formats across all endpoints
+- **Validation**: Runtime validation for all external data

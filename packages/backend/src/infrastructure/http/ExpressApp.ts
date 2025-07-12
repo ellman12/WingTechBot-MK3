@@ -1,12 +1,11 @@
+import { setupSwaggerUI } from "@infrastructure/http/OpenApiGenerator.js";
+import { initializeApiRouter, setupRoutes as setupApiRoutes } from "@infrastructure/http/api/ApiRouter.js";
 import cors from "cors";
 import express from "express";
 import type { Application } from "express";
 import helmet from "helmet";
 import type { Kysely } from "kysely";
-
-import type { DB } from "../../generated/database/types.js";
-import { OpenApiGenerator } from "./OpenApiGenerator.js";
-import { ApiRouter } from "./api/ApiRouter.js";
+import type { DB } from "kysely-codegen";
 
 export interface ServerConfig {
     port: number;
@@ -14,59 +13,47 @@ export interface ServerConfig {
     corsOrigin: string | false;
 }
 
-export class ExpressApp {
-    private app: Application;
-    private db: Kysely<DB>;
+// Private state using file-level constants
+let appInstance: Application | null = null;
+let dbInstance: Kysely<DB> | null = null;
 
-    constructor(db: Kysely<DB>) {
-        this.app = express();
-        this.db = db;
-        this.setupMiddleware();
-        this.setupRoutes();
-        this.setupDocumentation();
-    }
+// Private functions
+const setupMiddleware = (app: Application): void => {
+    // Security middleware
+    app.use(helmet());
+    app.use(cors());
 
-    private setupMiddleware(): void {
-        // Security middleware
-        this.app.use(helmet());
-        this.app.use(cors());
+    // Body parsing
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
+};
 
-        // Body parsing
-        this.app.use(express.json());
-        this.app.use(express.urlencoded({ extended: true }));
-    }
+const setupRoutes = (app: Application, db: Kysely<DB>): void => {
+    initializeApiRouter(app, db);
+    setupApiRoutes();
+};
 
-    private setupRoutes(): void {
-        const apiRouter = new ApiRouter(this.app, this.db);
-        apiRouter.setupRoutes();
-    }
+const setupDocumentation = (app: Application): void => {
+    setupSwaggerUI(app);
+};
 
-    private setupDocumentation(): void {
-        const openApiGenerator = new OpenApiGenerator();
-        openApiGenerator.setupSwaggerUI(this.app);
-    }
-
-    public getApp(): Application {
-        return this.app;
-    }
-
-    public start(port: number = 3000): void {
-        this.app.listen(port, () => {
-            console.log(`🚀 Server running on port ${port}`);
-            console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
-        });
-    }
-}
-
+// Public interface - exported functions
 export const createExpressApp = (db: Kysely<DB>, config: ServerConfig): Application => {
-    const expressApp = new ExpressApp(db);
+    const app = express();
+
+    appInstance = app;
+    dbInstance = db;
+
+    setupMiddleware(app);
+    setupRoutes(app, db);
+    setupDocumentation(app);
 
     // Configure CORS based on config
     if (config.corsOrigin) {
-        expressApp.getApp().use(cors({ origin: config.corsOrigin }));
+        app.use(cors({ origin: config.corsOrigin }));
     }
 
-    return expressApp.getApp();
+    return app;
 };
 
 export const startServer = (app: Application, port: number): void => {
@@ -74,4 +61,12 @@ export const startServer = (app: Application, port: number): void => {
         console.log(`🚀 Server running on port ${port}`);
         console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
     });
+};
+
+export const getExpressApp = (): Application | null => {
+    return appInstance;
+};
+
+export const getExpressDatabase = (): Kysely<DB> | null => {
+    return dbInstance;
 };

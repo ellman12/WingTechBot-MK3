@@ -1,3 +1,4 @@
+import type { RequestHandler } from "express";
 import type { z } from "zod/v4";
 
 export type ApiVersion = "v1" | "v2";
@@ -15,6 +16,7 @@ export interface RouteDefinition {
     readonly querySchema?: z.ZodTypeAny;
     readonly requestSchema?: z.ZodTypeAny;
     readonly responseSchema?: z.ZodTypeAny;
+    readonly handler: RequestHandler;
 }
 
 export interface ApiVersionConfig {
@@ -30,4 +32,11 @@ export interface RouteRegistryEntry extends RouteDefinition {
     readonly version: ApiVersion;
     readonly fullPath: string;
     readonly basePath: string;
+}
+
+export interface RouteGroup {
+    readonly name: string;
+    readonly basePath: string;
+    readonly tags: readonly string[];
+    readonly routes: readonly RouteDefinition[];
 }
