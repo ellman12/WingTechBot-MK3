@@ -8,6 +8,12 @@ import type { DB } from "../../generated/database/types.js";
 import { OpenApiGenerator } from "./OpenApiGenerator.js";
 import { ApiRouter } from "./api/ApiRouter.js";
 
+export interface ServerConfig {
+    port: number;
+    nodeEnv: string;
+    corsOrigin: string | false;
+}
+
 export class ExpressApp {
     private app: Application;
     private db: Kysely<DB>;
@@ -51,3 +57,21 @@ export class ExpressApp {
         });
     }
 }
+
+export const createExpressApp = (db: Kysely<DB>, config: ServerConfig): Application => {
+    const expressApp = new ExpressApp(db);
+
+    // Configure CORS based on config
+    if (config.corsOrigin) {
+        expressApp.getApp().use(cors({ origin: config.corsOrigin }));
+    }
+
+    return expressApp.getApp();
+};
+
+export const startServer = (app: Application, port: number): void => {
+    app.listen(port, () => {
+        console.log(`🚀 Server running on port ${port}`);
+        console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
+    });
+};
