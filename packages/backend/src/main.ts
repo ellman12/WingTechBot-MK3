@@ -7,12 +7,15 @@ import { getConfig } from "./infrastructure/config/Config.js";
 import { connect, disconnect, getKysely, healthCheck } from "./infrastructure/database/DatabaseConnection.js";
 import { type DiscordBot, createDiscordBot } from "./infrastructure/discord/DiscordBot.js";
 import { type ExpressApp, type ServerConfig, createExpressApp } from "./infrastructure/http/ExpressApp.js";
+import type { ReactionRepository } from "@core/repositories/ReactionRepository";
+import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
 
 export type AppDependencies = {
     readonly config: ReturnType<typeof getConfig>;
     readonly expressApp: ExpressApp;
     readonly discordBot: DiscordBot;
     readonly userRepository: ReturnType<typeof createUserRepository>;
+    readonly reactionRepository: ReactionRepository;
 };
 
 export type App = {
@@ -32,8 +35,9 @@ export const createApplication = async (): Promise<App> => {
         corsOrigin: process.env.CORS_ORIGIN || false,
     };
 
+    const reactionRepository = createReactionRepository(db);
     const expressApp = createExpressApp({ db, config: serverConfig });
-    const discordBot = createDiscordBot({ config });
+    const discordBot = createDiscordBot({ config, reactionRepository });
     const _userRepository = createUserRepository(db);
 
     console.log("🔧 Dependency Report:");
