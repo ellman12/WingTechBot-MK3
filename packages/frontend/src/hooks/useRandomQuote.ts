@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 
-interface Quote {
+type Quote = {
     id: number;
     content: string;
     author: string;
-}
+};
 
 async function fetchRandomQuote(): Promise<Quote> {
     const response = await fetch("https://quotable.io/random");

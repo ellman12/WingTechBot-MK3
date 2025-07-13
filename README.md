@@ -216,9 +216,29 @@ pnpm docker:run
 
 ## 📚 Documentation
 
-- **Backend API**: See `packages/backend/README.md` for API documentation
+We've consolidated all documentation into a modern, searchable documentation site.
 
-- **Database Schema**: Check `packages/backend/prisma/schema.prisma`
+**📖 [View Full Documentation](http://localhost:5173)** (run `pnpm docs:dev` first)
+
+### Quick Links
+
+- **[Getting Started](/guide/)** - Complete setup and development workflow
+- **[API Reference](/api/)** - REST API endpoints and usage
+- **[Architecture](/architecture/)** - System design and patterns
+- **[Discord Bot](/guide/discord-bot)** - Bot setup and features
+- **[Database](/guide/database)** - Schema and operations
+- **[Frontend](/guide/frontend)** - React development guide
+- **[Deployment](/guide/deployment)** - Production deployment
+
+### Development
+
+```bash
+# Start documentation site
+pnpm docs:dev
+
+# Build documentation
+pnpm docs:build
+```
 
 ## 🤝 Contributing
 
@@ -230,4 +250,4 @@ pnpm docker:run
 
 ## 📄 License
 
-This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

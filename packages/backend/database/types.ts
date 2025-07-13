@@ -8,7 +8,7 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U> ? Col
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
-export interface Users {
+export type Users = {
     avatar: string | null;
     created_at: Generated<Timestamp>;
     display_name: string | null;
@@ -16,8 +16,8 @@ export interface Users {
     is_bot: Generated<boolean>;
     updated_at: Generated<Timestamp>;
     username: string;
-}
+};
 
-export interface DB {
+export type DB = {
     users: Users;
-}
+};

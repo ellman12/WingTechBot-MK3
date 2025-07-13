@@ -4,7 +4,6 @@ import type { Kysely } from "kysely";
 
 import { routeSetupService } from "../RouteSetupService.js";
 
-// Public interface - exported functions
 export const initializeApiRouter = (app: Application, db: Kysely<DB>): void => {
     routeSetupService.initialize(app, db);
 };

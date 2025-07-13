@@ -7,66 +7,59 @@ import type { Application } from "express";
 import helmet from "helmet";
 import type { Kysely } from "kysely";
 
-export interface ServerConfig {
+export type ServerConfig = {
     port: number;
     nodeEnv: string;
     corsOrigin: string | false;
-}
-
-// Private state using file-level constants
-let appInstance: Application | null = null;
-let dbInstance: Kysely<DB> | null = null;
-
-// Private functions
-const setupMiddleware = (app: Application): void => {
-    // Security middleware
-    app.use(helmet());
-    app.use(cors());
-
-    // Body parsing
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
 };
 
-const setupRoutes = (app: Application, db: Kysely<DB>): void => {
-    initializeApiRouter(app, db);
-    setupApiRoutes();
+export type ExpressAppDeps = {
+    readonly db: Kysely<DB>;
+    readonly config: ServerConfig;
 };
 
-const setupDocumentation = (app: Application): void => {
-    setupSwaggerUI(app);
+export type ExpressApp = {
+    readonly app: Application;
+    readonly start: () => void;
 };
 
-// Public interface - exported functions
-export const createExpressApp = (db: Kysely<DB>, config: ServerConfig): Application => {
+export const createExpressApp = (deps: ExpressAppDeps): ExpressApp => {
     const app = express();
 
-    appInstance = app;
-    dbInstance = db;
+    const setupMiddleware = (): void => {
+        app.use(helmet());
+        app.use(cors());
 
-    setupMiddleware(app);
-    setupRoutes(app, db);
-    setupDocumentation(app);
+        app.use(express.json());
+        app.use(express.urlencoded({ extended: true }));
 
-    // Configure CORS based on config
-    if (config.corsOrigin) {
-        app.use(cors({ origin: config.corsOrigin }));
-    }
+        if (deps.config.corsOrigin) {
+            app.use(cors({ origin: deps.config.corsOrigin }));
+        }
+    };
 
-    return app;
-};
+    const setupRoutes = (): void => {
+        initializeApiRouter(app, deps.db);
+        setupApiRoutes();
+    };
 
-export const startServer = (app: Application, port: number): void => {
-    app.listen(port, () => {
-        console.log(`🚀 Server running on port ${port}`);
-        console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
-    });
-};
+    const setupDocumentation = (): void => {
+        setupSwaggerUI(app);
+    };
 
-export const getExpressApp = (): Application | null => {
-    return appInstance;
-};
+    const start = (): void => {
+        app.listen(deps.config.port, () => {
+            console.log(`🚀 Server running on port ${deps.config.port}`);
+            console.log(`📚 API Documentation: http://localhost:${deps.config.port}/api/docs`);
+        });
+    };
 
-export const getExpressDatabase = (): Kysely<DB> | null => {
-    return dbInstance;
+    setupMiddleware();
+    setupRoutes();
+    setupDocumentation();
+
+    return {
+        app,
+        start,
+    };
 };

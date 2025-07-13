@@ -189,6 +189,37 @@ The backend includes a fully integrated Discord bot that:
 
 The bot is configured through environment variables and starts automatically with the server. It uses the same database connection and business logic as the REST API, ensuring consistency.
 
+### Discord Commands
+
+The bot includes several voice-related slash commands:
+
+- `/join [channel]` - Join a voice channel
+- `/leave` - Leave the current voice channel
+- `/play <source>` - Play audio from a URL or file
+- `/stop` - Stop current audio playback
+- `/volume [level]` - Set or get the volume level
+
+#### Deploying Commands
+
+Commands need to be deployed to Discord's API to appear in the Discord UI:
+
+```bash
+# Deploy commands to Discord
+pnpm discord:deploy-commands
+
+# Or from the root directory
+pnpm discord:deploy-commands
+```
+
+**Development Mode**: Commands are automatically deployed when the bot starts in development mode.
+
+**Production**: Deploy commands manually before starting the bot in production.
+
+**Guild vs Global Commands**:
+
+- If `DISCORD_GUILD_ID` is set, commands deploy to that specific guild (instant)
+- If not set, commands deploy globally (takes up to 1 hour to propagate)
+
 ## 🗄️ Database
 
 ### Schema

@@ -5,19 +5,16 @@ import type { Application } from "express";
 import { Router } from "express";
 import type { Kysely } from "kysely";
 
-// Interface definition
-export interface RouteSetupService {
+export type RouteSetupService = {
     initialize(app: Application, db: Kysely<DB>): void;
     setupAllRoutes(): void;
     getApp(): Application | null;
     getDatabase(): Kysely<DB> | null;
-}
+};
 
-// Private state using file-level constants
 let appInstance: Application | null = null;
 let dbInstance: Kysely<DB> | null = null;
 
-// Private functions
 const setupVersionRoutes = (app: Application): void => {
     const v1Routes = getVersionRoutes("v1");
     const v1Router = Router();
@@ -25,10 +22,8 @@ const setupVersionRoutes = (app: Application): void => {
     v1Routes.forEach(route => {
         console.log(`📍 Registering ${route.method.toUpperCase()} ${route.fullPath}`);
 
-        // Convert OpenAPI path format {id} to Express format :id
         const expressPath = route.path.replace(/\{([^}]+)\}/g, ":$1");
 
-        // Register the route with Express
         switch (route.method) {
             case "get":
                 v1Router.get(expressPath, route.handler);
@@ -52,7 +47,6 @@ const setupVersionRoutes = (app: Application): void => {
 
     app.use("/api/v1", v1Router);
 
-    // Register health routes separately (they're not under /api/v1)
     const healthRoutes = getVersionRoutes("v1").filter(route => route.fullPath.startsWith("/health"));
 
     healthRoutes.forEach(route => {
@@ -91,7 +85,6 @@ const setupVersionEndpoint = (app: Application): void => {
     });
 };
 
-// Export the service object that implements the interface
 export const routeSetupService: RouteSetupService = {
     initialize(app: Application, db: Kysely<DB>): void {
         appInstance = app;
@@ -103,13 +96,10 @@ export const routeSetupService: RouteSetupService = {
             throw new Error("Route setup not initialized. Call initialize first.");
         }
 
-        // Initialize route configurations (this registers routes with the registry)
         initializeV1Routes();
 
-        // Setup Express routes for each version
         setupVersionRoutes(appInstance);
 
-        // Setup version listing endpoint
         setupVersionEndpoint(appInstance);
     },
 
