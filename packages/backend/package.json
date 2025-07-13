@@ -65,10 +65,8 @@
         "helmet": "^8.1.0",
         "kysely": "^0.28.2",
         "kysely-codegen": "^0.18.5",
-        "libsodium-wrappers": "^0.7.15",
         "morgan": "^1.10.0",
         "pg": "^8.13.1",
-        "sodium": "^3.0.2",
         "swagger-ui-express": "^5.0.1",
         "zod": "^4.0.5",
         "zod-openapi": "^5.1.0"
