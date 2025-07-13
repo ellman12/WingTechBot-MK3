@@ -7,7 +7,27 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config([
-    globalIgnores(["dist"]),
+    globalIgnores([
+        "dist",
+        "dist/**/*",
+        "**/dist/**/*",
+        "node_modules",
+        "node_modules/**/*",
+        "build",
+        "build/**/*",
+        "coverage",
+        "coverage/**/*",
+        ".next",
+        ".next/**/*",
+        "out",
+        "out/**/*",
+        "*.d.ts",
+        "*.js.map",
+        "*.css.map",
+        ".eslintcache",
+        "packages/backend/src/generated/**/*",
+        "packages/backend/prisma/generated/**/*",
+    ]),
     {
         files: ["**/*.{ts,tsx}"],
         extends: [
@@ -18,5 +38,8 @@ export default tseslint.config([
             prettier, // disables formatting rules conflicting with Prettier
         ],
         languageOptions: { ecmaVersion: 2020, globals: globals.browser },
+        rules: {
+            "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+        },
     },
 ]);

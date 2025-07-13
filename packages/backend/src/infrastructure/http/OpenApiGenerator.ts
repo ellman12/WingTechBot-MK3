@@ -5,17 +5,15 @@ import swaggerUi from "swagger-ui-express";
 import { z } from "zod/v4";
 
 import { getConfig } from "../config/Config.js";
-import { getAllRoutes, getSupportedVersions, getVersionConfig, getVersionRoutes } from "./api/RouteRegistry.js";
+import { getAllRoutes } from "./api/RouteRegistry.js";
 import type { RouteRegistryEntry } from "./api/types.js";
 
 extendZodWithOpenApi(z);
 
 const config = getConfig();
 
-// Private state using file-level constants
 let registryInstance: OpenAPIRegistry | null = null;
 
-// Private functions
 const getRegistry = (): OpenAPIRegistry => {
     if (!registryInstance) {
         registryInstance = new OpenAPIRegistry();
@@ -75,7 +73,6 @@ const generateOperation = (route: RouteRegistryEntry): Record<string, unknown> =
         operation.deprecated = true;
     }
 
-    // Add parameters for path parameters
     if (route.paramsSchema) {
         const params = generateParameters(route.fullPath);
         if (params && params.length > 0) {
@@ -83,12 +80,10 @@ const generateOperation = (route: RouteRegistryEntry): Record<string, unknown> =
         }
     }
 
-    // Add query parameters
     if (route.querySchema) {
         (operation.parameters as Array<unknown>).push(...generateQueryParameters(route.querySchema));
     }
 
-    // Add request body for POST/PUT/PATCH
     if (route.requestSchema && ["post", "put", "patch"].includes(route.method)) {
         const requestSchemaName = getSchemaName(route, "Request");
         operation.requestBody = { required: true, content: { "application/json": { schema: { $ref: `#/components/schemas/${requestSchemaName}` } } } };
@@ -111,14 +106,12 @@ const generateResponses = (route: RouteRegistryEntry): Record<string, Record<str
         "500": { description: "Internal Server Error", content: { "application/json": { schema: { $ref: "#/components/schemas/ApiError" } } } },
     };
 
-    // Add success response
     if (route.responseSchema) {
         const statusCode = route.method === "post" ? "201" : "200";
         const responseSchemaName = getSchemaName(route, "Response");
         responses[statusCode] = { description: "Success", content: { "application/json": { schema: { $ref: `#/components/schemas/${responseSchemaName}` } } } };
     }
 
-    // Add specific error responses based on route type
     if (route.fullPath.includes("{id}")) {
         responses["404"] = { description: "Not Found", content: { "application/json": { schema: { $ref: "#/components/schemas/ApiError" } } } };
     }
@@ -141,7 +134,6 @@ const generateParameters = (path: string): Array<Record<string, unknown>> => {
 const generateQueryParameters = (querySchema: z.ZodTypeAny): Array<Record<string, unknown>> => {
     const parameters: Array<Record<string, unknown>> = [];
 
-    // Handle ZodObject schemas
     if (querySchema && "shape" in querySchema) {
         const shape = (querySchema as z.ZodObject<z.ZodRawShape>).shape;
 
@@ -181,14 +173,11 @@ const getZodTypeString = (schema: z.ZodTypeAny): string => {
 const registerRouteSchemas = (routes: RouteRegistryEntry[]): void => {
     const registry = getRegistry();
 
-    // Register standard error schema
     registry.register("ApiError", createApiErrorSchema());
 
-    // Register schemas from routes
     const registeredSchemas = new Set<string>();
 
     routes.forEach(route => {
-        // Register request schema
         if (route.requestSchema) {
             const schemaName = getSchemaName(route, "Request");
             if (!registeredSchemas.has(schemaName)) {
@@ -197,29 +186,10 @@ const registerRouteSchemas = (routes: RouteRegistryEntry[]): void => {
             }
         }
 
-        // Register response schema
         if (route.responseSchema) {
             const schemaName = getSchemaName(route, "Response");
             if (!registeredSchemas.has(schemaName)) {
                 registry.register(schemaName, route.responseSchema);
-                registeredSchemas.add(schemaName);
-            }
-        }
-
-        // Register parameters schema
-        if (route.paramsSchema) {
-            const schemaName = getSchemaName(route, "Params");
-            if (!registeredSchemas.has(schemaName)) {
-                registry.register(schemaName, route.paramsSchema);
-                registeredSchemas.add(schemaName);
-            }
-        }
-
-        // Register query schema
-        if (route.querySchema) {
-            const schemaName = getSchemaName(route, "Query");
-            if (!registeredSchemas.has(schemaName)) {
-                registry.register(schemaName, route.querySchema);
                 registeredSchemas.add(schemaName);
             }
         }
@@ -228,19 +198,16 @@ const registerRouteSchemas = (routes: RouteRegistryEntry[]): void => {
 
 const createApiErrorSchema = (): z.ZodObject<z.ZodRawShape> => {
     return z.object({
-        success: z.literal(false),
-        error: z.string().describe("Error message"),
-        details: z
-            .array(z.object({ path: z.string().describe("Field path"), message: z.string().describe("Error message") }))
-            .optional()
-            .describe("Validation error details"),
+        error: z.string(),
+        message: z.string(),
+        statusCode: z.number(),
+        timestamp: z.string(),
     });
 };
 
 const getSchemaName = (route: RouteRegistryEntry, suffix: string): string => {
-    const method = capitalize(route.method);
     const pathName = pathToSchemaName(route.fullPath);
-    return `${method}${pathName}${suffix}`;
+    return `${capitalize(pathName)}${suffix}`;
 };
 
 const capitalize = (str: string): string => {
@@ -252,90 +219,41 @@ const pathToSchemaName = (path: string): string => {
         .split("/")
         .filter(Boolean)
         .map(part => part.replace(/[{}]/g, "").replace(/^:/, ""))
-        .map(part => capitalize(part))
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
         .join("");
 };
 
-// Public interface - exported functions
 export const generateOpenApiSpec = (): Record<string, unknown> => {
-    const allRoutes = getAllRoutes();
-    const supportedVersions = getSupportedVersions();
+    const routes = getAllRoutes();
 
-    // Register all schemas from routes
-    registerRouteSchemas(allRoutes);
+    registerRouteSchemas(routes);
 
-    // Generate the OpenAPI document
     const registry = getRegistry();
     const generator = new OpenApiGeneratorV3(registry.definitions);
-    const document = generator.generateDocument({
+
+    const spec = generator.generateDocument({
         openapi: "3.0.3",
         info: {
             title: "WingTechBot MK3 API",
-            version: "multi-version",
-            description: "A robust Discord bot API built with Express.js, TypeScript, and hexagonal architecture. This documentation includes all API versions.",
-            contact: { name: "WingTechBot MK3", url: "https://github.com/ellman12/WingTechBot-MK3" },
-            license: { name: "ISC", url: "https://opensource.org/licenses/ISC" },
-            "x-api-versions": supportedVersions.map(version => {
-                const config = getVersionConfig(version);
-                return { version, basePath: config?.basePath, deprecated: config?.deprecated, deprecationDate: config?.deprecationDate?.toISOString(), sunsetDate: config?.sunsetDate?.toISOString() };
-            }),
+            version: "1.0.0",
+            description: "API for WingTechBot MK3 Discord bot",
         },
         servers: generateServers(),
-        tags: generateTags(allRoutes),
+        tags: generateTags(routes),
     });
 
-    // Add paths manually since it's not part of the config
-    const openApiSpec = document as unknown as Record<string, unknown>;
-    openApiSpec.paths = generatePaths(allRoutes);
+    const openApiSpec = spec as unknown as Record<string, unknown>;
+    openApiSpec.paths = generatePaths(routes);
 
     return openApiSpec;
 };
 
 export const setupSwaggerUI = (app: Application): void => {
-    const openApiSpec = generateOpenApiSpec();
-    const supportedVersions = getSupportedVersions();
+    const spec = generateOpenApiSpec();
 
-    // Serve the comprehensive OpenAPI spec as JSON
-    app.get("/api/docs/openapi.json", (_req, res) => {
-        res.json(openApiSpec);
-    });
+    app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(spec, { explorer: true }));
 
-    // Setup main Swagger UI that shows all versions together
-    const swaggerOptions = {
-        customCss: ".swagger-ui .topbar { display: none }",
-        customSiteTitle: "WingTechBot MK3 API Documentation - All Versions",
-        swaggerOptions: { persistAuthorization: true, displayRequestDuration: true, filter: true, tryItOutEnabled: true, tagsSorter: "alpha", operationsSorter: "alpha", docExpansion: "list" },
-    };
-
-    app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openApiSpec, swaggerOptions));
-
-    // Setup API version overview endpoint
-    app.get("/api/versions", (_req, res) => {
-        const versions = supportedVersions.map(version => {
-            const config = getVersionConfig(version);
-
-            return {
-                version,
-                basePath: config?.basePath,
-                deprecated: config?.deprecated,
-                deprecationDate: config?.deprecationDate?.toISOString(),
-                sunsetDate: config?.sunsetDate?.toISOString(),
-                routeCount: getVersionRoutes(version).length,
-                endpoints: getVersionRoutes(version).map(route => ({ method: route.method.toUpperCase(), path: route.fullPath, summary: route.summary, deprecated: route.deprecated })),
-            };
-        });
-
-        res.json({ title: "WingTechBot MK3 API Versions", totalVersions: versions.length, versions });
-    });
-
-    console.log("📖 API Documentation available at:");
-    console.log(`   📚 All Versions Swagger UI: http://localhost:${config.server.port}/api/docs`);
-    console.log(`   📋 OpenAPI JSON: http://localhost:${config.server.port}/api/docs/openapi.json`);
-    console.log(`   🔍 Version Overview: http://localhost:${config.server.port}/api/versions`);
-
-    supportedVersions.forEach(version => {
-        const versionConfig = getVersionConfig(version);
-        const routes = getVersionRoutes(version);
-        console.log(`   📌 ${version.toUpperCase()}: ${routes.length} endpoints at ${versionConfig?.basePath}${versionConfig?.deprecated ? " (DEPRECATED)" : ""}`);
+    app.get("/api/openapi.json", (req, res) => {
+        res.json(spec);
     });
 };

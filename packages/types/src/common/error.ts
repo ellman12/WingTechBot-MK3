@@ -24,35 +24,43 @@ export interface ApiError {
     readonly details?: Record<string, unknown>;
 }
 
-export class ValidationError extends Error {
-    readonly code = "VALIDATION_ERROR";
-    readonly status = HttpStatus.BAD_REQUEST;
-
-    constructor(
-        message: string,
-        public readonly details?: Record<string, unknown>
-    ) {
-        super(message);
-        this.name = "ValidationError";
-    }
+export interface ValidationError extends Error {
+    code: "VALIDATION_ERROR";
+    status: HttpStatus.BAD_REQUEST;
+    details?: Record<string, unknown>;
 }
 
-export class NotFoundError extends Error {
-    readonly code = "NOT_FOUND";
-    readonly status = HttpStatus.NOT_FOUND;
-
-    constructor(message: string) {
-        super(message);
-        this.name = "NotFoundError";
-    }
+export interface NotFoundError extends Error {
+    code: "NOT_FOUND";
+    status: HttpStatus.NOT_FOUND;
 }
 
-export class ConflictError extends Error {
-    readonly code = "CONFLICT";
-    readonly status = HttpStatus.CONFLICT;
-
-    constructor(message: string) {
-        super(message);
-        this.name = "ConflictError";
-    }
+export interface ConflictError extends Error {
+    code: "CONFLICT";
+    status: HttpStatus.CONFLICT;
 }
+
+export const createValidationError = (message: string, details?: Record<string, unknown>): ValidationError => {
+    const error = new Error(message) as ValidationError;
+    error.name = "ValidationError";
+    error.code = "VALIDATION_ERROR";
+    error.status = HttpStatus.BAD_REQUEST;
+    error.details = details;
+    return error;
+};
+
+export const createNotFoundError = (message: string): NotFoundError => {
+    const error = new Error(message) as NotFoundError;
+    error.name = "NotFoundError";
+    error.code = "NOT_FOUND";
+    error.status = HttpStatus.NOT_FOUND;
+    return error;
+};
+
+export const createConflictError = (message: string): ConflictError => {
+    const error = new Error(message) as ConflictError;
+    error.name = "ConflictError";
+    error.code = "CONFLICT";
+    error.status = HttpStatus.CONFLICT;
+    return error;
+};

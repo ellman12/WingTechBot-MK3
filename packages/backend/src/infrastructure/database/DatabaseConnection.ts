@@ -2,18 +2,15 @@ import type { DB } from "@db/types";
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 
-// Private state using file-level constants
 let kyselyInstance: Kysely<DB> | null = null;
 let isConnected = false;
 
-// Private functions
 const createKyselyClient = (): Kysely<DB> => {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
     return new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
 };
 
-// Public interface - exported functions
 export const getKysely = (): Kysely<DB> => {
     if (!kyselyInstance) {
         kyselyInstance = createKyselyClient();
@@ -30,7 +27,6 @@ export const connect = async (): Promise<void> => {
     try {
         const kysely = getKysely();
 
-        // Test connection
         await kysely.selectFrom("users").select("id").limit(1).execute();
 
         isConnected = true;

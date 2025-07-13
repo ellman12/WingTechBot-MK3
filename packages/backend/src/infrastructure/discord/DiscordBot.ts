@@ -1,85 +1,95 @@
 import { Client, type ClientEvents, Events, GatewayIntentBits } from "discord.js";
 
+import { createDiscordVoiceAdapter } from "@/adapters/services/DiscordVoiceAdapter.js";
+import { deployCommands, registerCommands } from "@/application/commands/commands.js";
+
 import type { Config } from "../config/Config.js";
 
-// Private state using file-level constants
-let clientInstance: Client | null = null;
-let configInstance: Config | null = null;
-let isReady = false;
-
-// Private functions
-const createClient = (): Client => {
-    return new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.DirectMessages] });
+export type DiscordBotDeps = {
+    readonly config: Config;
 };
 
-const setupEventHandlers = (client: Client): void => {
-    client.once(Events.ClientReady, (readyClient: Client<true>) => {
-        console.log(`🤖 Discord bot ready! Logged in as ${readyClient.user.tag}`);
-        console.log(`📊 Bot is in ${readyClient.guilds.cache.size} guilds`);
-        isReady = true;
+export type DiscordBot = {
+    readonly client: Client;
+    readonly isReady: () => boolean;
+    readonly start: () => Promise<void>;
+    readonly stop: () => Promise<void>;
+    readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
+};
+
+export const createDiscordBot = (deps: DiscordBotDeps): DiscordBot => {
+    const client = new Client({
+        intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.DirectMessages],
     });
 
-    client.on(Events.Error, (error: Error) => {
-        console.error("❌ Discord client error:", error);
-    });
-};
+    let isReadyState = false;
 
-// Public interface - exported functions
-export const initializeDiscordBot = (config: Config): void => {
-    configInstance = config;
+    const voiceService = createDiscordVoiceAdapter({ client });
 
-    if (!clientInstance) {
-        clientInstance = createClient();
-        setupEventHandlers(clientInstance);
-    }
-};
+    const setupEventHandlers = (): void => {
+        client.once(Events.ClientReady, async (readyClient: Client<true>) => {
+            console.log(`🤖 Discord bot ready! Logged in as ${readyClient.user.tag}`);
+            console.log(`📊 Bot is in ${readyClient.guilds.cache.size} servers`);
+            isReadyState = true;
 
-export const startDiscordBot = async (): Promise<void> => {
-    if (!clientInstance || !configInstance) {
-        throw new Error("Discord bot not initialized. Call initializeDiscordBot first.");
-    }
+            if (process.env.NODE_ENV === "development") {
+                try {
+                    await deployCommands(deps.config.discord.token, deps.config.discord.clientId, deps.config.discord.serverId, voiceService);
+                } catch (error) {
+                    console.warn("⚠️ Failed to deploy commands automatically:", error);
+                    console.log("💡 You can deploy commands manually with: pnpm discord:deploy-commands");
+                }
+            }
+        });
 
-    try {
-        console.log("🚀 Starting Discord bot...");
-        await clientInstance.login(configInstance.discord.token);
-    } catch (error) {
-        console.error("❌ Failed to start Discord bot:", error);
-        throw error;
-    }
-};
+        client.on(Events.Error, (error: Error) => {
+            console.error("❌ Discord client error:", error);
+        });
 
-export const stopDiscordBot = async (): Promise<void> => {
-    if (!clientInstance) {
-        return;
-    }
+        registerCommands(voiceService, {
+            client,
+            isReady,
+            start,
+            stop,
+            registerEventHandler,
+        });
+    };
 
-    try {
-        console.log("🛑 Stopping Discord bot...");
-        clientInstance.destroy();
-        isReady = false;
-        console.log("✅ Discord bot stopped");
-    } catch (error) {
-        console.error("❌ Error stopping Discord bot:", error);
-        throw error;
-    }
-};
+    const start = async (): Promise<void> => {
+        try {
+            console.log("🚀 Starting Discord bot...");
+            await client.login(deps.config.discord.token);
+        } catch (error) {
+            console.error("❌ Failed to start Discord bot:", error);
+            throw error;
+        }
+    };
 
-export const getDiscordClient = (): Client | null => {
-    return clientInstance;
-};
+    const stop = async (): Promise<void> => {
+        try {
+            console.log("🛑 Stopping Discord bot...");
+            client.destroy();
+            isReadyState = false;
+            console.log("✅ Discord bot stopped");
+        } catch (error) {
+            console.error("❌ Error stopping Discord bot:", error);
+            throw error;
+        }
+    };
 
-export const isDiscordBotReady = (): boolean => {
-    return isReady;
-};
+    const registerEventHandler = <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>): void => {
+        client.on(event, handler);
+    };
 
-export const getDiscordConfig = (): Config | null => {
-    return configInstance;
-};
+    const isReady = (): boolean => isReadyState;
 
-export const registerEventHandler = <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>): void => {
-    if (!clientInstance) {
-        throw new Error("Discord bot not initialized. Call initializeDiscordBot first.");
-    }
+    setupEventHandlers();
 
-    clientInstance.on(event, handler);
+    return {
+        client,
+        isReady,
+        start,
+        stop,
+        registerEventHandler,
+    };
 };

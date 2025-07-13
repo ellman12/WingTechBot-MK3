@@ -1,11 +1,11 @@
 import { create } from "zustand";
 
-interface CounterState {
+type CounterState = {
     count: number;
     increment: () => void;
     decrement: () => void;
     reset: () => void;
-}
+};
 
 export const useCounterStore = create<CounterState>(set => ({
     count: 0,

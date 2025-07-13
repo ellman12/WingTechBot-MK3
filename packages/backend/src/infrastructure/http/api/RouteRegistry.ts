@@ -1,11 +1,9 @@
 import type { ApiVersion, ApiVersionConfig } from "./types.js";
 import type { RouteRegistryEntry } from "./types.js";
 
-// Private state using file-level constants
 const routes: Map<ApiVersion, RouteRegistryEntry[]> = new Map();
 const versionConfigs: Map<ApiVersion, ApiVersionConfig> = new Map();
 
-// Public interface - exported functions
 export const registerVersion = (config: ApiVersionConfig): void => {
     versionConfigs.set(config.version, config);
 
@@ -88,7 +86,6 @@ export const validateVersionSupport = (version: ApiVersion): boolean => {
 
     const now = new Date();
 
-    // Check if version is past sunset date
     if (config.sunsetDate && now > config.sunsetDate) {
         return false;
     }

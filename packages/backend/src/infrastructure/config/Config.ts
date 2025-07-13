@@ -1,18 +1,16 @@
-export interface Config {
+export type Config = {
     readonly server: { readonly port: number; readonly environment: string };
     readonly database: { readonly url: string };
-    readonly discord: { readonly token: string; readonly clientId: string; readonly guildId?: string };
-}
+    readonly discord: { readonly token: string; readonly clientId: string; readonly serverId?: string };
+};
 
-// Private state using file-level constants
 let configInstance: Config | null = null;
 
-// Private functions
 const loadConfig = (): Config => {
     return {
         server: { port: Number(process.env.PORT) || 3000, environment: process.env.NODE_ENV || "development" },
         database: { url: process.env.DATABASE_URL || "postgresql://wingtechbot:wingtechbot_password@localhost:5432/wingtechbot" },
-        discord: { token: process.env.DISCORD_TOKEN || "", clientId: process.env.DISCORD_CLIENT_ID || "", ...(process.env.DISCORD_GUILD_ID && { guildId: process.env.DISCORD_GUILD_ID }) },
+        discord: { token: process.env.DISCORD_TOKEN || "", clientId: process.env.DISCORD_CLIENT_ID || "", ...(process.env.DISCORD_GUILD_ID && { serverId: process.env.DISCORD_GUILD_ID }) },
     };
 };
 
@@ -42,7 +40,6 @@ const validateConfig = (config: Config): void => {
     }
 };
 
-// Public interface - exported functions
 export const getConfig = (): Config => {
     if (!configInstance) {
         configInstance = loadConfig();

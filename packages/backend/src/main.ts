@@ -1,66 +1,95 @@
 #!/usr/bin/env node
 import "@dotenvx/dotenvx/config";
-import type { Application } from "express";
 
-import { createUserRepository } from "./adapters/repositories/UserRepository.js";
+import { createUserRepository } from "./adapters/repositories/KyselyUserRepository.js";
 import { getConfig } from "./infrastructure/config/Config.js";
 import { connect, disconnect, getKysely, healthCheck } from "./infrastructure/database/DatabaseConnection.js";
-import { initializeDiscordBot, startDiscordBot, stopDiscordBot } from "./infrastructure/discord/DiscordBot.js";
-import { type ServerConfig, createExpressApp, startServer } from "./infrastructure/http/ExpressApp.js";
+import { type DiscordBot, createDiscordBot } from "./infrastructure/discord/DiscordBot.js";
+import { type ExpressApp, type ServerConfig, createExpressApp } from "./infrastructure/http/ExpressApp.js";
 
-interface AppDependencies {
+export type AppDependencies = {
     readonly config: ReturnType<typeof getConfig>;
-    readonly expressApp: Application;
+    readonly expressApp: ExpressApp;
+    readonly discordBot: DiscordBot;
     readonly userRepository: ReturnType<typeof createUserRepository>;
-}
+};
 
-const createAppDependencies = async (): Promise<AppDependencies> => {
+export type App = {
+    readonly start: () => Promise<void>;
+    readonly stop: () => Promise<void>;
+};
+
+export const createApplication = async (): Promise<App> => {
     const config = getConfig();
 
-    // Connect to database
     await connect();
 
     const db = getKysely();
-    const serverConfig: ServerConfig = { port: config.server.port, nodeEnv: process.env.NODE_ENV || "development", corsOrigin: process.env.CORS_ORIGIN || false };
+    const serverConfig: ServerConfig = {
+        port: config.server.port,
+        nodeEnv: process.env.NODE_ENV || "development",
+        corsOrigin: process.env.CORS_ORIGIN || false,
+    };
 
-    const expressApp = createExpressApp(db, serverConfig);
+    const expressApp = createExpressApp({ db, config: serverConfig });
+    const discordBot = createDiscordBot({ config });
+    const _userRepository = createUserRepository(db);
 
-    // Create repository instances
-    const userRepository = createUserRepository(db);
+    const runMigrations = async (): Promise<void> => {
+        try {
+            const isHealthy = await healthCheck();
 
-    // Initialize Discord bot
-    initializeDiscordBot(config);
+            if (!isHealthy) {
+                throw new Error("Database health check failed");
+            }
 
-    return { config, expressApp, userRepository };
-};
-
-const runMigrations = async (): Promise<void> => {
-    try {
-        const isHealthy = await healthCheck();
-
-        if (!isHealthy) {
-            throw new Error("Database health check failed");
+            console.log("✅ Database is ready");
+        } catch (error) {
+            console.error("❌ Database migration failed:", error);
+            throw error;
         }
+    };
 
-        console.log("✅ Database is ready");
-    } catch (error) {
-        console.error("❌ Database migration failed:", error);
-        throw error;
-    }
-};
+    const start = async (): Promise<void> => {
+        try {
+            console.log("🚀 Starting WingTechBot MK3...");
 
-const setupGracefulShutdown = (): void => {
-    const shutdown = async (exitCode = 0): Promise<void> => {
+            await runMigrations();
+            await discordBot.start();
+            expressApp.start();
+
+            console.log("✅ Application started successfully!");
+        } catch (error) {
+            console.error("❌ Failed to start application:", error);
+            throw error;
+        }
+    };
+
+    const stop = async (): Promise<void> => {
         try {
             console.log("🛑 Shutting down application...");
 
-            // Stop Discord bot
-            await stopDiscordBot();
+            await discordBot.stop();
 
-            // Disconnect from database
             await disconnect();
 
             console.log("✅ Application shut down gracefully");
+        } catch (error) {
+            console.error("❌ Error during shutdown:", error);
+            throw error;
+        }
+    };
+
+    return {
+        start,
+        stop,
+    };
+};
+
+const setupGracefulShutdown = (app: App): void => {
+    const shutdown = async (exitCode = 0): Promise<void> => {
+        try {
+            await app.stop();
             process.exit(exitCode);
         } catch (error) {
             console.error("❌ Error during shutdown:", error);
@@ -90,16 +119,9 @@ const setupGracefulShutdown = (): void => {
 
 const startApplication = async (): Promise<void> => {
     try {
-        console.log("🚀 Starting WingTechBot MK3...");
-
-        const dependencies = await createAppDependencies();
-        await runMigrations();
-        await startDiscordBot();
-
-        startServer(dependencies.expressApp, dependencies.config.server.port);
-
-        console.log("✅ Application started successfully!");
-        setupGracefulShutdown();
+        const app = await createApplication();
+        await app.start();
+        setupGracefulShutdown(app);
     } catch (error) {
         console.error("❌ Failed to start application:", error);
         process.exit(1);

@@ -15,6 +15,5 @@
     "plugins": ["@trivago/prettier-plugin-sort-imports", "prettier-plugin-tailwindcss"],
     "importOrder": ["^react$", "^react-(.*)$", "^@/(.*)$", "^[./]"],
     "importOrderSeparation": true,
-    "importOrderSortSpecifiers": true,
-    "objectWrap": "collapse"
+    "importOrderSortSpecifiers": true
 }

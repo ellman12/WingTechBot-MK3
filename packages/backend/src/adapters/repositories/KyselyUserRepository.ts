@@ -5,7 +5,13 @@ import type { Kysely, Selectable } from "kysely";
 
 // Transform database user to domain user
 const transformUser = (dbUser: Selectable<Users>): User => {
-    return { id: dbUser.id, username: dbUser.username, displayName: dbUser.display_name ?? undefined, avatar: dbUser.avatar ?? undefined, isBot: dbUser.is_bot } satisfies User;
+    return {
+        id: dbUser.id,
+        username: dbUser.username,
+        displayName: dbUser.display_name ?? undefined,
+        avatar: dbUser.avatar ?? undefined,
+        isBot: dbUser.is_bot,
+    } satisfies User;
 };
 
 // Factory function to create UserRepository instance
@@ -70,5 +76,13 @@ export const createUserRepository = (db: Kysely<DB>): UserRepository => {
         return !!user;
     };
 
-    return { findById: findUserById, findByUsername: getUserByUsername, findAll: getAllUsers, create: createUser, update: updateUser, delete: deleteUser, exists: userExists };
+    return {
+        findById: findUserById,
+        findByUsername: getUserByUsername,
+        findAll: getAllUsers,
+        create: createUser,
+        update: updateUser,
+        delete: deleteUser,
+        exists: userExists,
+    };
 };
