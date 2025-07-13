@@ -1,0 +1,187 @@
+/* Global styles for Material-UI integration */
+body {
+  margin: 0;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+code {
+  font-family: 'JetBrains Mono', 'Monaco', 'Consolas', monospace;
+}
+
+/* Custom scrollbar for sidebar */
+.doc-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.doc-sidebar::-webkit-scrollbar-track {
+  background: var(--scrollbar-track, #f1f1f1);
+}
+
+.doc-sidebar::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb, #c1c1c1);
+  border-radius: 3px;
+}
+
+.doc-sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover, #a8a8a8);
+}
+
+/* Dark mode scrollbar */
+[data-mui-color-scheme="dark"] .doc-sidebar::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+
+[data-mui-color-scheme="dark"] .doc-sidebar::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+[data-mui-color-scheme="dark"] .doc-sidebar::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+/* Code block styling */
+.doc-code-block {
+  background-color: #263238;
+  color: #eeffff;
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: background-color 0.3s ease;
+}
+
+/* Dark mode code block */
+[data-mui-color-scheme="dark"] .doc-code-block {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+}
+
+/* Markdown content styling */
+.doc-prose {
+  line-height: 1.6;
+  color: var(--text-primary, #333);
+  transition: color 0.3s ease;
+}
+
+.doc-prose h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: var(--primary-color, #1976d2);
+  transition: color 0.3s ease;
+}
+
+.doc-prose h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-top: 3rem;
+  margin-bottom: 1.5rem;
+  color: var(--primary-color, #1976d2);
+  transition: color 0.3s ease;
+}
+
+.doc-prose h3 {
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  color: var(--primary-color, #1976d2);
+  transition: color 0.3s ease;
+}
+
+.doc-prose p {
+  margin-bottom: 1rem;
+  color: var(--text-secondary, #555);
+  transition: color 0.3s ease;
+}
+
+.doc-prose code {
+  background-color: var(--code-bg, #f5f5f5);
+  color: var(--code-color, #d32f2f);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.doc-prose pre {
+  background-color: #263238;
+  color: #eeffff;
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1rem 0;
+  transition: background-color 0.3s ease;
+}
+
+.doc-prose pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+/* Dark mode prose styles */
+[data-mui-color-scheme="dark"] .doc-prose {
+  color: #e0e0e0;
+}
+
+[data-mui-color-scheme="dark"] .doc-prose h1,
+[data-mui-color-scheme="dark"] .doc-prose h2,
+[data-mui-color-scheme="dark"] .doc-prose h3 {
+  color: #90caf9;
+}
+
+[data-mui-color-scheme="dark"] .doc-prose p {
+  color: #b0b0b0;
+}
+
+[data-mui-color-scheme="dark"] .doc-prose code {
+  background-color: #2d2d2d;
+  color: #ff8a80;
+}
+
+[data-mui-color-scheme="dark"] .doc-prose pre {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+}
+
+/* CSS Custom Properties for theme switching */
+:root {
+  --text-primary: #333;
+  --text-secondary: #555;
+  --primary-color: #1976d2;
+  --code-bg: #f5f5f5;
+  --code-color: #d32f2f;
+  --scrollbar-track: #f1f1f1;
+  --scrollbar-thumb: #c1c1c1;
+  --scrollbar-thumb-hover: #a8a8a8;
+}
+
+[data-mui-color-scheme="dark"] {
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --primary-color: #90caf9;
+  --code-bg: #2d2d2d;
+  --code-color: #ff8a80;
+  --scrollbar-track: #2d2d2d;
+  --scrollbar-thumb: #555;
+  --scrollbar-thumb-hover: #777;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .doc-content {
+    margin-left: 0 !important;
+    padding: 16px !important;
+  }
+}
+
+/* Smooth transitions for theme switching */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+} 
