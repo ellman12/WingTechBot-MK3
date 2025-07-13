@@ -2,14 +2,14 @@
     "name": "backend",
     "version": "1.0.0",
     "description": "ExpressJS TypeScript backend with Discord bot functionality following hexagonal architecture",
-    "main": "dist/main.js",
+    "main": "dist/src/main.js",
     "type": "module",
     "scripts": {
         "predev": "docker compose -f docker-compose.db.yaml up -d",
         "dev": "tsx watch src/main.ts",
         "build": "tsc",
         "build:with-docs": "tsc && pnpm run docs:generate",
-        "start": "node dist/main.js",
+        "start": "node dist/src/main.js",
         "test": "vitest",
         "test:ui": "vitest --ui",
         "test:coverage": "vitest --coverage",
@@ -22,7 +22,7 @@
         "discord:deploy-commands": "tsx -r @dotenvx/dotenvx/config scripts/deploy-commands.ts",
         "docker:build": "docker build -t wingtechbot-mk3 .",
         "docker:run": "docker run -p 3000:3000 wingtechbot-mk3",
-        "docker:up": "docker compose -f docker-compose.dev.yaml up --build",
+        "docker:up": "dotenvx run -- docker compose -f docker-compose.dev.yaml up --build",
         "docker:up:detached": "docker compose -f docker-compose.dev.yaml up --build -d",
         "docker:down": "docker compose -f docker-compose.dev.yaml down",
         "docker:down:volumes": "docker compose -f docker-compose.dev.yaml down -v",
@@ -42,6 +42,9 @@
         "hexagonal-architecture",
         "backend"
     ],
+    "pnpm": {
+        "neverBuiltDependencies": []
+    },
     "author": "",
     "license": "ISC",
     "bugs": {
@@ -61,13 +64,16 @@
         "cors": "^2.8.5",
         "discord.js": "^14.21.0",
         "express": "^5.1.0",
-        "ffmpeg-static": "^5.2.0",
         "helmet": "^8.1.0",
         "kysely": "^0.28.2",
         "kysely-codegen": "^0.18.5",
+        "libsodium": "^0.7.15",
         "morgan": "^1.10.0",
+        "opusscript": "^0.0.8",
         "pg": "^8.13.1",
+        "sodium-native": "^5.0.6",
         "swagger-ui-express": "^5.0.1",
+        "ytdl-core": "^4.11.5",
         "zod": "^4.0.5",
         "zod-openapi": "^5.1.0"
     },

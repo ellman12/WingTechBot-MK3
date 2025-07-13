@@ -26,13 +26,19 @@ export const createVoiceCommands = (voiceService: VoiceService): Record<string, 
                     if (voiceChannel) {
                         targetChannelId = voiceChannel.id;
                     } else {
-                        await interaction.reply({ content: "You are not in a voice channel and no channel was specified!", ephemeral: true });
+                        await interaction.reply({
+                            content: "You are not in a voice channel and no channel was specified!",
+                            ephemeral: true,
+                        });
                         return;
                     }
                 }
 
                 if (voiceService.isConnected(interaction.guildId)) {
-                    await interaction.reply({ content: "I'm already connected to a voice channel in this server!", ephemeral: true });
+                    await interaction.reply({
+                        content: "I'm already connected to a voice channel in this server!",
+                        ephemeral: true,
+                    });
                     return;
                 }
 
@@ -42,7 +48,10 @@ export const createVoiceCommands = (voiceService: VoiceService): Record<string, 
                 await interaction.reply(`🎵 Joined ${channelName}!`);
             } catch (error) {
                 console.error("Error joining voice channel:", error);
-                await interaction.reply({ content: "Failed to join the voice channel. Please try again.", ephemeral: true });
+                await interaction.reply({
+                    content: "Failed to join the voice channel. Please try again.",
+                    ephemeral: true,
+                });
             }
         },
     };
@@ -60,7 +69,10 @@ export const createVoiceCommands = (voiceService: VoiceService): Record<string, 
                 await interaction.reply("👋 Left the voice channel!");
             } catch (error) {
                 console.error("Error leaving voice channel:", error);
-                await interaction.reply({ content: "Failed to leave the voice channel. Please try again.", ephemeral: true });
+                await interaction.reply({
+                    content: "Failed to leave the voice channel. Please try again.",
+                    ephemeral: true,
+                });
             }
         },
     };
@@ -69,7 +81,15 @@ export const createVoiceCommands = (voiceService: VoiceService): Record<string, 
         data: new SlashCommandBuilder()
             .setName("play")
             .setDescription("Play audio in the voice channel")
-            .addStringOption(option => option.setName("source").setDescription("Audio source (URL or file path)").setRequired(true)),
+            .addStringOption(option => option.setName("source").setDescription("Audio source (URL, file path, or YouTube URL)").setRequired(true))
+            .addIntegerOption(option => option.setName("volume").setDescription("Volume level (0-100)").setRequired(false).setMinValue(0).setMaxValue(100))
+            .addStringOption(option =>
+                option
+                    .setName("quality")
+                    .setDescription("Audio quality")
+                    .setRequired(false)
+                    .addChoices({ name: "Lowest", value: "lowest" }, { name: "Low", value: "low" }, { name: "Medium", value: "medium" }, { name: "High", value: "high" }, { name: "Highest", value: "highest" })
+            ),
         execute: async (interaction: ChatInputCommandInteraction) => {
             if (!interaction.guildId) {
                 await interaction.reply({ content: "This command can only be used in a server!", ephemeral: true });
@@ -78,14 +98,23 @@ export const createVoiceCommands = (voiceService: VoiceService): Record<string, 
 
             try {
                 const audioSource = interaction.options.getString("source", true);
+                const volume = interaction.options.getInteger("volume");
+                const quality = interaction.options.getString("quality");
 
                 if (!voiceService.isConnected(interaction.guildId)) {
                     await interaction.reply({ content: "I'm not connected to a voice channel!", ephemeral: true });
                     return;
                 }
 
+                // Set volume if specified
+                if (volume !== null) {
+                    await voiceService.setVolume(interaction.guildId, volume);
+                }
+
                 await voiceService.playAudio(interaction.guildId, audioSource);
-                await interaction.reply(`🎵 Playing audio from: ${audioSource}`);
+
+                const qualityText = quality ? ` at ${quality} quality` : "";
+                await interaction.reply(`🎵 Playing audio from: ${audioSource}${qualityText}`);
             } catch (error) {
                 console.error("Error playing audio:", error);
                 await interaction.reply({ content: "Failed to play audio. Please try again.", ephemeral: true });

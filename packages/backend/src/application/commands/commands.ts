@@ -65,7 +65,7 @@ export const registerCommands = (voiceService: VoiceService, discordBot: Discord
         {} as Record<string, Command>
     );
 
-    console.log(`🔄 ${Object.keys(commands).length} Commands registered:`);
+    console.log(`✅ Registered ${Object.keys(commands).length} Commands:`);
     Object.keys(commands).forEach(command => {
         console.log(`- ${command}`);
     });

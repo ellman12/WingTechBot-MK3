@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { generateDependencyReport } from "@discordjs/voice";
 import "@dotenvx/dotenvx/config";
 
 import { createUserRepository } from "./adapters/repositories/KyselyUserRepository.js";
@@ -34,6 +35,9 @@ export const createApplication = async (): Promise<App> => {
     const expressApp = createExpressApp({ db, config: serverConfig });
     const discordBot = createDiscordBot({ config });
     const _userRepository = createUserRepository(db);
+
+    console.log("🔧 Dependency Report:");
+    console.log(generateDependencyReport());
 
     const runMigrations = async (): Promise<void> => {
         try {

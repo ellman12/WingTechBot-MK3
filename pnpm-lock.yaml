@@ -63,7 +63,7 @@ importers:
                 version: 0.10.0
             "@discordjs/voice":
                 specifier: ^0.18.0
-                version: 0.18.0(@discordjs/opus@0.10.0)(ffmpeg-static@5.2.0)
+                version: 0.18.0(@discordjs/opus@0.10.0)(ffmpeg-static@5.2.0)(opusscript@0.0.8)
             "@dotenvx/dotenvx":
                 specifier: ^1.47.3
                 version: 1.47.3
@@ -82,9 +82,6 @@ importers:
             express:
                 specifier: ^5.1.0
                 version: 5.1.0
-            ffmpeg-static:
-                specifier: ^5.2.0
-                version: 5.2.0
             helmet:
                 specifier: ^8.1.0
                 version: 8.1.0
@@ -94,15 +91,27 @@ importers:
             kysely-codegen:
                 specifier: ^0.18.5
                 version: 0.18.5(kysely@0.28.2)(pg@8.16.3)(typescript@5.8.3)
+            libsodium:
+                specifier: ^0.7.15
+                version: 0.7.15
             morgan:
                 specifier: ^1.10.0
                 version: 1.10.0
+            opusscript:
+                specifier: ^0.0.8
+                version: 0.0.8
             pg:
                 specifier: ^8.13.1
                 version: 8.16.3
+            sodium-native:
+                specifier: ^5.0.6
+                version: 5.0.6
             swagger-ui-express:
                 specifier: ^5.0.1
                 version: 5.0.1(express@5.1.0)
+            ytdl-core:
+                specifier: ^4.11.5
+                version: 4.11.5
             zod:
                 specifier: ^4.0.5
                 version: 4.0.5
@@ -1490,6 +1499,35 @@ packages:
     balanced-match@1.0.2:
         resolution: { integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw== }
 
+    bare-addon-resolve@1.9.4:
+        resolution: { integrity: sha512-unn6Vy/Yke6F99vg/7tcrvM2KUvIhTNniaSqDbam4AWkd4NhvDVSrQiRYVlNzUV2P7SPobkCK7JFVxrJk9btCg== }
+        peerDependencies:
+            bare-url: "*"
+        peerDependenciesMeta:
+            bare-url:
+                optional: true
+
+    bare-module-resolve@1.11.1:
+        resolution: { integrity: sha512-DCxeT9i8sTs3vUMA3w321OX/oXtNEu5EjObQOnTmCdNp5RXHBAvAaBDHvAi9ta0q/948QPz+co6SsGi6aQMYRg== }
+        peerDependencies:
+            bare-url: "*"
+        peerDependenciesMeta:
+            bare-url:
+                optional: true
+
+    bare-os@3.6.1:
+        resolution: { integrity: sha512-uaIjxokhFidJP+bmmvKSgiMzj2sV5GPHaZVAIktcxcpCyBFFWO+YlikVAdhmUo2vYFvFhOXIAlldqV29L8126g== }
+        engines: { bare: ">=1.14.0" }
+
+    bare-path@3.0.0:
+        resolution: { integrity: sha512-tyfW2cQcB5NN8Saijrhqn0Zh7AnFNsnczRcuWODH0eYAXBsJ5gVxAUuNr7tsHSC6IZ77cA0SitzT+s47kot8Mw== }
+
+    bare-semver@1.0.1:
+        resolution: { integrity: sha512-UtggzHLiTrmFOC/ogQ+Hy7VfoKoIwrP1UFcYtTxoCUdLtsIErT8+SWtOC2DH/snT9h+xDrcBEPcwKei1mzemgg== }
+
+    bare-url@2.1.6:
+        resolution: { integrity: sha512-FgjDeR+/yDH34By4I0qB5NxAoWv7dOTYcOXwn73kr+c93HyC2lU6tnjifqUe33LKMJcDyCYPQjEAqgOQiXkE2Q== }
+
     basic-auth@2.0.1:
         resolution: { integrity: sha512-NF+epuEdnUYVlGuhaxbbq+dvJttwLnGY+YixlXlME5KpQ5W3CnXA5cVTneY3SPbPDRkcjMbifrwmFYcClgOZeg== }
         engines: { node: ">= 0.8" }
@@ -2448,6 +2486,9 @@ packages:
         resolution: { integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ== }
         engines: { node: ">= 0.8.0" }
 
+    libsodium@0.7.15:
+        resolution: { integrity: sha512-sZwRknt/tUpE2AwzHq3jEyUU5uvIZHtSssktXq7owd++3CSgn8RGrv6UZJJBpP7+iBghBqe7Z06/2M31rI2NKw== }
+
     lightningcss-darwin-arm64@1.30.1:
         resolution: { integrity: sha512-c8JK7hyE65X1MHMN+Viq9n11RRC7hgin3HhYKhrMyaXflk5GVplZ60IxyoVtzILeKr+xAJwg6zK6sjTBJ0FKYQ== }
         engines: { node: ">= 12.0.0" }
@@ -2572,6 +2613,10 @@ packages:
 
     lru-cache@5.1.1:
         resolution: { integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w== }
+
+    m3u8stream@0.8.6:
+        resolution: { integrity: sha512-LZj8kIVf9KCphiHmH7sbFQTVe4tOemb202fWwvJwR9W5ENW/1hxJN6ksAWGhQgSBSa3jyWhnjKU1Fw1GaOdbyA== }
+        engines: { node: ">=12" }
 
     magic-bytes.js@1.12.1:
         resolution: { integrity: sha512-ThQLOhN86ZkJ7qemtVRGYM+gRgR8GEXNli9H/PMvpnZsE44Xfh3wx9kGJaldg314v85m+bFW6WBMaVHJc/c3zA== }
@@ -2757,6 +2802,10 @@ packages:
         resolution: { integrity: sha512-VP79XUPxV2CigYP3jWwAUFSku2aKqBH7uTAapFWCBqutsbmDo96KY5o8uh6U+/YSIn5OxJnXp73beVkpqMIGhA== }
         engines: { node: ">=18" }
 
+    miniget@4.2.3:
+        resolution: { integrity: sha512-SjbDPDICJ1zT+ZvQwK0hUcRY4wxlhhNpHL9nJOB2MEAXRGagTljsO8MEDzQMTFf0Q8g4QNi8P9lEm/g7e+qgzA== }
+        engines: { node: ">=12" }
+
     minimatch@10.0.3:
         resolution: { integrity: sha512-IPZ167aShDZZUMdRk66cyQAW3qr0WzbHkPdMYa8bzZhlHhO3jALbKdxcaak7W9FfT2rZNpQuUu4Od7ILEpXSaw== }
         engines: { node: 20 || >=22 }
@@ -2918,6 +2967,9 @@ packages:
     optionator@0.9.4:
         resolution: { integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g== }
         engines: { node: ">= 0.8.0" }
+
+    opusscript@0.0.8:
+        resolution: { integrity: sha512-VSTi1aWFuCkRCVq+tx/BQ5q9fMnQ9pVZ3JU4UHKqTkf0ED3fKEPdr+gKAAl3IA2hj9rrP6iyq3hlcJq3HELtNQ== }
 
     p-limit@2.3.0:
         resolution: { integrity: sha512-//88mFWSJx8lxCzwdAABTJL2MyWB12+eIY7MDL2SqLmAkeKU9qxRvWuSyTjm3FUmpBEMuFfckAIqEaVGUDxb6w== }
@@ -3293,6 +3345,10 @@ packages:
     remark-stringify@11.0.0:
         resolution: { integrity: sha512-1OSmLd3awB/t8qdoEOMazZkNsfVTeY4fTsgzcQFdXNq8ToTN4ZGwrMnlda4K6smTFKD+GRV6O48i6Z4iKgPPpw== }
 
+    require-addon@1.1.0:
+        resolution: { integrity: sha512-KbXAD5q2+v1GJnkzd8zzbOxchTkStSyJZ9QwoCq3QwEXAaIlG3wDYRZGzVD357jmwaGY7hr5VaoEAL0BkF0Kvg== }
+        engines: { bare: ">=1.10.0" }
+
     resolve-from@4.0.0:
         resolution: { integrity: sha512-pb/MYmXstAkysRFx8piNI1tGFNQIFA3vkE3Gq4EuA1dF6gHp/+vgZqsCGJapvy8N3Q+4o7FwvquPJcnZ7RYy4g== }
         engines: { node: ">=4" }
@@ -3350,6 +3406,9 @@ packages:
 
     safer-buffer@2.1.2:
         resolution: { integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg== }
+
+    sax@1.4.1:
+        resolution: { integrity: sha512-+aWOz7yVScEGoKNd4PA10LZ8sk0A/z5+nXQG5giUO5rprX9jgYsTdov9qCchZiPIZezbZH+jRut8nPodFAX4Jg== }
 
     scheduler@0.23.2:
         resolution: { integrity: sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ== }
@@ -3442,6 +3501,10 @@ packages:
     slice-ansi@7.1.0:
         resolution: { integrity: sha512-bSiSngZ/jWeX93BqeIAbImyTbEihizcwNjFoRUIY/T1wWQsfsm2Vw1agPKylXvQTU7iASGdHhyqRlqQzfz+Htg== }
         engines: { node: ">=18" }
+
+    sodium-native@5.0.6:
+        resolution: { integrity: sha512-lKSVfjJ867gb3LrnOZ0nuVxZ19//k/YhhYKVWQg4fklZ85YKtDHTxmEuWuk/s62IoiDbKC/DV50pcSd9tgaVew== }
+        engines: { bare: ">=1.16.0" }
 
     source-map-js@1.2.1:
         resolution: { integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA== }
@@ -3810,6 +3873,9 @@ packages:
     whatwg-url@5.0.0:
         resolution: { integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw== }
 
+    which-runtime@1.3.0:
+        resolution: { integrity: sha512-mQrEBUe15PdEuJvrBlvy3tika6sxQrkblI7JQ9kXeg8Lcby9FwmKvAYrCT3wLh91k6ltost7AVM7qYhjC8N0Zg== }
+
     which@2.0.2:
         resolution: { integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA== }
         engines: { node: ">= 8" }
@@ -3889,6 +3955,10 @@ packages:
     yocto-queue@0.1.0:
         resolution: { integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q== }
         engines: { node: ">=10" }
+
+    ytdl-core@4.11.5:
+        resolution: { integrity: sha512-27LwsW4n4nyNviRCO1hmr8Wr5J1wLLMawHCQvH8Fk0hiRqrxuIu028WzbJetiYH28K8XDbeinYW4/wcHQD1EXA== }
+        engines: { node: ">=12" }
 
     zod-openapi@5.1.0:
         resolution: { integrity: sha512-eo/E7A4RCTyf3Qbd0cPWzMxBTqs27WEGqJrp4wkgb+sbu6fvQ58Ert3hN4pL8hqkrrKpwGBZ78xao672ZoxRzg== }
@@ -4063,6 +4133,7 @@ snapshots:
             concat-stream: 2.0.0
             http-response-object: 3.0.2
             parse-cache-control: 1.0.1
+        optional: true
 
     "@discordjs/builders@1.11.2":
         dependencies:
@@ -4119,11 +4190,11 @@ snapshots:
 
     "@discordjs/util@1.1.1": {}
 
-    "@discordjs/voice@0.18.0(@discordjs/opus@0.10.0)(ffmpeg-static@5.2.0)":
+    "@discordjs/voice@0.18.0(@discordjs/opus@0.10.0)(ffmpeg-static@5.2.0)(opusscript@0.0.8)":
         dependencies:
             "@types/ws": 8.18.1
             discord-api-types: 0.37.120
-            prism-media: 1.3.5(@discordjs/opus@0.10.0)(ffmpeg-static@5.2.0)
+            prism-media: 1.3.5(@discordjs/opus@0.10.0)(ffmpeg-static@5.2.0)(opusscript@0.0.8)
             tslib: 2.8.1
             ws: 8.18.3
         transitivePeerDependencies:
@@ -4801,7 +4872,8 @@ snapshots:
 
     "@types/ms@2.1.0": {}
 
-    "@types/node@10.17.60": {}
+    "@types/node@10.17.60":
+        optional: true
 
     "@types/node@24.0.13":
         dependencies:
@@ -5158,6 +5230,31 @@ snapshots:
 
     balanced-match@1.0.2: {}
 
+    bare-addon-resolve@1.9.4(bare-url@2.1.6):
+        dependencies:
+            bare-module-resolve: 1.11.1(bare-url@2.1.6)
+            bare-semver: 1.0.1
+        optionalDependencies:
+            bare-url: 2.1.6
+
+    bare-module-resolve@1.11.1(bare-url@2.1.6):
+        dependencies:
+            bare-semver: 1.0.1
+        optionalDependencies:
+            bare-url: 2.1.6
+
+    bare-os@3.6.1: {}
+
+    bare-path@3.0.0:
+        dependencies:
+            bare-os: 3.6.1
+
+    bare-semver@1.0.1: {}
+
+    bare-url@2.1.6:
+        dependencies:
+            bare-path: 3.0.0
+
     basic-auth@2.0.1:
         dependencies:
             safe-buffer: 5.1.2
@@ -5198,7 +5295,8 @@ snapshots:
             node-releases: 2.0.19
             update-browserslist-db: 1.1.3(browserslist@4.25.1)
 
-    buffer-from@1.1.2: {}
+    buffer-from@1.1.2:
+        optional: true
 
     bytes@3.1.2: {}
 
@@ -5218,7 +5316,8 @@ snapshots:
 
     caniuse-lite@1.0.30001727: {}
 
-    caseless@0.12.0: {}
+    caseless@0.12.0:
+        optional: true
 
     ccount@2.0.1: {}
 
@@ -5338,6 +5437,7 @@ snapshots:
             inherits: 2.0.4
             readable-stream: 3.6.2
             typedarray: 0.0.6
+        optional: true
 
     console-control-strings@1.1.0: {}
 
@@ -5731,6 +5831,7 @@ snapshots:
             progress: 2.0.3
         transitivePeerDependencies:
             - supports-color
+        optional: true
 
     file-entry-cache@8.0.0:
         dependencies:
@@ -5986,6 +6087,7 @@ snapshots:
     http-response-object@3.0.2:
         dependencies:
             "@types/node": 10.17.60
+        optional: true
 
     https-proxy-agent@5.0.1:
         dependencies:
@@ -6148,6 +6250,8 @@ snapshots:
             prelude-ls: 1.2.1
             type-check: 0.4.0
 
+    libsodium@0.7.15: {}
+
     lightningcss-darwin-arm64@1.30.1:
         optional: true
 
@@ -6263,6 +6367,11 @@ snapshots:
     lru-cache@5.1.1:
         dependencies:
             yallist: 3.1.1
+
+    m3u8stream@0.8.6:
+        dependencies:
+            miniget: 4.2.3
+            sax: 1.4.1
 
     magic-bytes.js@1.12.1: {}
 
@@ -6647,6 +6756,8 @@ snapshots:
 
     mimic-function@5.0.1: {}
 
+    miniget@4.2.3: {}
+
     minimatch@10.0.3:
         dependencies:
             "@isaacs/brace-expansion": 5.0.0
@@ -6789,6 +6900,8 @@ snapshots:
             type-check: 0.4.0
             word-wrap: 1.2.5
 
+    opusscript@0.0.8: {}
+
     p-limit@2.3.0:
         dependencies:
             p-try: 2.2.0
@@ -6813,7 +6926,8 @@ snapshots:
         dependencies:
             callsites: 3.1.0
 
-    parse-cache-control@1.0.1: {}
+    parse-cache-control@1.0.1:
+        optional: true
 
     parse-entities@2.0.0:
         dependencies:
@@ -6941,14 +7055,16 @@ snapshots:
 
     prettier@3.6.2: {}
 
-    prism-media@1.3.5(@discordjs/opus@0.10.0)(ffmpeg-static@5.2.0):
+    prism-media@1.3.5(@discordjs/opus@0.10.0)(ffmpeg-static@5.2.0)(opusscript@0.0.8):
         optionalDependencies:
             "@discordjs/opus": 0.10.0
             ffmpeg-static: 5.2.0
+            opusscript: 0.0.8
 
     prismjs@1.30.0: {}
 
-    progress@2.0.3: {}
+    progress@2.0.3:
+        optional: true
 
     prop-types@15.8.1:
         dependencies:
@@ -7112,6 +7228,11 @@ snapshots:
             mdast-util-to-markdown: 2.1.2
             unified: 11.0.5
 
+    require-addon@1.1.0:
+        dependencies:
+            bare-addon-resolve: 1.9.4(bare-url@2.1.6)
+            bare-url: 2.1.6
+
     resolve-from@4.0.0: {}
 
     resolve-pkg-maps@1.0.0: {}
@@ -7191,6 +7312,8 @@ snapshots:
     safe-buffer@5.2.1: {}
 
     safer-buffer@2.1.2: {}
+
+    sax@1.4.1: {}
 
     scheduler@0.23.2:
         dependencies:
@@ -7300,6 +7423,11 @@ snapshots:
         dependencies:
             ansi-styles: 6.2.1
             is-fullwidth-code-point: 5.0.0
+
+    sodium-native@5.0.6:
+        dependencies:
+            require-addon: 1.1.0
+            which-runtime: 1.3.0
 
     source-map-js@1.2.1: {}
 
@@ -7497,7 +7625,8 @@ snapshots:
             media-typer: 1.1.0
             mime-types: 3.0.1
 
-    typedarray@0.0.6: {}
+    typedarray@0.0.6:
+        optional: true
 
     typescript-eslint@8.36.0(eslint@9.30.1(jiti@2.4.2))(typescript@5.8.3):
         dependencies:
@@ -7667,6 +7796,8 @@ snapshots:
             tr46: 0.0.3
             webidl-conversions: 3.0.1
 
+    which-runtime@1.3.0: {}
+
     which@2.0.2:
         dependencies:
             isexe: 2.0.0
@@ -7723,6 +7854,12 @@ snapshots:
     yn@3.1.1: {}
 
     yocto-queue@0.1.0: {}
+
+    ytdl-core@4.11.5:
+        dependencies:
+            m3u8stream: 0.8.6
+            miniget: 4.2.3
+            sax: 1.4.1
 
     zod-openapi@5.1.0(zod@4.0.5):
         dependencies:
