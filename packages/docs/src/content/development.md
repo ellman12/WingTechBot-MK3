@@ -7,6 +7,7 @@ This guide provides comprehensive information for developing with WingTechBot MK
 ### Prerequisites
 
 **Required Software:**
+
 - Node.js (version 18.0.0 or higher)
 - pnpm (install with npm install -g pnpm)
 - Git for version control
@@ -24,6 +25,7 @@ This guide provides comprehensive information for developing with WingTechBot MK
 ## Development Best Practices
 
 ### TypeScript Best Practices
+
 - **Type Safety:** Use strict TypeScript, avoid any/unknown
 - **Error Handling:** Use custom error types
 - **Interfaces:** We're using types and factory functions instead of interfaces and classes
@@ -38,19 +40,19 @@ API routes are organized by version and feature. To add a new route:
 
 ```typescript
 export const createUserRoutes = (db: Kysely<DB>): RouteGroup => ({
-  name: "users",
-  basePath: "/users",
-  tags: ["Users"],
-  routes: [
-    {
-      method: "get",
-      path: "/",
-      summary: "Get all users",
-      handler: getUsersHandler(db),
-      // ...schemas
-    },
-    // More routes...
-  ],
+    name: "users",
+    basePath: "/users",
+    tags: ["Users"],
+    routes: [
+        {
+            method: "get",
+            path: "/",
+            summary: "Get all users",
+            handler: getUsersHandler(db),
+            // ...schemas
+        },
+        // More routes...
+    ],
 });
 ```
 
@@ -60,11 +62,11 @@ export const createUserRoutes = (db: Kysely<DB>): RouteGroup => ({
 import { createUserRoutes } from "./users";
 
 export const createV1ApiConfiguration = (db: Kysely<DB>) => ({
-  config: { version: "v1", basePath: "/api/v1" },
-  groups: [
-    createHealthRoutes(),
-    createUserRoutes(db), // Add here
-  ],
+    config: { version: "v1", basePath: "/api/v1" },
+    groups: [
+        createHealthRoutes(),
+        createUserRoutes(db), // Add here
+    ],
 });
 ```
 
@@ -78,12 +80,10 @@ Slash commands are defined in the `src/application/commands/` directory. To add 
 
 ```typescript
 const pingCommand: Command = {
-  data: new SlashCommandBuilder()
-    .setName("ping")
-    .setDescription("Replies with Pong!"),
-  execute: async (interaction) => {
-    await interaction.reply("Pong!");
-  },
+    data: new SlashCommandBuilder().setName("ping").setDescription("Replies with Pong!"),
+    execute: async interaction => {
+        await interaction.reply("Pong!");
+    },
 };
 ```
 
@@ -95,7 +95,6 @@ const pingCommand: Command = {
 pnpm discord:deploy-commands
 ```
 
-*(Guild commands update instantly; global commands may take up to 1 hour.)*
+_(Guild commands update instantly; global commands may take up to 1 hour.)_
 
 **Tip:** Use `SlashCommandBuilder` for type-safe command definitions.
-

@@ -76,4 +76,4 @@ If everything is running, you should see the API docs and the React frontend. Th
 - See **Development** and **Discord Bot** guides for advanced usage.
 - For Docker setup, see the **Deployment** guide.
 
-Ready to contribute? Check out the [Development](/guide/development) and [Discord Bot](/guide/discord-bot) guides for more details! 
+Ready to contribute? Check out the [Development](/guide/development) and [Discord Bot](/guide/discord-bot) guides for more details!

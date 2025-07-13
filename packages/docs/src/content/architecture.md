@@ -23,6 +23,7 @@ The project uses a **monorepo pattern** with clear package boundaries:
 - **Documentation Package**: Developer documentation site
 
 This structure enables:
+
 - **Shared code** between packages
 - **Independent development** of each package
 - **Consistent tooling** across the entire project
@@ -37,6 +38,7 @@ The backend follows **hexagonal architecture** with four distinct layers, each w
 The hexagonal architecture is organized into four concentric layers:
 
 **Core Layer (Innermost)**
+
 - Pure business logic
 - Domain entities and business rules
 - Domain services and use cases
@@ -44,6 +46,7 @@ The hexagonal architecture is organized into four concentric layers:
 - Domain-specific errors
 
 **Application Layer**
+
 - Application contracts and orchestration
 - API version management
 - Route configurations
@@ -51,6 +54,7 @@ The hexagonal architecture is organized into four concentric layers:
 - Application services
 
 **Adapter Layer**
+
 - HTTP controllers and presenters
 - Repository implementations
 - Service implementations
@@ -58,6 +62,7 @@ The hexagonal architecture is organized into four concentric layers:
 - External system integrations
 
 **Infrastructure Layer (Outermost)**
+
 - HTTP routing and middleware
 - Database connections
 - Discord bot setup
@@ -102,17 +107,21 @@ The database follows **relational design principles** with:
 ## Key Architectural Benefits
 
 ### Clean Separation of Concerns
+
 Business logic isolated in core layer, API contracts separate from implementation, infrastructure separate from application logic.
 
 ### Easy Version Management
+
 Add new API versions by creating new contract/adapter directories, old versions remain isolated and maintainable.
 
 ### Testability
+
 Core layer easily unit testable, adapters can be mocked or replaced, infrastructure can be swapped without affecting business logic.
 
 ### Maintainability
+
 Clear boundaries between layers, easy to find and modify specific concerns, consistent patterns across the codebase.
 
 ## Summary
 
-WingTechBot MK3 demonstrates a **well-architected, modern full-stack application** with hexagonal architecture ensuring clean separation of concerns, type safety throughout the entire stack, scalable monorepo structure, comprehensive testing strategy, modern tooling and best practices, Discord bot integration with clean abstractions, and production-ready deployment options. 
+WingTechBot MK3 demonstrates a **well-architected, modern full-stack application** with hexagonal architecture ensuring clean separation of concerns, type safety throughout the entire stack, scalable monorepo structure, comprehensive testing strategy, modern tooling and best practices, Discord bot integration with clean abstractions, and production-ready deployment options.

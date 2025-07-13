@@ -39,14 +39,6 @@
             "types": "./dist/index.d.ts",
             "import": "./dist/index.js"
         },
-        "./api/v1/common": {
-            "types": "./dist/api/v1/common.d.ts",
-            "import": "./dist/api/v1/common.js"
-        },
-        "./api/v1/health": {
-            "types": "./dist/api/v1/health.d.ts",
-            "import": "./dist/api/v1/health.js"
-        },
         "./api/v1/users": {
             "types": "./dist/api/v1/users.d.ts",
             "import": "./dist/api/v1/users.js"
