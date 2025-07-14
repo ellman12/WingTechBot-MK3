@@ -1,13 +1,17 @@
+import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository";
+import type { ReactionRepository } from "@core/repositories/ReactionRepository";
+import { createReactionService } from "@core/services/reactionService";
 import { Client, type ClientEvents, Events, GatewayIntentBits, Partials } from "discord.js";
+
 import { createDiscordVoiceAdapter } from "@/adapters/services/DiscordVoiceAdapter.js";
 import { deployCommands, registerCommands } from "@/application/commands/commands.js";
+
 import type { Config } from "../config/Config.js";
-import { createReactionService } from "@core/services/reactionService";
-import type { ReactionRepository } from "@core/repositories/ReactionRepository";
 
 export type DiscordBotDeps = {
     readonly config: Config;
     readonly reactionRepository: ReactionRepository;
+    readonly emoteRepository: ReactionEmoteRepository;
 };
 
 export type DiscordBot = {
@@ -18,7 +22,7 @@ export type DiscordBot = {
     readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
 };
 
-export const createDiscordBot = ({ config, reactionRepository }: DiscordBotDeps): DiscordBot => {
+export const createDiscordBot = ({ config, reactionRepository, emoteRepository }: DiscordBotDeps): DiscordBot => {
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
@@ -29,19 +33,12 @@ export const createDiscordBot = ({ config, reactionRepository }: DiscordBotDeps)
             GatewayIntentBits.GuildVoiceStates,
             GatewayIntentBits.GuildMessageReactions,
         ],
-        partials: [
-            Partials.Channel,
-            Partials.Message,
-            Partials.Reaction,
-            Partials.User,
-            Partials.GuildMember,
-            Partials.ThreadMember,
-        ],
+        partials: [Partials.Channel, Partials.Message, Partials.Reaction, Partials.User, Partials.GuildMember, Partials.ThreadMember],
     });
 
     let isReadyState = false;
 
-    createReactionService({ client, reactionRepository });
+    createReactionService({ client, reactionRepository, emoteRepository });
     const voiceService = createDiscordVoiceAdapter({ client });
 
     const setupEventHandlers = (): void => {

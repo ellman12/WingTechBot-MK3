@@ -23,12 +23,16 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         return emote ? transformReactionEmote(emote) : null;
     };
 
+    const findOrCreate = async (name: string, discordId: string | null): Promise<ReactionEmote> => {
+        return (await findByNameAndDiscordId(name, discordId)) ?? (await createReactionEmote({ name, discordId, karmaValue: 0 }));
+    };
+
     const createReactionEmote = async (data: CreateReactionEmoteData): Promise<ReactionEmote> => {
         if (data.name === "" || data.discordId === "") {
             throw new Error("Invalid data");
         }
 
-        const existing = findByNameAndDiscordId(data.name, data.discordId);
+        const existing = await findByNameAndDiscordId(data.name, data.discordId);
         if (existing !== null) {
             throw new Error("Reaction emote exists");
         }
@@ -53,5 +57,5 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         return emote ? transformReactionEmote(emote) : null;
     };
 
-    return { findById: findEmoteById, findByNameAndDiscordId, create: createReactionEmote, update: updateReactionEmote };
+    return { findById: findEmoteById, findByNameAndDiscordId, findOrCreate, create: createReactionEmote, update: updateReactionEmote };
 };

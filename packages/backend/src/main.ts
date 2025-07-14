@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository";
+import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
+import type { ReactionRepository } from "@core/repositories/ReactionRepository";
 import { generateDependencyReport } from "@discordjs/voice";
 import "@dotenvx/dotenvx/config";
 
@@ -7,8 +10,6 @@ import { getConfig } from "./infrastructure/config/Config.js";
 import { connect, disconnect, getKysely, healthCheck } from "./infrastructure/database/DatabaseConnection.js";
 import { type DiscordBot, createDiscordBot } from "./infrastructure/discord/DiscordBot.js";
 import { type ExpressApp, type ServerConfig, createExpressApp } from "./infrastructure/http/ExpressApp.js";
-import type { ReactionRepository } from "@core/repositories/ReactionRepository";
-import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
 
 export type AppDependencies = {
     readonly config: ReturnType<typeof getConfig>;
@@ -36,8 +37,9 @@ export const createApplication = async (): Promise<App> => {
     };
 
     const reactionRepository = createReactionRepository(db);
+    const emoteRepository = createReactionEmoteRepository(db);
     const expressApp = createExpressApp({ db, config: serverConfig });
-    const discordBot = createDiscordBot({ config, reactionRepository });
+    const discordBot = createDiscordBot({ config, reactionRepository, emoteRepository });
     const _userRepository = createUserRepository(db);
 
     console.log("🔧 Dependency Report:");
