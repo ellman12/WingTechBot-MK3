@@ -4,7 +4,7 @@ import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import type { Command } from "./Commands.js";
 
 export type AudioCommandDeps = {
-    soundService: SoundService;
+    readonly soundService: SoundService;
 };
 
 export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<string, Command> => {

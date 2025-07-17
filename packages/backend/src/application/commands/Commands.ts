@@ -8,12 +8,12 @@ import { createAudioCommands } from "./AudioCommands.js";
 import { createVoiceCommands } from "./VoiceCommands.js";
 
 export type Command = {
-    data: SlashCommandOptionsOnlyBuilder;
-    execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
+    readonly data: SlashCommandOptionsOnlyBuilder;
+    readonly execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 };
 
 export const createCommands = (soundService: SoundService, voiceService: VoiceService): Record<string, Command> => {
-    const commandRecords = [createAudioCommands({ soundService }), createVoiceCommands({ voiceService })];
+    const commandRecords = [createAudioCommands({ soundService }), createVoiceCommands({ voiceService, soundService })];
 
     // Assert that there are no duplicate command name in a way where we can have an arbitrary number of commands
     const commandNames = new Set<string>();

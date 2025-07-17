@@ -20,7 +20,29 @@ export const createFileManager = (): FileManager => {
             return fs.promises.readFile(path, "binary");
         },
         readStream: (path: string): Readable => {
-            return fs.createReadStream(path);
+            console.log(`[FileManager] Creating optimized read stream for: ${path}`);
+
+            // Optimized buffer settings for audio streaming
+            const stream = fs.createReadStream(path, {
+                highWaterMark: 256 * 1024, // Increased to 256KB buffer for smoother streaming
+                autoClose: true,
+                emitClose: true,
+            });
+
+            // Add stream monitoring
+            stream.on("open", () => {
+                console.log(`[FileManager] File stream opened: ${path}`);
+            });
+
+            stream.on("error", error => {
+                console.error(`[FileManager] File stream error for ${path}:`, error);
+            });
+
+            stream.on("end", () => {
+                console.log(`[FileManager] File stream ended: ${path}`);
+            });
+
+            return stream;
         },
         writeFile: async (filePath: string, content: string) => {
             console.log(`[FileManager] Writing file: ${filePath}`);

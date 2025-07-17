@@ -1,13 +1,15 @@
+import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { ChannelType, ChatInputCommandInteraction, GuildMember, SlashCommandBuilder } from "discord.js";
 
 import type { Command } from "./Commands.js";
 
 export type VoiceCommandDeps = {
-    voiceService: VoiceService;
+    readonly voiceService: VoiceService;
+    readonly soundService: SoundService;
 };
 
-export const createVoiceCommands = ({ voiceService }: VoiceCommandDeps): Record<string, Command> => {
+export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommandDeps): Record<string, Command> => {
     const joinCommand: Command = {
         data: new SlashCommandBuilder()
             .setName("join")
@@ -29,14 +31,30 @@ export const createVoiceCommands = ({ voiceService }: VoiceCommandDeps): Record<
                 const channel = interaction.options.getChannel("channel");
                 let targetChannelId: string;
 
-                console.log(`[VoiceCommands] Join command channel option:`, channel ? { id: channel.id, name: channel.name } : "none");
+                console.log(
+                    `[VoiceCommands] Join command channel option:`,
+                    channel
+                        ? {
+                              id: channel.id,
+                              name: channel.name,
+                          }
+                        : "none"
+                );
 
                 if (channel) {
                     targetChannelId = channel.id;
                     console.log(`[VoiceCommands] Using specified channel: ${channel.name} (${targetChannelId})`);
                 } else {
                     const voiceChannel = (interaction.member as GuildMember).voice.channel;
-                    console.log(`[VoiceCommands] User voice channel:`, voiceChannel ? { id: voiceChannel.id, name: voiceChannel.name } : "none");
+                    console.log(
+                        `[VoiceCommands] User voice channel:`,
+                        voiceChannel
+                            ? {
+                                  id: voiceChannel.id,
+                                  name: voiceChannel.name,
+                              }
+                            : "none"
+                    );
 
                     if (voiceChannel) {
                         targetChannelId = voiceChannel.id;
@@ -160,12 +178,27 @@ export const createVoiceCommands = ({ voiceService }: VoiceCommandDeps): Record<
                 console.log(`[VoiceCommands] Voice service connection status for guild ${interaction.guildId}: ${isConnected}`);
 
                 if (!isConnected) {
-                    console.log(`[VoiceCommands] Play command rejected - bot not connected to voice channel`);
-                    await interaction.reply({
-                        content: "I'm not connected to a voice channel!",
-                        ephemeral: true,
-                    });
-                    return;
+                    const voiceChannel = (interaction.member as GuildMember).voice.channel;
+                    console.log(
+                        `[VoiceCommands] User voice channel:`,
+                        voiceChannel
+                            ? {
+                                  id: voiceChannel.id,
+                                  name: voiceChannel.name,
+                              }
+                            : "none"
+                    );
+
+                    if (!voiceChannel) {
+                        console.log(`[VoiceCommands] Play command rejected - bot not connected to voice channel`);
+                        await interaction.reply({
+                            content: "I'm not connected to a voice channel!",
+                            ephemeral: true,
+                        });
+                        return;
+                    }
+
+                    await voiceService.connect(voiceChannel.id, interaction.guildId);
                 }
 
                 // Send deferred reply immediately to avoid timeout
@@ -269,11 +302,125 @@ export const createVoiceCommands = ({ voiceService }: VoiceCommandDeps): Record<
         },
     };
 
+    const playDlCommand: Command = {
+        data: new SlashCommandBuilder()
+            .setName("play-dl")
+            .setDescription("Download and automatically play audio from a URL")
+            .addStringOption(option => option.setName("url").setDescription("URL of the audio to download and play").setRequired(true))
+            .addIntegerOption(option => option.setName("volume").setDescription("Volume level (0-100)").setRequired(false).setMinValue(0).setMaxValue(100)),
+        execute: async (interaction: ChatInputCommandInteraction) => {
+            console.log(`[VoiceCommands] Play-dl command received from user ${interaction.user.username} in guild ${interaction.guildId}`);
+
+            if (!interaction.guildId) {
+                console.log(`[VoiceCommands] Play-dl command rejected - not in guild`);
+                await interaction.reply({
+                    content: "This command can only be used in a server!",
+                    ephemeral: true,
+                });
+                return;
+            }
+
+            try {
+                const url = interaction.options.getString("url", true);
+                const volume = interaction.options.getInteger("volume");
+
+                console.log(`[VoiceCommands] Play-dl command parameters:`, {
+                    guildId: interaction.guildId,
+                    url,
+                    volume,
+                    userId: interaction.user.id,
+                    username: interaction.user.username,
+                });
+
+                // Check voice connection
+                const isConnected = voiceService.isConnected(interaction.guildId);
+                console.log(`[VoiceCommands] Voice service connection status for guild ${interaction.guildId}: ${isConnected}`);
+
+                if (!isConnected) {
+                    const voiceChannel = (interaction.member as GuildMember).voice.channel;
+                    console.log(
+                        `[VoiceCommands] User voice channel:`,
+                        voiceChannel
+                            ? {
+                                  id: voiceChannel.id,
+                                  name: voiceChannel.name,
+                              }
+                            : "none"
+                    );
+
+                    if (!voiceChannel) {
+                        console.log(`[VoiceCommands] Play-dl command rejected - bot not connected to voice channel`);
+                        await interaction.reply({
+                            content: "I'm not connected to a voice channel! Please join a voice channel first.",
+                            ephemeral: true,
+                        });
+                        return;
+                    }
+
+                    await voiceService.connect(voiceChannel.id, interaction.guildId);
+                }
+
+                // Send deferred reply immediately to avoid timeout
+                console.log(`[VoiceCommands] Deferring reply to avoid timeout`);
+                await interaction.deferReply();
+
+                try {
+                    // First, download and add the sound with the name "currently-playing"
+                    console.log(`[VoiceCommands] Adding sound as "currently-playing" from URL: ${url}`);
+                    await soundService.addSound("currently-playing", url);
+                    console.log(`[VoiceCommands] Successfully downloaded audio as "currently-playing"`);
+
+                    // Set volume if specified
+                    if (volume !== null) {
+                        console.log(`[VoiceCommands] Setting volume to ${volume}% for guild ${interaction.guildId}`);
+                        await voiceService.setVolume(interaction.guildId, volume);
+                        console.log(`[VoiceCommands] Volume set successfully`);
+                    }
+
+                    // Then play the downloaded sound
+                    console.log(`[VoiceCommands] Starting playback of "currently-playing"`);
+                    await voiceService.playAudio(interaction.guildId, "currently-playing");
+                    console.log(`[VoiceCommands] Audio playback started successfully`);
+
+                    const responseMessage = `🎵 Downloaded and playing audio from: ${url}`;
+                    console.log(`[VoiceCommands] Sending success response: ${responseMessage}`);
+                    await interaction.editReply(responseMessage);
+                } catch (downloadError) {
+                    console.error(`[VoiceCommands] Error during download/play process:`, downloadError);
+                    await interaction.editReply({
+                        content: `Failed to download or play audio: ${downloadError instanceof Error ? downloadError.message : "Unknown error"}`,
+                    });
+                }
+            } catch (error) {
+                console.error(`[VoiceCommands] Error in play-dl command for guild ${interaction.guildId}:`, error);
+                console.error(`[VoiceCommands] Error details:`, {
+                    message: error instanceof Error ? error.message : "Unknown error",
+                    stack: error instanceof Error ? error.stack : undefined,
+                    guildId: interaction.guildId,
+                    userId: interaction.user.id,
+                });
+
+                // Check if we've already deferred the reply
+                if (interaction.deferred) {
+                    await interaction.editReply({
+                        content: `Failed to execute play-dl command: ${error instanceof Error ? error.message : "Unknown error"}`,
+                    });
+                } else {
+                    await interaction.reply({
+                        content: `Failed to execute play-dl command: ${error instanceof Error ? error.message : "Unknown error"}`,
+                        ephemeral: true,
+                    });
+                }
+            }
+        },
+    };
+
     return {
         join: joinCommand,
         leave: leaveCommand,
         play: playCommand,
         stop: stopCommand,
         volume: volumeCommand,
+        "play-dl": playDlCommand,
     };
 };

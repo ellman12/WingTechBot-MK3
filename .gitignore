@@ -2,7 +2,7 @@ node_modules
 # Keep environment variables out of version control
 .env
 
-/packages/backend/prisma/generated
+/packages/backend/sounds/
 **/dist
 
 .idea

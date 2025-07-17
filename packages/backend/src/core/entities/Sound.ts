@@ -1,4 +1,4 @@
 export type Sound = {
-    name: string;
-    path: string;
+    readonly name: string;
+    readonly path: string;
 };

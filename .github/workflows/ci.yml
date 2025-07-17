@@ -180,6 +180,20 @@ jobs:
         strategy:
             matrix:
                 package: [backend, frontend, types]
+        services:
+            postgres:
+                image: postgres:15
+                env:
+                    POSTGRES_USER: wingtechbot
+                    POSTGRES_PASSWORD: wingtechbot_password
+                    POSTGRES_DB: wingtechbot_test
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+                ports:
+                    - 5432:5432
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -193,6 +207,19 @@ jobs:
               uses: pnpm/action-setup@v4
               with:
                   version: ${{ env.PNPM_VERSION }}
+
+            - name: Install FFmpeg and yt-dlp for backend audio tests
+              if: matrix.package == 'backend'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y ffmpeg python3-pip
+                  pip3 install yt-dlp
+
+            - name: Verify audio tools installation
+              if: matrix.package == 'backend'
+              run: |
+                  ffmpeg -version
+                  yt-dlp --version
 
             - name: Get pnpm store directory
               shell: bash
@@ -224,7 +251,11 @@ jobs:
             #   run: pnpm --filter backend db:generate
 
             - name: Run tests for ${{ matrix.package }}
-              run: pnpm --filter ${{ matrix.package }} test
+              run: pnpm --filter ${{ matrix.package }} test${{ matrix.package == 'backend' && ':ci' || '' }}
+              env:
+                  DATABASE_URL: postgresql://wingtechbot:wingtechbot_password@localhost:5432/wingtechbot_test
+                  NODE_ENV: test
+                  CI: true
 
             - name: Upload test coverage
               uses: codecov/codecov-action@v5

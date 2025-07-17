@@ -1,5 +1,5 @@
 import type { SoundRepository } from "@core/repositories/SoundRepository";
-import { readStreamToBytes } from "@core/utils/streamUtils";
+import { createPreBufferedStream, readStreamToBytes } from "@core/utils/streamUtils";
 import { Readable } from "stream";
 
 import type { AudioFetcherService } from "./AudioFetcherService";
@@ -7,17 +7,17 @@ import type { AudioProcessingService } from "./AudioProcessingService";
 import type { FileManager } from "./FileManager";
 
 export type SoundService = {
-    addSound: (name: string, source: string) => Promise<void>;
-    getSound: (nameOrSource: string) => Promise<Readable>;
-    listSounds: () => Promise<string[]>;
-    deleteSound: (name: string) => Promise<void>;
+    readonly addSound: (name: string, source: string) => Promise<void>;
+    readonly getSound: (nameOrSource: string) => Promise<Readable>;
+    readonly listSounds: () => Promise<string[]>;
+    readonly deleteSound: (name: string) => Promise<void>;
 };
 
 export type SoundServiceDeps = {
-    audioFetcher: AudioFetcherService;
-    audioProcessor: AudioProcessingService;
-    fileManager: FileManager;
-    soundRepository: SoundRepository;
+    readonly audioFetcher: AudioFetcherService;
+    readonly audioProcessor: AudioProcessingService;
+    readonly fileManager: FileManager;
+    readonly soundRepository: SoundRepository;
 };
 
 const AUDIO_FILE_STORE_PATH = "./sounds";
@@ -59,6 +59,7 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
             }
         },
         getSound: async (nameOrSource: string): Promise<Readable> => {
+            const startTime = Date.now();
             console.log(`[SoundService] Getting sound: ${nameOrSource}`);
 
             try {
@@ -79,7 +80,11 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                         console.log(`[SoundService] Reading soundboard file: ${soundPath}`);
 
                         const stream = fileManager.readStream(soundPath);
-                        console.log(`[SoundService] Successfully created soundboard stream for: ${nameOrSource}`);
+                        const elapsedTime = Date.now() - startTime;
+                        console.log(`[SoundService] Successfully created direct soundboard stream for: ${nameOrSource} in ${elapsedTime}ms`);
+
+                        // Try bypassing buffering for local files to eliminate potential stream processing issues
+                        console.log(`[SoundService] Returning direct file stream to eliminate buffering overhead`);
                         return stream;
                     }
                     case "url":
@@ -89,8 +94,14 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                         console.log(`[SoundService] Got audio stream, processing for: ${nameOrSource}`);
 
                         const processedStream = audioProcessor.processAudioStream(audioStream);
-                        console.log(`[SoundService] Successfully processed audio stream for: ${nameOrSource}`);
-                        return processedStream;
+                        console.log(`[SoundService] Pre-buffering processed stream for: ${nameOrSource}`);
+
+                        // Use pre-buffering for URL/YouTube content to ensure smooth playback
+                        const preBufferedStream = await createPreBufferedStream(processedStream, `url:${nameOrSource}`);
+
+                        const elapsedTime = Date.now() - startTime;
+                        console.log(`[SoundService] Successfully pre-buffered audio stream for: ${nameOrSource} in ${elapsedTime}ms`);
+                        return preBufferedStream;
                     }
                 }
             } catch (error) {

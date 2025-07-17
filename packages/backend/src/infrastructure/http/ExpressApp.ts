@@ -8,9 +8,9 @@ import helmet from "helmet";
 import type { Kysely } from "kysely";
 
 export type ServerConfig = {
-    port: number;
-    nodeEnv: string;
-    corsOrigin: string | false;
+    readonly port: number;
+    readonly nodeEnv: string;
+    readonly corsOrigin: string | false;
 };
 
 export type ExpressAppDeps = {

@@ -6,10 +6,10 @@ import { Router } from "express";
 import type { Kysely } from "kysely";
 
 export type RouteSetupService = {
-    initialize(app: Application, db: Kysely<DB>): void;
-    setupAllRoutes(): void;
-    getApp(): Application | null;
-    getDatabase(): Kysely<DB> | null;
+    readonly initialize: (app: Application, db: Kysely<DB>) => void;
+    readonly setupAllRoutes: () => void;
+    readonly getApp: () => Application | null;
+    readonly getDatabase: () => Kysely<DB> | null;
 };
 
 let appInstance: Application | null = null;
@@ -79,9 +79,18 @@ const setupVersionEndpoint = (app: Application): void => {
     app.get("/api/versions", (req, res) => {
         const versions = getVersionRoutes("v1");
 
-        const versionInfo = versions.map(route => ({ method: route.method.toUpperCase(), path: route.fullPath, summary: route.summary, deprecated: route.deprecated }));
+        const versionInfo = versions.map(route => ({
+            method: route.method.toUpperCase(),
+            path: route.fullPath,
+            summary: route.summary,
+            deprecated: route.deprecated,
+        }));
 
-        res.json({ title: "WingTechBot MK3 API Versions", totalVersions: 1, versions: [{ version: "v1", routes: versionInfo }] });
+        res.json({
+            title: "WingTechBot MK3 API Versions",
+            totalVersions: 1,
+            versions: [{ version: "v1", routes: versionInfo }],
+        });
     });
 };
 

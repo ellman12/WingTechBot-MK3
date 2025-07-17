@@ -6,19 +6,19 @@ import type { FileManager } from "./FileManager";
 export type audioSource = "soundboard" | "youtube" | "url";
 
 export type YoutubeService = {
-    fetchAudioFromYoutube(link: string): Promise<Readable>;
+    readonly fetchAudioFromYoutube: (link: string) => Promise<Readable>;
 };
 
 export type AudioFetcherService = {
-    parseAudioSource(source: string): audioSource;
-    fetchUrlAudio(link: string): Promise<Readable>;
-    fetchSoundboardAudio(name: string): Promise<Readable>;
+    readonly parseAudioSource: (source: string) => audioSource;
+    readonly fetchUrlAudio: (link: string) => Promise<Readable>;
+    readonly fetchSoundboardAudio: (name: string) => Promise<Readable>;
 };
 
 export type AudioFetcherDeps = {
-    youtubeService: YoutubeService;
-    soundRepository: SoundRepository;
-    fileManager: FileManager;
+    readonly youtubeService: YoutubeService;
+    readonly soundRepository: SoundRepository;
+    readonly fileManager: FileManager;
 };
 
 export const createAudioFetcherService = ({ fileManager, soundRepository, youtubeService }: AudioFetcherDeps) => {

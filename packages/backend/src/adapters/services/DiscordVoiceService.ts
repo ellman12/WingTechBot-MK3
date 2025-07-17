@@ -22,9 +22,13 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
     const voiceStates = new Map<string, VoiceState>();
 
     const audioStreamToResource = (stream: Readable): AudioResource => {
-        console.log(`[DiscordVoiceService] Creating audio resource with OggOpus format`);
+        console.log(`[DiscordVoiceService] Creating audio resource with auto-detection and no inline volume`);
+
+        // Try letting Discord.js auto-detect the format and disable inline volume
+        // which might be causing processing hitches
         return createAudioResource(stream, {
-            inputType: StreamType.OggOpus,
+            inputType: StreamType.Arbitrary, // Let Discord.js detect the format
+            inlineVolume: false, // Disable inline volume processing to reduce CPU load
         });
     };
 
@@ -177,6 +181,7 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
     };
 
     const playAudio = async (serverId: string, nameOrSource: string): Promise<void> => {
+        const playStartTime = Date.now();
         console.log(`[DiscordVoiceService] playAudio called with serverId: ${serverId}, source: ${nameOrSource}`);
 
         const state = voiceStates.get(serverId);
@@ -223,8 +228,10 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
 
             // Use AudioFetcher to handle all audio sources
             console.log(`[DiscordVoiceService] Calling soundService.getSound for: ${nameOrSource}`);
+            const streamStartTime = Date.now();
             const audioStream = await soundService.getSound(nameOrSource);
-            console.log(`[DiscordVoiceService] Got audio stream from soundService`);
+            const streamElapsed = Date.now() - streamStartTime;
+            console.log(`[DiscordVoiceService] Got audio stream from soundService in ${streamElapsed}ms`);
 
             console.log(`[DiscordVoiceService] Converting stream to Discord audio resource`);
 
@@ -284,7 +291,8 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
             state.currentResource = resource;
             state.isPlaying = true;
 
-            console.log(`[VOICE SERVICE] Audio resource queued for playback`);
+            const totalElapsed = Date.now() - playStartTime;
+            console.log(`[VOICE SERVICE] Audio resource queued for playback in ${totalElapsed}ms total`);
             console.log(`[VOICE SERVICE] Player status after play: ${state.player.state.status}`);
 
             // Set up a timeout to detect if the stream doesn't start playing

@@ -2,43 +2,84 @@ import { type ChildProcess, spawn } from "child_process";
 import { Readable } from "stream";
 
 export type FfmpegConvertOptions = {
-    inputFormat?: string; // Input format (e.g., 'wav', 'mp3')
-    outputFormat: string; // Output format (e.g., 'wav', 'mp3')
-    sampleRate?: number; // Sample rate in Hz (e.g., 44100)
-    channels?: number; // Number of audio channels (e.g., 1 for mono, 2 for stereo)
-    codec: string; // Audio codec (e.g., 'libopus', 'aac')
-    bitrate?: string; // Bitrate (e.g., '128k', '256k')
+    readonly inputFormat?: string; // Input format (e.g., 'wav', 'mp3')
+    readonly outputFormat: string; // Output format (e.g., 'wav', 'mp3')
+    readonly sampleRate?: number; // Sample rate in Hz (e.g., 44100)
+    readonly channels?: number; // Number of audio channels (e.g., 1 for mono, 2 for stereo)
+    readonly codec: string; // Audio codec (e.g., 'libopus', 'aac')
+    readonly bitrate?: string; // Bitrate (e.g., '128k', '256k')
+    readonly extraArgs?: string[]; // Additional FFmpeg arguments
 };
 
 export type FfmpegService = {
     // Raw ffmpeg process execution methods
-    run: (inputStream: Readable, args: string[]) => ChildProcess;
-    runStreamAsync: (inputStream: Readable, args: string[]) => Promise<Uint8Array>;
-    runAsyncStream: (inputStream: Uint8Array, args: string[]) => Readable;
-    runAsync: (inputStream: Uint8Array, args: string[]) => Promise<Uint8Array>;
-    runAsyncWithStderr: (inputStream: Uint8Array, args: string[]) => Promise<{ stdout: Uint8Array; stderr: string }>;
+    readonly run: (inputStream: Readable, args: string[]) => ChildProcess;
+    readonly runStreamAsync: (inputStream: Readable, args: string[]) => Promise<Uint8Array>;
+    readonly runAsyncStream: (inputStream: Uint8Array, args: string[]) => Readable;
+    readonly runAsync: (inputStream: Uint8Array, args: string[]) => Promise<Uint8Array>;
+    readonly runAsyncWithStderr: (
+        inputStream: Uint8Array,
+        args: string[]
+    ) => Promise<{
+        stdout: Uint8Array;
+        stderr: string;
+    }>;
     // Structured ffmpeg functions
-    convertAudio: (input: Uint8Array, options: FfmpegConvertOptions) => Promise<Uint8Array>;
-    convertStreamToAudio: (inputStream: Readable, options: FfmpegConvertOptions) => Promise<Uint8Array>;
-    convertStreamToStream: (inputStream: Readable, options: FfmpegConvertOptions) => Readable;
-    convertAudioToStream: (input: Uint8Array, options: FfmpegConvertOptions) => Readable;
-    normalizeAudioStreamRealtime: (inputStream: Readable) => Readable;
-    normalizeAudio: (input: Uint8Array, options: Partial<Pick<FfmpegConvertOptions, "channels" | "sampleRate">>) => Promise<Uint8Array>;
+    readonly convertAudio: (input: Uint8Array, options: FfmpegConvertOptions) => Promise<Uint8Array>;
+    readonly convertStreamToAudio: (inputStream: Readable, options: FfmpegConvertOptions) => Promise<Uint8Array>;
+    readonly convertStreamToStream: (inputStream: Readable, options: FfmpegConvertOptions) => Readable;
+    readonly convertAudioToStream: (input: Uint8Array, options: FfmpegConvertOptions) => Readable;
+    readonly normalizeAudioStreamRealtime: (inputStream: Readable) => Readable;
+    readonly normalizeAudio: (input: Uint8Array, options: Partial<Pick<FfmpegConvertOptions, "channels" | "sampleRate">>) => Promise<Uint8Array>;
 };
 
 export const createFfmpegService = (): FfmpegService => {
     const run = (inputStream: Readable, args: string[]) => {
-        const ffmpegInstance = spawn("ffmpeg", ["-i", "pipe:0", ...args, "-loglevel", "error", "pipe:1"]);
+        // Add aggressive real-time streaming optimizations
+        const optimizedArgs = [
+            "-i",
+            "pipe:0",
+            "-fflags",
+            "+genpts+igndts", // Generate timestamps and ignore input timestamps
+            "-avoid_negative_ts",
+            "make_zero", // Avoid timing issues
+            "-max_muxing_queue_size",
+            "1024", // Larger muxing queue for streaming
+            "-preset",
+            "ultrafast", // Fastest encoding preset
+            "-tune",
+            "zerolatency", // Optimize for real-time streaming
+            ...args,
+            "-loglevel",
+            "error",
+            "pipe:1",
+        ];
+
+        const ffmpegInstance = spawn("ffmpeg", optimizedArgs, {
+            stdio: ["pipe", "pipe", "pipe"],
+        });
+
         if (!ffmpegInstance.pid) {
             throw new Error("Failed to start ffmpeg process");
         }
-        inputStream.pipe(ffmpegInstance.stdin);
+
+        // Optimize input piping
+        inputStream.pipe(ffmpegInstance.stdin, { end: true });
 
         ffmpegInstance.stdout.on("error", err => {
             console.error(`ffmpeg stdout error: ${err.message}`);
         });
 
-        ffmpegInstance.stdout.on("close", () => {});
+        ffmpegInstance.stderr.on("data", data => {
+            const errorMsg = data.toString().trim();
+            if (errorMsg && !errorMsg.includes("frame=") && !errorMsg.includes("size=")) {
+                console.error(`ffmpeg stderr: ${errorMsg}`);
+            }
+        });
+
+        ffmpegInstance.stdout.on("close", () => {
+            console.log(`[FfmpegService] FFmpeg stdout closed`);
+        });
 
         return ffmpegInstance;
     };
@@ -180,6 +221,9 @@ export const createFfmpegService = (): FfmpegService => {
         if (options.bitrate) {
             args.push("-b:a", options.bitrate);
         }
+        if (options.extraArgs) {
+            args.push(...options.extraArgs);
+        }
 
         return args;
     };
@@ -198,6 +242,7 @@ export const createFfmpegService = (): FfmpegService => {
     const convertStreamToStream = (inputStream: Readable, options: FfmpegConvertOptions) => {
         const args = createConvertArgs(options);
 
+        console.log(`[FfmpegService] Converting stream with args:`, args);
         const ffmpegInstance = run(inputStream, args);
 
         return ffmpegInstance.stdout;

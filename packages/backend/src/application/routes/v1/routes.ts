@@ -1,5 +1,6 @@
-import { registerVersion } from "../../../infrastructure/http/api/RouteRegistry.js";
-import type { ApiVersionConfig, RouteGroup } from "../../../infrastructure/http/api/types.js";
+import { registerVersion } from "@infrastructure/http/api/RouteRegistry";
+import type { ApiVersionConfig, RouteGroup } from "@infrastructure/http/api/types";
+
 import { createHealthRoutes } from "./health.js";
 
 export const createV1ApiConfiguration = (): { config: ApiVersionConfig; groups: RouteGroup[] } => ({ config: { version: "v1", basePath: "/api/v1", routes: [] }, groups: [createHealthRoutes()] });
