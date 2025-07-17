@@ -122,7 +122,6 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
     return {
         parseAudioSource,
         fetchUrlAudio,
-        fetchYoutubeAudio,
         fetchSoundboardAudio,
     };
 };
