@@ -73,7 +73,6 @@
         "pg": "^8.13.1",
         "sodium-native": "^5.0.6",
         "swagger-ui-express": "^5.0.1",
-        "ytdl-core": "^4.11.5",
         "zod": "^4.0.5",
         "zod-openapi": "^5.1.0"
     },

@@ -28,6 +28,8 @@ const migrationProvider = {
             }
         }
 
+        console.log(`🔍 Found ${Object.keys(migrations).length} migrations:`, Object.keys(migrations));
+
         return migrations;
     },
 };

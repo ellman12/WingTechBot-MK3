@@ -8,7 +8,27 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U> ? Col
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
-export type Users = {
+export interface Sounds {
+    created_at: Generated<Timestamp>;
+    id: Generated<number>;
+    name: string;
+    path: string;
+}
+
+export interface SoundSoundtags {
+    created_at: Generated<Timestamp>;
+    id: Generated<number>;
+    sound: Generated<number>;
+    tag: Generated<number>;
+}
+
+export interface Soundtags {
+    created_at: Generated<Timestamp>;
+    id: Generated<number>;
+    name: string;
+}
+
+export interface Users {
     avatar: string | null;
     created_at: Generated<Timestamp>;
     display_name: string | null;
@@ -16,8 +36,11 @@ export type Users = {
     is_bot: Generated<boolean>;
     updated_at: Generated<Timestamp>;
     username: string;
-};
+}
 
-export type DB = {
+export interface DB {
+    sound_soundtags: SoundSoundtags;
+    sounds: Sounds;
+    soundtags: Soundtags;
     users: Users;
-};
+}

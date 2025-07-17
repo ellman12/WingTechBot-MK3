@@ -1,34 +1,47 @@
+import type { SoundService } from "@core/services/SoundService";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { ChatInputCommandInteraction, Events, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
 
 import type { DiscordBot } from "@/infrastructure/discord/DiscordBot.js";
 
-import { createVoiceCommands } from "./voice-commands.js";
+import { createAudioCommands } from "./AudioCommands.js";
+import { createVoiceCommands } from "./VoiceCommands.js";
 
 export type Command = {
     data: SlashCommandOptionsOnlyBuilder;
     execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 };
 
-export const deployCommands = async (token: string, clientId: string, guildId?: string, voiceService?: VoiceService): Promise<void> => {
+export const createCommands = (soundService: SoundService, voiceService: VoiceService): Record<string, Command> => {
+    const commandRecords = [createAudioCommands({ soundService }), createVoiceCommands({ voiceService })];
+
+    // Assert that there are no duplicate command name in a way where we can have an arbitrary number of commands
+    const commandNames = new Set<string>();
+    const commandMap: Record<string, Command> = {};
+    commandRecords.forEach(record => {
+        Object.keys(record).forEach(name => {
+            if (commandNames.has(name)) {
+                throw new Error(`Duplicate command name found: ${name}`);
+            }
+
+            if (record[name] == null) {
+                throw new Error(`Command ${name} is not defined in the record`);
+            }
+
+            commandMap[name] = record[name];
+            commandNames.add(name);
+        });
+    });
+
+    return commandMap;
+};
+
+export const deployCommands = async (soundService: SoundService, voiceService: VoiceService, token: string, clientId: string, guildId?: string): Promise<void> => {
     try {
         console.log("🚀 Deploying Discord commands...");
 
-        const serviceToUse = voiceService || {
-            connect: async () => {},
-            disconnect: async () => {},
-            isConnected: () => false,
-            playAudio: async () => {},
-            stopAudio: async () => {},
-            isPlaying: () => false,
-            setVolume: async () => {},
-            getVolume: () => 50,
-            pause: async () => {},
-            resume: async () => {},
-        };
-
-        const voiceCommands = createVoiceCommands(serviceToUse);
-        const commands = Object.values(voiceCommands).map(command => command.data.toJSON());
+        const commandMap = createCommands(soundService, voiceService);
+        const commands = Object.values(commandMap).map(command => command.data.toJSON());
 
         console.log(`📋 Deploying ${commands.length} commands:`);
         commands.forEach(cmd => {
@@ -53,24 +66,16 @@ export const deployCommands = async (token: string, clientId: string, guildId?: 
     }
 };
 
-export const registerCommands = (voiceService: VoiceService, discordBot: DiscordBot): void => {
+export const registerCommands = (soundService: SoundService, voiceService: VoiceService, registerEventHandler: DiscordBot["registerEventHandler"]): void => {
     console.log("🔄 Registering commands...");
-    const voiceCommands = createVoiceCommands(voiceService);
 
-    const commands = Object.values(voiceCommands).reduce(
-        (acc, command) => {
-            acc[command.data.name] = command;
-            return acc;
-        },
-        {} as Record<string, Command>
-    );
-
+    const commands = createCommands(soundService, voiceService);
     console.log(`✅ Registered ${Object.keys(commands).length} Commands:`);
     Object.keys(commands).forEach(command => {
         console.log(`- ${command}`);
     });
 
-    discordBot.registerEventHandler(Events.InteractionCreate, async interaction => {
+    registerEventHandler(Events.InteractionCreate, async interaction => {
         if (!interaction.isChatInputCommand()) return;
 
         const command = commands[interaction.commandName];

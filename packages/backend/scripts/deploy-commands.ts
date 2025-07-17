@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import "@dotenvx/dotenvx/config";
-import { REST, Routes } from "discord.js";
+import { REST, type RESTPostAPIChatInputApplicationCommandsJSONBody, Routes } from "discord.js";
 
-import { createVoiceCommands } from "../src/application/commands/voice-commands.js";
+import { createAudioCommands } from "../src/application/commands/AudioCommands";
+import type { Command } from "../src/application/commands/Commands";
+import { createVoiceCommands } from "../src/application/commands/VoiceCommands";
 
 const deployCommands = async (): Promise<void> => {
     try {
@@ -20,6 +22,15 @@ const deployCommands = async (): Promise<void> => {
             throw new Error("DISCORD_CLIENT_ID environment variable is required");
         }
 
+        // TODO: Swap over to Jest or smth.
+
+        const mockSoundService = {
+            addSound: () => {},
+            getSound: () => {},
+            listSounds: () => {},
+            deleteSound: () => {},
+        };
+
         // Create voice commands (we need a mock voice service for this)
         const mockVoiceService = {
             connect: async () => {},
@@ -34,10 +45,15 @@ const deployCommands = async (): Promise<void> => {
             resume: async () => {},
         };
 
-        const voiceCommands = createVoiceCommands(mockVoiceService);
+        const commandRecords = [createAudioCommands({ soundService: mockSoundService }), createVoiceCommands({ voiceService: mockVoiceService })];
 
-        // Extract command data for deployment
-        const commands = Object.values(voiceCommands).map(command => command.data.toJSON());
+        const constructCommands = (commands: Record<string, Command>) => {
+            return [...Object.values(commands).map(command => command.data.toJSON())];
+        };
+
+        const commands = commandRecords.reduce((acc, record) => {
+            return [...acc, ...constructCommands(record)];
+        }, [] as RESTPostAPIChatInputApplicationCommandsJSONBody[]);
 
         console.log(`📋 Deploying ${commands.length} commands:`);
         commands.forEach(cmd => {

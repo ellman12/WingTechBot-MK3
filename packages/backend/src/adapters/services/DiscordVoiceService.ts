@@ -1,13 +1,12 @@
+import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
-import type { AudioPlayer, AudioResource, VoiceConnection } from "@discordjs/voice";
-import { AudioPlayerStatus, NoSubscriberBehavior, VoiceConnectionStatus, createAudioPlayer, joinVoiceChannel } from "@discordjs/voice";
+import { type AudioPlayer, AudioPlayerStatus, type AudioResource, NoSubscriberBehavior, StreamType, type VoiceConnection, VoiceConnectionStatus, createAudioPlayer, createAudioResource, joinVoiceChannel } from "@discordjs/voice";
 import type { Client, VoiceChannel as DiscordVoiceChannel } from "discord.js";
+import { Readable } from "stream";
 
-import { AudioFetcher } from "../audio/AudioFetcher.js";
-import { type ExtendedAudioResource, setupFFmpegStreamMonitoring } from "../audio/FFmpegAudioAdapter.js";
-
-export type DiscordVoiceAdapterDeps = {
+export type DiscordVoiceServiceDeps = {
     readonly client: Client;
+    readonly soundService: SoundService;
 };
 
 type VoiceState = {
@@ -19,36 +18,64 @@ type VoiceState = {
     isReady: boolean;
 };
 
-export const createDiscordVoiceAdapter = (deps: DiscordVoiceAdapterDeps): VoiceService => {
+export const createDiscordVoiceService = ({ client, soundService }: DiscordVoiceServiceDeps): VoiceService => {
     const voiceStates = new Map<string, VoiceState>();
 
+    const audioStreamToResource = (stream: Readable): AudioResource => {
+        console.log(`[DiscordVoiceService] Creating audio resource with OggOpus format`);
+        return createAudioResource(stream, {
+            inputType: StreamType.OggOpus,
+        });
+    };
+
     const connect = async (channelId: string, serverId: string): Promise<void> => {
+        console.log(`[DiscordVoiceService] Attempting to connect to channel ${channelId} in server ${serverId}`);
+
         try {
-            const guild = await deps.client.guilds.fetch(serverId);
+            console.log(`[DiscordVoiceService] Fetching guild ${serverId}`);
+            const guild = await client.guilds.fetch(serverId);
+            console.log(`[DiscordVoiceService] Guild fetched: ${guild.name} (${guild.id})`);
+
+            console.log(`[DiscordVoiceService] Fetching channel ${channelId}`);
             const channel = (await guild.channels.fetch(channelId)) as DiscordVoiceChannel;
+            console.log(`[DiscordVoiceService] Channel fetched:`, {
+                name: channel?.name,
+                id: channel?.id,
+                type: channel?.type,
+                isVoiceBased: channel?.isVoiceBased(),
+            });
 
             if (!channel || !channel.isVoiceBased()) {
-                throw new Error("Invalid voice channel");
+                const error = new Error("Invalid voice channel");
+                console.error(`[DiscordVoiceService] ${error.message}`);
+                throw error;
             }
 
             // Disconnect if already connected
             if (voiceStates.has(serverId)) {
+                console.log(`[DiscordVoiceService] Already connected to server ${serverId}, disconnecting first`);
                 await disconnect(serverId);
             }
 
+            console.log(`[DiscordVoiceService] Creating voice connection`);
             const connection = joinVoiceChannel({
                 channelId: channelId,
                 guildId: serverId,
                 adapterCreator: channel.guild.voiceAdapterCreator,
             });
+            console.log(`[DiscordVoiceService] Voice connection created`);
 
+            console.log(`[DiscordVoiceService] Creating audio player`);
             const player: AudioPlayer = createAudioPlayer({
                 behaviors: {
                     noSubscriber: NoSubscriberBehavior.Play,
                 },
             });
+            console.log(`[DiscordVoiceService] Audio player created`);
 
+            console.log(`[DiscordVoiceService] Subscribing player to connection`);
             connection.subscribe(player);
+            console.log(`[DiscordVoiceService] Player subscribed to connection`);
 
             // Monitor connection state
             connection.on("stateChange", (oldState, newState) => {
@@ -106,6 +133,7 @@ export const createDiscordVoiceAdapter = (deps: DiscordVoiceAdapterDeps): VoiceS
                 console.log(`[VOICE SERVICE] Audio player in server ${serverId} paused.`);
             });
 
+            console.log(`[DiscordVoiceService] Storing voice state for server ${serverId}`);
             voiceStates.set(serverId, {
                 connection,
                 player,
@@ -113,29 +141,58 @@ export const createDiscordVoiceAdapter = (deps: DiscordVoiceAdapterDeps): VoiceS
                 isPlaying: false,
                 isReady: false,
             });
+            console.log(`[DiscordVoiceService] Successfully connected to voice channel ${channel.name} in server ${serverId}`);
         } catch (error) {
+            console.error(`[DiscordVoiceService] Failed to connect to voice channel:`, error);
+            console.error(`[DiscordVoiceService] Error details:`, {
+                message: error instanceof Error ? error.message : "Unknown error",
+                stack: error instanceof Error ? error.stack : undefined,
+                serverId,
+                channelId,
+            });
             throw new Error(`Failed to connect to voice channel: ${error}`);
         }
     };
 
     const disconnect = async (serverId: string): Promise<void> => {
+        console.log(`[DiscordVoiceService] Attempting to disconnect from server ${serverId}`);
         const state = voiceStates.get(serverId);
         if (state) {
+            console.log(`[DiscordVoiceService] Stopping audio player for server ${serverId}`);
             state.player.stop();
+            console.log(`[DiscordVoiceService] Destroying voice connection for server ${serverId}`);
             state.connection.destroy();
+            console.log(`[DiscordVoiceService] Removing voice state for server ${serverId}`);
             voiceStates.delete(serverId);
+            console.log(`[DiscordVoiceService] Successfully disconnected from server ${serverId}`);
+        } else {
+            console.log(`[DiscordVoiceService] No voice state found for server ${serverId}, already disconnected`);
         }
     };
 
     const isConnected = (serverId: string): boolean => {
-        return voiceStates.has(serverId);
+        const connected = voiceStates.has(serverId);
+        console.log(`[DiscordVoiceService] Connection status check for server ${serverId}: ${connected}`);
+        return connected;
     };
 
-    const playAudio = async (serverId: string, audioSource: string): Promise<void> => {
+    const playAudio = async (serverId: string, nameOrSource: string): Promise<void> => {
+        console.log(`[DiscordVoiceService] playAudio called with serverId: ${serverId}, source: ${nameOrSource}`);
+
         const state = voiceStates.get(serverId);
         if (!state) {
-            throw new Error("Not connected to voice channel");
+            const error = new Error("Not connected to voice channel");
+            console.error(`[DiscordVoiceService] ${error.message} for server ${serverId}`);
+            throw error;
         }
+
+        console.log(`[DiscordVoiceService] Voice state found for server ${serverId}:`, {
+            volume: state.volume,
+            isPlaying: state.isPlaying,
+            isReady: state.isReady,
+            playerStatus: state.player.state.status,
+            connectionStatus: state.connection.state.status,
+        });
 
         // Wait for connection to be ready
         if (!state.isReady) {
@@ -159,18 +216,59 @@ export const createDiscordVoiceAdapter = (deps: DiscordVoiceAdapterDeps): VoiceS
         }
 
         try {
-            console.log(`[VOICE SERVICE] Creating audio resource for source: ${audioSource}`);
+            console.log(`[VOICE SERVICE] Creating audio resource for source: ${nameOrSource}`);
             console.log(`[VOICE SERVICE] Server ID: ${serverId}`);
             console.log(`[VOICE SERVICE] Current player status: ${state.player.state.status}`);
             console.log(`[VOICE SERVICE] Connection ready: ${state.isReady}`);
 
             // Use AudioFetcher to handle all audio sources
-            const audioSourceConfig = AudioFetcher.createAudioSource(audioSource);
-            const resource = await AudioFetcher.fetchAudio(audioSourceConfig);
+            console.log(`[DiscordVoiceService] Calling soundService.getSound for: ${nameOrSource}`);
+            const audioStream = await soundService.getSound(nameOrSource);
+            console.log(`[DiscordVoiceService] Got audio stream from soundService`);
+
+            console.log(`[DiscordVoiceService] Converting stream to Discord audio resource`);
+
+            // Add stream debugging
+            let bytesReceived = 0;
+            audioStream.on("data", chunk => {
+                bytesReceived += chunk.length;
+                console.log(`[DiscordVoiceService] Received ${chunk.length} bytes, total: ${bytesReceived}`);
+            });
+
+            audioStream.on("end", () => {
+                console.log(`[DiscordVoiceService] Audio stream ended, total bytes: ${bytesReceived}`);
+            });
+
+            audioStream.on("error", error => {
+                console.error(`[DiscordVoiceService] Audio stream error:`, error);
+            });
+
+            audioStream.on("close", () => {
+                console.log(`[DiscordVoiceService] Audio stream closed`);
+            });
+
+            const resource = audioStreamToResource(audioStream);
 
             console.log(`[VOICE SERVICE] Audio resource created successfully`);
             console.log(`[VOICE SERVICE] Resource metadata:`, resource.metadata);
             console.log(`[VOICE SERVICE] Resource volume available:`, !!resource.volume);
+            console.log(`[VOICE SERVICE] Resource readable:`, resource.readable);
+            console.log(`[VOICE SERVICE] Resource playStream available:`, !!resource.playStream);
+
+            // Add resource stream debugging
+            if (resource.playStream) {
+                resource.playStream.on("end", () => {
+                    console.log(`[DiscordVoiceService] Resource playStream ended`);
+                });
+
+                resource.playStream.on("error", error => {
+                    console.error(`[DiscordVoiceService] Resource playStream error:`, error);
+                });
+
+                resource.playStream.on("close", () => {
+                    console.log(`[DiscordVoiceService] Resource playStream closed`);
+                });
+            }
 
             if (resource.volume) {
                 console.log(`[VOICE SERVICE] Setting volume to ${state.volume / 100}`);
@@ -182,9 +280,6 @@ export const createDiscordVoiceAdapter = (deps: DiscordVoiceAdapterDeps): VoiceS
 
             console.log(`[VOICE SERVICE] Playing audio resource...`);
 
-            // Add stream monitoring for remote URLs
-            setupFFmpegStreamMonitoring(resource as ExtendedAudioResource, audioSource);
-
             state.player.play(resource);
             state.currentResource = resource;
             state.isPlaying = true;
@@ -193,7 +288,7 @@ export const createDiscordVoiceAdapter = (deps: DiscordVoiceAdapterDeps): VoiceS
             console.log(`[VOICE SERVICE] Player status after play: ${state.player.state.status}`);
 
             // Set up a timeout to detect if the stream doesn't start playing
-            if (audioSource.startsWith("http://") || audioSource.startsWith("https://")) {
+            if (nameOrSource.startsWith("http://") || nameOrSource.startsWith("https://")) {
                 const playTimeout = setTimeout(() => {
                     if (state.player.state.status === "buffering") {
                         console.warn(`[VOICE SERVICE] Remote URL stream is still buffering after 10 seconds - may be an issue with the URL`);
@@ -214,7 +309,7 @@ export const createDiscordVoiceAdapter = (deps: DiscordVoiceAdapterDeps): VoiceS
                 message: error instanceof Error ? error.message : String(error),
                 stack: error instanceof Error ? error.stack : undefined,
                 serverId,
-                audioSource,
+                audioSource: nameOrSource,
             });
             throw new Error(`Failed to play audio: ${error}`);
         }

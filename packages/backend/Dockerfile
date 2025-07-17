@@ -12,7 +12,8 @@ RUN apk add --no-cache \
     ffmpeg \
     ffmpeg-dev \
     ca-certificates \
-    bind-tools
+    bind-tools \
+    yt-dlp
 
 # Set working directory
 WORKDIR /app
@@ -77,7 +78,8 @@ RUN apk add --no-cache \
     libsodium \
     ffmpeg \
     ca-certificates \
-    bind-tools
+    bind-tools \
+    yt-dlp
 
 # Set working directory
 WORKDIR /app

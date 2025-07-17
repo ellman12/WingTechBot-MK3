@@ -1,19 +1,16 @@
 #!/usr/bin/env node
-import { generateDependencyReport } from "@discordjs/voice";
+import { createKyselySoundRepository } from "@adapters/repositories/KyselySoundRepository";
+import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService";
+import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService";
+import { createAudioFetcherService } from "@core/services/AudioFetcherService";
+import { createSoundService } from "@core/services/SoundService";
 import "@dotenvx/dotenvx/config";
-
-import { createUserRepository } from "./adapters/repositories/KyselyUserRepository.js";
-import { getConfig } from "./infrastructure/config/Config.js";
-import { connect, disconnect, getKysely, healthCheck } from "./infrastructure/database/DatabaseConnection.js";
-import { type DiscordBot, createDiscordBot } from "./infrastructure/discord/DiscordBot.js";
-import { type ExpressApp, type ServerConfig, createExpressApp } from "./infrastructure/http/ExpressApp.js";
-
-export type AppDependencies = {
-    readonly config: ReturnType<typeof getConfig>;
-    readonly expressApp: ExpressApp;
-    readonly discordBot: DiscordBot;
-    readonly userRepository: ReturnType<typeof createUserRepository>;
-};
+import { getConfig } from "@infrastructure/config/Config.js";
+import { connect, disconnect, getKysely, healthCheck } from "@infrastructure/database/DatabaseConnection.js";
+import { createDiscordBot } from "@infrastructure/discord/DiscordBot.js";
+import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService";
+import { createFileManager } from "@infrastructure/filestore/FileManager";
+import { type ServerConfig, createExpressApp } from "@infrastructure/http/ExpressApp";
 
 export type App = {
     readonly start: () => Promise<void>;
@@ -25,6 +22,7 @@ export const createApplication = async (): Promise<App> => {
 
     await connect();
 
+    // Initialize Infrastructure
     const db = getKysely();
     const serverConfig: ServerConfig = {
         port: config.server.port,
@@ -32,12 +30,25 @@ export const createApplication = async (): Promise<App> => {
         corsOrigin: process.env.CORS_ORIGIN || false,
     };
 
-    const expressApp = createExpressApp({ db, config: serverConfig });
-    const discordBot = createDiscordBot({ config });
-    const _userRepository = createUserRepository(db);
+    const fileManager = createFileManager();
+    const ffmpeg = createFfmpegService();
+    const ytdl = createYtdlYoutubeService();
 
-    console.log("🔧 Dependency Report:");
-    console.log(generateDependencyReport());
+    // Initialize Repositories
+    const soundRepository = createKyselySoundRepository(db);
+
+    // Initialize Services
+    const audioProcessingService = createFfmpegAudioProcessingService({ ffmpeg });
+    const audioFetchService = createAudioFetcherService({ fileManager, soundRepository, youtubeService: ytdl });
+    const soundService = createSoundService({
+        audioFetcher: audioFetchService,
+        audioProcessor: audioProcessingService,
+        fileManager,
+        soundRepository,
+    });
+
+    const expressApp = createExpressApp({ db, config: serverConfig });
+    const discordBot = createDiscordBot({ config, soundService });
 
     const runMigrations = async (): Promise<void> => {
         try {
