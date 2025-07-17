@@ -267,7 +267,7 @@ export const createFfmpegService = (): FfmpegService => {
      * Returns a Promise that resolves to the normalized audio as a Uint8Array, in WAV format.
      */
     const normalizeAudio = async (input: Uint8Array, options: Pick<FfmpegConvertOptions, "channels" | "sampleRate">) => {
-        console.log();
+        console.log("Starting audio normalization process..");
 
         const preprocessArgs = ["-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json", "-f", "null"];
         const preprocessResult = await runAsyncWithStderr(input, preprocessArgs);
