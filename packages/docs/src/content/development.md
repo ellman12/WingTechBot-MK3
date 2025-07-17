@@ -76,7 +76,7 @@ export const createV1ApiConfiguration = (db: Kysely<DB>) => ({
 
 Slash commands are defined in the `src/application/commands/` directory. To add a new command:
 
-1. **Edit or create a command** in `voice-commands.ts` (or a new file). Example:
+1. **Edit or create a command** in `VoiceCommands.ts` (or a new file). Example:
 
 ```typescript
 const pingCommand: Command = {

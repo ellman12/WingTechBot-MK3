@@ -1,12 +1,13 @@
+import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
+import { deployCommands, registerCommands } from "@application/commands/Commands.js";
+import type { SoundService } from "@core/services/SoundService";
 import { Client, type ClientEvents, Events, GatewayIntentBits } from "discord.js";
-
-import { createDiscordVoiceAdapter } from "@/adapters/services/DiscordVoiceAdapter.js";
-import { deployCommands, registerCommands } from "@/application/commands/commands.js";
 
 import type { Config } from "../config/Config.js";
 
 export type DiscordBotDeps = {
     readonly config: Config;
+    readonly soundService: SoundService;
 };
 
 export type DiscordBot = {
@@ -17,14 +18,14 @@ export type DiscordBot = {
     readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
 };
 
-export const createDiscordBot = (deps: DiscordBotDeps): DiscordBot => {
+export const createDiscordBot = ({ config, soundService }: DiscordBotDeps): DiscordBot => {
     const client = new Client({
         intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.DirectMessages, GatewayIntentBits.GuildVoiceStates],
     });
 
     let isReadyState = false;
 
-    const voiceService = createDiscordVoiceAdapter({ client });
+    const voiceService = createDiscordVoiceService({ client, soundService });
 
     const setupEventHandlers = (): void => {
         client.once(Events.ClientReady, async (readyClient: Client<true>) => {
@@ -32,13 +33,11 @@ export const createDiscordBot = (deps: DiscordBotDeps): DiscordBot => {
             console.log(`📊 Bot is in ${readyClient.guilds.cache.size} servers`);
             isReadyState = true;
 
-            if (process.env.NODE_ENV === "development") {
-                try {
-                    await deployCommands(deps.config.discord.token, deps.config.discord.clientId, deps.config.discord.serverId, voiceService);
-                } catch (error) {
-                    console.warn("⚠️ Failed to deploy commands automatically:", error);
-                    console.log("💡 You can deploy commands manually with: pnpm discord:deploy-commands");
-                }
+            try {
+                await deployCommands(soundService, voiceService, config.discord.token, config.discord.clientId, config.discord.serverId);
+            } catch (error) {
+                console.warn("⚠️ Failed to deploy commands automatically:", error);
+                console.log("💡 You can deploy commands manually with: pnpm discord:deploy-commands");
             }
         });
 
@@ -46,19 +45,13 @@ export const createDiscordBot = (deps: DiscordBotDeps): DiscordBot => {
             console.error("❌ Discord client error:", error);
         });
 
-        registerCommands(voiceService, {
-            client,
-            isReady,
-            start,
-            stop,
-            registerEventHandler,
-        });
+        registerCommands(soundService, voiceService, registerEventHandler);
     };
 
     const start = async (): Promise<void> => {
         try {
             console.log("🚀 Starting Discord bot...");
-            await client.login(deps.config.discord.token);
+            await client.login(config.discord.token);
         } catch (error) {
             console.error("❌ Failed to start Discord bot:", error);
             throw error;

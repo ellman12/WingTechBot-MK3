@@ -7,7 +7,7 @@
         "rootDir": ".",
         "newLine": "lf",
         "baseUrl": ".",
-        "paths": { "@/*": ["src/*"], "@core/*": ["src/core/*"], "@infrastructure/*": ["src/infrastructure/*"], "@application/*": ["src/application/*"], "@adapters/*": ["src/adapters/*"], "@db/*": ["database/*"] },
+        "paths": { "@/*": ["src/*"], "@core/*": ["src/core/*"], "@infrastructure/*": ["src/infrastructure/*"], "@application/*": ["src/application/*"], "@adapters/*": ["src/adapters/*"], "@db/*": ["database/*"], "@utils/*": ["src/utils/*"] },
         "types": ["node", "vitest/globals"]
     },
     "include": ["src/**/*", "tests/**/*", "database/**/*"],

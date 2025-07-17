@@ -6,10 +6,10 @@ export type DiscordVoiceStateRepositoryDeps = {
     readonly client: Client;
 };
 
-export const createDiscordVoiceStateRepository = (deps: DiscordVoiceStateRepositoryDeps): VoiceStateRepository => {
+export const createDiscordVoiceStateRepository = ({ client }: DiscordVoiceStateRepositoryDeps): VoiceStateRepository => {
     const getUserVoiceState = (userId: string): VoiceState | null => {
         try {
-            for (const guild of deps.client.guilds.cache.values()) {
+            for (const guild of client.guilds.cache.values()) {
                 const voiceState = guild.voiceStates.cache.get(userId);
                 if (voiceState?.channel) {
                     return voiceState;
@@ -25,7 +25,7 @@ export const createDiscordVoiceStateRepository = (deps: DiscordVoiceStateReposit
         try {
             const voiceStates: VoiceState[] = [];
 
-            for (const guild of deps.client.guilds.cache.values()) {
+            for (const guild of client.guilds.cache.values()) {
                 for (const [_, voiceState] of guild.voiceStates.cache) {
                     if (voiceState.channelId === channelId) {
                         voiceStates.push(voiceState);
@@ -41,7 +41,7 @@ export const createDiscordVoiceStateRepository = (deps: DiscordVoiceStateReposit
 
     const getServerVoiceStates = (serverId: string): VoiceState[] => {
         try {
-            const guild = deps.client.guilds.cache.get(serverId);
+            const guild = client.guilds.cache.get(serverId);
             if (!guild) {
                 return [];
             }
@@ -63,7 +63,7 @@ export const createDiscordVoiceStateRepository = (deps: DiscordVoiceStateReposit
         try {
             const voiceStates: VoiceState[] = [];
 
-            for (const guild of deps.client.guilds.cache.values()) {
+            for (const guild of client.guilds.cache.values()) {
                 for (const [_, voiceState] of guild.voiceStates.cache) {
                     if (voiceState.channel) {
                         voiceStates.push(voiceState);
@@ -98,7 +98,7 @@ export const createDiscordVoiceStateRepository = (deps: DiscordVoiceStateReposit
     const getBotConnectedServers = (): string[] => {
         const connectedServers: string[] = [];
 
-        for (const guild of deps.client.guilds.cache.values()) {
+        for (const guild of client.guilds.cache.values()) {
             if (hasBotVoiceConnection(guild.id)) {
                 connectedServers.push(guild.id);
             }

@@ -1,8 +1,7 @@
 import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
+import type { RouteGroup } from "@infrastructure/http/api/types";
 import type { Request, Response } from "express";
 import { z } from "zod";
-
-import type { RouteGroup } from "../../../infrastructure/http/api/types.js";
 
 extendZodWithOpenApi(z);
 

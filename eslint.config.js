@@ -7,27 +7,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config([
-    globalIgnores([
-        "dist",
-        "dist/**/*",
-        "**/dist/**/*",
-        "node_modules",
-        "node_modules/**/*",
-        "build",
-        "build/**/*",
-        "coverage",
-        "coverage/**/*",
-        ".next",
-        ".next/**/*",
-        "out",
-        "out/**/*",
-        "*.d.ts",
-        "*.js.map",
-        "*.css.map",
-        ".eslintcache",
-        "packages/backend/src/generated/**/*",
-        "packages/backend/prisma/generated/**/*",
-    ]),
+    globalIgnores(["dist", "dist/**/*", "**/dist/**/*", "node_modules", "node_modules/**/*", "build", "build/**/*", "coverage", "coverage/**/*", ".next", ".next/**/*", "out", "out/**/*", "*.d.ts", "*.js.map", "*.css.map", ".eslintcache"]),
     {
         files: ["**/*.{ts,tsx}"],
         extends: [
