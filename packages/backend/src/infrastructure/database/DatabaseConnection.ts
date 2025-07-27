@@ -24,17 +24,7 @@ export const connect = async (): Promise<void> => {
         return;
     }
 
-    try {
-        const kysely = getKysely();
-
-        await kysely.selectFrom("users").select("id").limit(1).execute();
-
-        isConnected = true;
-        console.log("✅ Database connected successfully");
-    } catch (error) {
-        console.error("❌ Database connection failed:", error);
-        throw error;
-    }
+    isConnected = true;
 };
 
 export const disconnect = async (): Promise<void> => {
