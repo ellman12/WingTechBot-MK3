@@ -85,7 +85,6 @@ export const createDiscordBot = ({ config, soundService, reactionService }: Disc
     };
 
     const registerEventHandler = <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>): void => {
-        console.log("register", event, handler);
         client.on(event, handler);
     };
 
