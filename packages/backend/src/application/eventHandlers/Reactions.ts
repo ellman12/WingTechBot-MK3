@@ -3,5 +3,6 @@ import type { DiscordBot } from "@infrastructure/discord/DiscordBot";
 import { Events } from "discord.js";
 
 export const registerReactionEvents = (reactionService: ReactionService, registerEventHandler: DiscordBot["registerEventHandler"]): void => {
-    registerEventHandler(Events.MessageReactionAdd, (reaction, user) => reactionService.addReaction(reaction, user));
+    registerEventHandler(Events.MessageReactionAdd, reactionService.addReaction);
+    registerEventHandler(Events.MessageReactionRemove, reactionService.removeReaction);
 };

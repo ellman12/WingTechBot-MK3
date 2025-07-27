@@ -4,7 +4,7 @@ import type { MessageReaction, PartialMessageReaction, PartialUser, User } from 
 
 export type ReactionService = {
     readonly addReaction: (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => Promise<void>;
-    // readonly removeReaction: () => Promise<void>;
+    readonly removeReaction: (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => Promise<void>;
 };
 
 export type ReactionServiceDeps = {
@@ -34,6 +34,32 @@ export const createReactionService = ({ reactionRepository, emoteRepository }: R
                 await reactionRepository.create(data);
             } catch (e: unknown) {
                 console.error("Error adding reaction to message", e);
+            }
+        },
+
+        removeReaction: async (reaction, user): Promise<void> => {
+            const message = await reaction.message.fetch();
+            const channel = message.channel;
+
+            try {
+                const emoteName = reaction.emoji.name;
+                const emoteDiscordId = reaction.emoji.id;
+
+                if (!emoteName) {
+                    throw new Error("Missing reaction emoji name");
+                }
+
+                const reactionEmote = await emoteRepository.findByNameAndDiscordId(emoteName, emoteDiscordId);
+
+                if (!reactionEmote) {
+                    console.warn("Skipping removal of reaction because reaction emote not found");
+                    return;
+                }
+
+                const data = { giverId: user.id, receiverId: message.author.id, channelId: channel.id, messageId: message.id, emoteId: reactionEmote.id };
+                await reactionRepository.delete(data);
+            } catch (e: unknown) {
+                console.error("Error removing reaction from message", e);
             }
         },
     };

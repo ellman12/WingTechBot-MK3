@@ -2,7 +2,9 @@ import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEm
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
 import { getKyselyForMigrations, runMigrations } from "@db/migrations";
 import type { DB } from "@db/types";
-import { type Guild, type TextChannel } from "discord.js";
+import { getKysely } from "@infrastructure/database/DatabaseConnection";
+import type { DiscordBot } from "@infrastructure/discord/DiscordBot";
+import { type Guild, type Message, type TextChannel } from "discord.js";
 import { promises as fs } from "fs";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import path from "path";
@@ -10,8 +12,9 @@ import { Pool } from "pg";
 import { DataType, newDb } from "pg-mem";
 import { expect } from "vitest";
 
-import { type App } from "@/main";
+import { getApp } from "@/main";
 
+import { createTesterDiscordBot } from "../integration/testBot/TesterDiscordBot";
 import { type TestReactionEmote, validEmotes } from "../testData/reactionEmotes";
 
 const migrationsDir = path.resolve(__dirname, "../../database/migrations");
@@ -61,18 +64,19 @@ export function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export function getTestingGuild(app: App): Guild {
-    const guilds = app.discordBot.client.guilds.cache;
+export function getTestingGuild(bot: DiscordBot): Guild {
+    const guilds = bot.client.guilds.cache;
     return guilds.get(process.env.DISCORD_GUILD_ID!)!;
 }
 
-export function getTestingChannel(app: App): TextChannel {
-    const guild = getTestingGuild(app);
+export async function getTestingChannel(bot: DiscordBot): Promise<TextChannel> {
+    const guild = getTestingGuild(bot);
+    await guild.channels.fetch();
     return guild.channels.cache.get(process.env.DISCORD_BOT_CHANNEL_ID!) as TextChannel;
 }
 
-export function getTestingEmotes(app: App): TestReactionEmote[] {
-    const guild = getTestingGuild(app);
+export function getTestingEmotes(bot: DiscordBot): TestReactionEmote[] {
+    const guild = getTestingGuild(bot);
     const emotes: TestReactionEmote[] = [
         ["👀", null],
         ["🐈‍⬛", null],
@@ -121,4 +125,43 @@ export async function createTestReactions(db: Kysely<DB>, messageCount: number, 
     const expectedReactions = messageCount * reactionsPerMessage;
     const foundReactions = await db.selectFrom("reactions").selectAll().execute();
     expect(foundReactions.length).toEqual(expectedReactions);
+}
+
+export async function setUpIntegrationTest() {
+    const bot = getApp().discordBot;
+    const channel = await getTestingChannel(bot);
+    const emotes = getTestingEmotes(bot);
+
+    const db = getKysely();
+
+    const testerBot = await createTesterDiscordBot();
+    const testerChannel = await getTestingChannel(testerBot);
+    const testerBotId = testerBot.client.user!.id;
+
+    return { bot, channel, emotes, testerBot, testerChannel, db, testerBotId };
+}
+
+export async function createMessagesAndReactions(botChannel: TextChannel, testerBotChannel: TextChannel, totalMessages: number, reactionsPerMessage: number, emotes: TestReactionEmote[]) {
+    const messages: Message[] = [];
+
+    for (let i = 0; i < totalMessages; i++) {
+        const message = await botChannel.send(`Message ${i}: ${totalMessages} messages, ${reactionsPerMessage} reactions per message`);
+        messages.push(message);
+
+        for (let j = 0; j < reactionsPerMessage; j++) {
+            const [name, discordId] = emotes[j]!;
+
+            await testerBotChannel.messages.fetch();
+            const foundMessage = testerBotChannel.messages.cache.get(message.id)!;
+            await foundMessage.react(discordId ?? name);
+        }
+    }
+
+    return messages;
+}
+
+export async function checkReactionAmount(db: Kysely<DB>, expectedReactions: number) {
+    const reactions = await db.selectFrom("reactions").selectAll().execute();
+    expect(reactions.length).toStrictEqual(expectedReactions);
+    expect(reactions.filter(r => r.giver_id !== process.env.DISCORD_CLIENT_ID).length).toStrictEqual(0);
 }
