@@ -1,14 +1,18 @@
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
+import { getKyselyForMigrations, runMigrations } from "@db/migrations";
 import type { DB } from "@db/types";
+import { type Guild, type TextChannel } from "discord.js";
 import { promises as fs } from "fs";
-import { Kysely, PostgresDialect } from "kysely";
+import { Kysely, PostgresDialect, sql } from "kysely";
 import path from "path";
 import { Pool } from "pg";
 import { DataType, newDb } from "pg-mem";
 import { expect } from "vitest";
 
-import { validEmotes } from "../testData/reactionEmotes";
+import { type App } from "@/main";
+
+import { type TestReactionEmote, validEmotes } from "../testData/reactionEmotes";
 
 const migrationsDir = path.resolve(__dirname, "../../database/migrations");
 
@@ -52,6 +56,42 @@ export async function createTestDb(): Promise<Kysely<DB>> {
 
     return kysely;
 }
+
+export function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export function getTestingGuild(app: App): Guild {
+    const guilds = app.discordBot.client.guilds.cache;
+    return guilds.get(process.env.DISCORD_GUILD_ID!)!;
+}
+
+export function getTestingChannel(app: App): TextChannel {
+    const guild = getTestingGuild(app);
+    return guild.channels.cache.get(process.env.DISCORD_BOT_CHANNEL_ID!) as TextChannel;
+}
+
+export function getTestingEmotes(app: App): TestReactionEmote[] {
+    const guild = getTestingGuild(app);
+    const emotes: TestReactionEmote[] = [
+        ["👀", null],
+        ["🐈‍⬛", null],
+    ];
+
+    const upvote = guild.emojis.cache.find(e => e.name === "upvote")!;
+    emotes.push([upvote.name!, upvote.id]);
+
+    const downvote = guild.emojis.cache.find(e => e.name === "downvote")!;
+    emotes.push([downvote.name!, downvote.id]);
+
+    return emotes;
+}
+
+export const recreateDatabase = async (): Promise<void> => {
+    const db = getKyselyForMigrations();
+    await sql`DROP SCHEMA public CASCADE; CREATE SCHEMA public;`.execute(db);
+    await runMigrations();
+};
 
 export async function createTestReactions(db: Kysely<DB>, messageCount: number, reactionsPerMessage: number, baseMsgId: string) {
     const reactions = createReactionRepository(db);

@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 import { createKyselySoundRepository } from "@adapters/repositories/KyselySoundRepository";
+import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository";
+import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService";
+import { createReactionService } from "@core/services/ReactionService";
 import { createSoundService } from "@core/services/SoundService";
 import "@dotenvx/dotenvx/config";
 import { getConfig } from "@infrastructure/config/Config.js";
 import { connect, disconnect, getKysely, healthCheck } from "@infrastructure/database/DatabaseConnection.js";
-import { createDiscordBot } from "@infrastructure/discord/DiscordBot.js";
+import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService";
 import { createFileManager } from "@infrastructure/filestore/FileManager";
 import { type ServerConfig, createExpressApp } from "@infrastructure/http/ExpressApp";
@@ -15,6 +18,7 @@ import { type ServerConfig, createExpressApp } from "@infrastructure/http/Expres
 export type App = {
     readonly start: () => Promise<void>;
     readonly stop: () => Promise<void>;
+    readonly discordBot: DiscordBot;
 };
 
 export const createApplication = async (): Promise<App> => {
@@ -22,7 +26,6 @@ export const createApplication = async (): Promise<App> => {
 
     await connect();
 
-    // Initialize Infrastructure
     const db = getKysely();
     const serverConfig: ServerConfig = {
         port: config.server.port,
@@ -34,10 +37,10 @@ export const createApplication = async (): Promise<App> => {
     const ffmpeg = createFfmpegService();
     const ytdl = createYtdlYoutubeService();
 
-    // Initialize Repositories
     const soundRepository = createKyselySoundRepository(db);
+    const reactionRepository = createReactionRepository(db);
+    const emoteRepository = createReactionEmoteRepository(db);
 
-    // Initialize Services
     const audioProcessingService = createFfmpegAudioProcessingService({ ffmpeg });
     const audioFetchService = createAudioFetcherService({ fileManager, soundRepository, youtubeService: ytdl });
     const soundService = createSoundService({
@@ -46,9 +49,10 @@ export const createApplication = async (): Promise<App> => {
         fileManager,
         soundRepository,
     });
+    const reactionService = createReactionService({ reactionRepository, emoteRepository });
 
     const expressApp = createExpressApp({ db, config: serverConfig });
-    const discordBot = createDiscordBot({ config, soundService });
+    const discordBot = createDiscordBot({ config, soundService, reactionService });
 
     const runMigrations = async (): Promise<void> => {
         try {
@@ -98,6 +102,7 @@ export const createApplication = async (): Promise<App> => {
     return {
         start,
         stop,
+        discordBot,
     };
 };
 
@@ -134,7 +139,7 @@ const setupGracefulShutdown = (app: App): void => {
 
 const startApplication = async (): Promise<void> => {
     try {
-        const app = await createApplication();
+        app = await createApplication();
         await app.start();
         setupGracefulShutdown(app);
     } catch (error) {
@@ -142,5 +147,9 @@ const startApplication = async (): Promise<void> => {
         process.exit(1);
     }
 };
+
+export let app: App;
+
+export const getApp = () => app;
 
 void startApplication();
