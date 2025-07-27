@@ -7,9 +7,10 @@ import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioSer
 import { createAudioFetcherService } from "@core/services/AudioFetcherService";
 import { createReactionService } from "@core/services/ReactionService";
 import { createSoundService } from "@core/services/SoundService";
+import { runMigrations } from "@db/migrations";
 import "@dotenvx/dotenvx/config";
 import { getConfig } from "@infrastructure/config/Config.js";
-import { connect, disconnect, getKysely, healthCheck } from "@infrastructure/database/DatabaseConnection.js";
+import { connect, disconnect, getKysely } from "@infrastructure/database/DatabaseConnection.js";
 import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService";
 import { createFileManager } from "@infrastructure/filestore/FileManager";
@@ -53,21 +54,6 @@ export const createApplication = async (): Promise<App> => {
 
     const expressApp = createExpressApp({ db, config: serverConfig });
     const discordBot = createDiscordBot({ config, soundService, reactionService });
-
-    const runMigrations = async (): Promise<void> => {
-        try {
-            const isHealthy = await healthCheck();
-
-            if (!isHealthy) {
-                throw new Error("Database health check failed");
-            }
-
-            console.log("✅ Database is ready");
-        } catch (error) {
-            console.error("❌ Database migration failed:", error);
-            throw error;
-        }
-    };
 
     const start = async (): Promise<void> => {
         try {
