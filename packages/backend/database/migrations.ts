@@ -5,14 +5,12 @@ import type { Migration } from "kysely";
 import { join } from "path";
 import { Pool } from "pg";
 
-// Create Kysely instance for migrations
-const createKyselyForMigrations = (): Kysely<DB> => {
+export const getKyselyForMigrations = (): Kysely<DB> => {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
     return new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
 };
 
-// Migration provider
 const migrationProvider = {
     async getMigrations() {
         const migrationsPath = join(".", "database", "migrations");
@@ -34,9 +32,8 @@ const migrationProvider = {
     },
 };
 
-// Migration runner
 export const runMigrations = async (): Promise<void> => {
-    const db = createKyselyForMigrations();
+    const db = getKyselyForMigrations();
     const migrator = new Migrator({ db, provider: migrationProvider });
 
     try {
@@ -60,9 +57,8 @@ export const runMigrations = async (): Promise<void> => {
     }
 };
 
-// Migration rollback
 export const rollbackMigrations = async (): Promise<void> => {
-    const db = createKyselyForMigrations();
+    const db = getKyselyForMigrations();
     const migrator = new Migrator({ db, provider: migrationProvider });
 
     try {
