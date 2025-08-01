@@ -22,13 +22,13 @@ beforeAll(async () => {
 
     const bot = getApp().discordBot;
     const channel = await getTestingChannel(bot);
-    await channel.send("Starting Remove Reactions for Message tests");
+    await channel.send("Starting Remove Reactions for Emote tests");
 });
 
 afterAll(async () => {
     const bot = getApp().discordBot;
     const channel = await getTestingChannel(bot);
-    await channel.send("Finish Remove Reactions for Message tests");
+    await channel.send("Finish Remove Reactions for Emote tests");
 });
 
 beforeEach(async () => {
@@ -37,7 +37,7 @@ beforeEach(async () => {
     await recreateDatabase();
 });
 
-describe("Remove Reactions For Message", () => {
+describe("Remove Reactions for Emote", () => {
     test.each(data)(
         "%s messages, %s reactions per message",
         async (totalMessages, reactionsPerMessage) => {
@@ -48,9 +48,12 @@ describe("Remove Reactions For Message", () => {
             await sleep(8 * 1000);
             await checkReactionAmount(db, totalMessages * reactionsPerMessage);
 
-            for (const id of messages.map(m => m.id)) {
-                const foundMessage = await testerChannel.messages.cache.get(id)!.fetch(true);
-                await foundMessage.reactions.removeAll();
+            for (const message of messages) {
+                for (let j = 0; j < reactionsPerMessage; j++) {
+                    const [name, discordId] = emotes[j]!;
+                    const reaction = message.reactions.cache.find(r => r.emoji.name === name && r.emoji.id === discordId)!;
+                    await reaction.remove();
+                }
             }
 
             await sleep(8 * 1000);
