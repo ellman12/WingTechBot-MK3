@@ -7,4 +7,5 @@ export const registerReactionEvents = (reactionService: ReactionService, registe
     registerEventHandler(Events.MessageReactionRemove, reactionService.removeReaction);
     registerEventHandler(Events.MessageReactionRemoveAll, reactionService.removeReactionsForMessage);
     registerEventHandler(Events.MessageReactionRemoveEmoji, reactionService.removeReactionsForEmote);
+    registerEventHandler(Events.MessageDelete, message => reactionService.removeReactionsForMessage(message));
 };

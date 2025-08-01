@@ -1,11 +1,11 @@
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository";
-import type { Message, MessageReaction, OmitPartialGroupDMChannel, PartialMessage, PartialMessageReaction, PartialUser, ReadonlyCollection, User } from "discord.js";
+import type { Message, MessageReaction, OmitPartialGroupDMChannel, PartialMessage, PartialMessageReaction, PartialUser, User } from "discord.js";
 
 export type ReactionService = {
     readonly addReaction: (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => Promise<void>;
     readonly removeReaction: (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => Promise<void>;
-    readonly removeReactionsForMessage: (message: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, reactions: ReadonlyCollection<string, MessageReaction>) => Promise<void>;
+    readonly removeReactionsForMessage: (message: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>) => Promise<void>;
     readonly removeReactionsForEmote: (reaction: MessageReaction | PartialMessageReaction) => Promise<void>;
 };
 
