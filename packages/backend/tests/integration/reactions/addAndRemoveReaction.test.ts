@@ -42,6 +42,7 @@ describe("Create Messages, Add Reactions, Then Remove Them", () => {
         "%s messages, %s reactions per message",
         async (totalMessages, reactionsPerMessage) => {
             const { channel, emotes, testerBotId, testerChannel, db } = await setUpIntegrationTest();
+            await testerChannel.fetch(true);
             const messages = await createMessagesAndReactions(channel, testerChannel, totalMessages, reactionsPerMessage, emotes);
 
             await sleep(8 * 1000);

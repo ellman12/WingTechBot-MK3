@@ -6,6 +6,7 @@ export type ReactionService = {
     readonly addReaction: (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => Promise<void>;
     readonly removeReaction: (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => Promise<void>;
     readonly removeReactionsForMessage: (message: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, reactions: ReadonlyCollection<string, MessageReaction>) => Promise<void>;
+    readonly removeReactionsForEmote: (reaction: MessageReaction | PartialMessageReaction) => Promise<void>;
 };
 
 export type ReactionServiceDeps = {
@@ -69,6 +70,20 @@ export const createReactionService = ({ reactionRepository, emoteRepository }: R
                 await reactionRepository.deleteReactionsForMessage(message.id);
             } catch (e: unknown) {
                 console.error("Error removing reaction from message", e);
+            }
+        },
+
+        removeReactionsForEmote: async (reaction): Promise<void> => {
+            try {
+                const emote = await emoteRepository.findByNameAndDiscordId(reaction.emoji.name!, reaction.emoji.id);
+
+                if (!emote) {
+                    throw new Error("Emote not found in removeReactionsForEmote");
+                }
+
+                await reactionRepository.deleteReactionsForEmote(reaction.message.id, emote.id);
+            } catch (e: unknown) {
+                console.error("Error removing reactions for emote", e);
             }
         },
     };
