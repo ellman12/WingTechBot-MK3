@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockAudioFetcher: AudioFetcherService = {
     fetchUrlAudio: vi.fn(),
     parseAudioSource: vi.fn(),
+    fetchSoundboardAudio: vi.fn(),
 };
 
 const mockAudioProcessor: AudioProcessingService = {
@@ -22,6 +23,9 @@ const mockFileManager: FileManager = {
     writeStream: vi.fn(),
     deleteFile: vi.fn(),
     fileExists: vi.fn(),
+    readFile: vi.fn(),
+    writeFile: vi.fn(),
+    listFiles: vi.fn(),
 };
 
 const mockSoundRepository: SoundRepository = {

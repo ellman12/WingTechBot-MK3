@@ -6,7 +6,7 @@ import { Readable } from "stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 describe("Audio File Normalization Integration Test", () => {
-    const testDir = "./tests/integration/ffmpeg";
+    const testDir = "./tests/integration/audio";
     const inputFilePath = join(testDir, "test.mp3");
     const outputFilePath = join(testDir, "test-output.pcm");
 

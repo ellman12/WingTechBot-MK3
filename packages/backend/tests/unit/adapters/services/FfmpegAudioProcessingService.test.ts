@@ -126,4 +126,25 @@ describe("FfmpegAudioProcessingService", () => {
             });
         });
     });
+
+    describe("error handling", () => {
+        it("should handle FFmpeg spawn failures", async () => {
+            const inputAudio = new Uint8Array([1, 2, 3, 4]);
+
+            // Mock spawn failure
+            vi.mocked(mockFfmpegService.normalizeAudio).mockRejectedValue(new Error("ffmpeg not found"));
+
+            await expect(audioProcessingService.deepProcessAudio(inputAudio)).rejects.toThrow("ffmpeg not found");
+        });
+
+        it("should handle conversion errors", async () => {
+            const inputAudio = new Uint8Array([1, 2, 3, 4]);
+            const normalizedAudio = new Uint8Array([5, 6, 7, 8]);
+
+            vi.mocked(mockFfmpegService.normalizeAudio).mockResolvedValue(normalizedAudio);
+            vi.mocked(mockFfmpegService.convertAudio).mockRejectedValue(new Error("ffmpeg conversion failed"));
+
+            await expect(audioProcessingService.deepProcessAudio(inputAudio)).rejects.toThrow("ffmpeg conversion failed");
+        });
+    });
 });

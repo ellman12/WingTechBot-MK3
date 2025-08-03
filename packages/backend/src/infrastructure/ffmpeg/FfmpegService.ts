@@ -109,6 +109,7 @@ export const createFfmpegService = (): FfmpegService => {
             });
 
             ffmpegInstance.on("error", err => {
+                console.error(`ffmpeg process error: ${err.message}`);
                 reject(err);
             });
         });
@@ -151,6 +152,7 @@ export const createFfmpegService = (): FfmpegService => {
             });
 
             ffmpegInstance.on("error", err => {
+                console.error(`ffmpeg process error: ${err.message}`);
                 reject(err);
             });
         });
@@ -188,6 +190,7 @@ export const createFfmpegService = (): FfmpegService => {
             });
 
             ffmpegInstance.on("error", err => {
+                console.error(`ffmpeg process error: ${err.message}`);
                 reject(err);
             });
         });

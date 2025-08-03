@@ -1,5 +1,4 @@
 import { createYtDlpService } from "@infrastructure/yt-dlp/YtDlpService";
-import { spawn } from "child_process";
 import { Readable } from "stream";
 import { describe, expect, it, vi } from "vitest";
 
@@ -126,25 +125,29 @@ describe("YtDlpService Integration Tests", () => {
 
     // Mock test for when yt-dlp is not available
     it("should handle yt-dlp process spawn failures", async () => {
-        // This test mocks the spawn function to simulate yt-dlp not being available
-        const originalSpawn = spawn;
+        // Mock spawn to simulate yt-dlp not being available
+        const mockSpawn = vi.fn(() => {
+            throw new Error("yt-dlp not found");
+        });
 
+        // Mock the child_process module
         vi.doMock("child_process", () => ({
-            spawn: vi.fn(() => {
-                throw new Error("yt-dlp not found");
-            }),
+            spawn: mockSpawn,
         }));
 
-        // Re-import after mocking
+        // Clear modules and re-import to get the mocked version
+        vi.resetModules();
         const { createYtDlpService: createMockedService } = await import("@infrastructure/yt-dlp/YtDlpService");
         const mockedService = createMockedService();
 
         await expect(mockedService.getAudioStream("https://example.com")).rejects.toThrow("yt-dlp not found");
         await expect(mockedService.getVideoInfo("https://example.com")).rejects.toThrow("yt-dlp not found");
 
-        // Restore original spawn
-        vi.doMock("child_process", () => ({
-            spawn: originalSpawn,
-        }));
+        // Verify spawn was called
+        expect(mockSpawn).toHaveBeenCalled();
+
+        // Clean up
+        vi.doUnmock("child_process");
+        vi.resetModules();
     });
 });

@@ -15,7 +15,8 @@ const mockAudioFetcher: AudioFetcherService = {
     fetchUrlAudio: async (url: string): Promise<Readable> => {
         // Return the test MP3 file as a stream for URL requests
         if (url.startsWith("http")) {
-            const testFilePath = join(__dirname, "../ffmpeg/test.mp3");
+            const testDir = "./tests/integration/audio";
+            const testFilePath = join(testDir, "test.mp3");
             const fileBuffer = readFileSync(testFilePath);
             return Readable.from([fileBuffer]);
         }
