@@ -1,7 +1,7 @@
 import { OverlappingAudioPlayer } from "@adapters/audio/OverlappingAudioPlayer.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
-import { AudioPlayerStatus, type AudioResource, NoSubscriberBehavior, type VoiceConnection, VoiceConnectionStatus, joinVoiceChannel } from "@discordjs/voice";
+import { AudioPlayerStatus, type VoiceConnection, VoiceConnectionStatus, joinVoiceChannel } from "@discordjs/voice";
 import type { Client, VoiceChannel as DiscordVoiceChannel } from "discord.js";
 
 import { createPlayingSound } from "../../core/entities/PlayingSound.js";
@@ -15,7 +15,6 @@ type VoiceState = {
     connection: VoiceConnection;
     player: OverlappingAudioPlayer;
     volume: number;
-    isPlaying: boolean;
     isReady: boolean;
 };
 
@@ -203,7 +202,7 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
         try {
             // Create abort controller for the entire operation
             const abortController = new AbortController();
-            const audioId = `audio_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const audioId = `audio_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
             const audioStream = await soundService.getSound(nameOrSource, abortController.signal);
             const audioSource = createPlayingSound(audioId, audioStream, volume, {
@@ -238,8 +237,6 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
         const state = voiceStates.get(serverId);
         if (state) {
             state.player.stopAll();
-            state.isPlaying = false;
-            state.currentResource = undefined;
         }
     };
 
@@ -247,10 +244,6 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
         const state = voiceStates.get(serverId);
         if (state) {
             const success = state.player.stopAudio(audioId);
-            if (state.player.getActiveAudioCount() === 0) {
-                state.isPlaying = false;
-                state.currentResource = undefined;
-            }
             return success;
         }
         return false;
