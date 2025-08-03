@@ -44,7 +44,6 @@ const deployCommands = async (): Promise<void> => {
             getActiveAudioCount: () => 0,
             getActiveAudioIds: () => [],
             setVolume: async () => {},
-            setAudioVolume: async () => false,
             getVolume: () => 50,
             pause: async () => {},
             resume: async () => {},

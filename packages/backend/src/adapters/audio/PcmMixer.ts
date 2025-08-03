@@ -208,27 +208,39 @@ export class PcmMixer extends Transform {
         const streamIds = Array.from(this.streamBuffers.keys());
         if (streamIds.length === 0) return null;
 
-        // Extract chunks from each stream
+        // Extract chunks from each stream, padding with silence if needed
         const chunks: Buffer[] = [];
+        const streamVolumes: number[] = [];
+
         for (const streamId of streamIds) {
             const buffer = this.streamBuffers.get(streamId);
-            if (!buffer) continue;
+            const streamState = this.activeStreams.get(streamId);
+
+            if (!buffer || !streamState) continue;
 
             if (buffer.length >= chunkSize) {
+                // Stream has enough data
                 const chunk = buffer.subarray(0, chunkSize);
                 chunks.push(chunk);
+                streamVolumes.push(streamState.info.volume);
                 this.streamBuffers.set(streamId, buffer.subarray(chunkSize));
             } else {
-                // Not enough data from this stream, skip mixing this round
-                return null;
+                // Stream doesn't have enough data - pad with available data + silence
+                const availableData = buffer.length > 0 ? buffer : Buffer.alloc(0);
+                const silencePadding = Buffer.alloc(chunkSize - availableData.length);
+                const paddedChunk = Buffer.concat([availableData, silencePadding]);
+
+                chunks.push(paddedChunk);
+                streamVolumes.push(streamState.info.volume);
+                this.streamBuffers.set(streamId, Buffer.alloc(0)); // Clear the buffer since we used all available data
             }
         }
 
         // Mix the chunks
-        return this.mixPcmChunks(chunks);
+        return this.mixPcmChunks(chunks, streamVolumes);
     }
 
-    private mixPcmChunks(chunks: Buffer[]): Buffer {
+    private mixPcmChunks(chunks: Buffer[], volumes: number[]): Buffer {
         if (chunks.length === 0) return Buffer.alloc(0);
 
         const firstChunk = chunks[0];
@@ -236,13 +248,8 @@ export class PcmMixer extends Transform {
 
         if (chunks.length === 1) {
             // Apply volume to single stream
-            const firstStreamId = Array.from(this.activeStreams.keys())[0];
-            if (!firstStreamId) return firstChunk;
-
-            const streamState = this.activeStreams.get(firstStreamId);
-            if (!streamState) return firstChunk;
-
-            return this.applyVolume(firstChunk, streamState.info.volume);
+            const volume = volumes[0] ?? 1.0;
+            return this.applyVolume(firstChunk, volume);
         }
 
         const chunkSize = firstChunk.length;
@@ -256,19 +263,14 @@ export class PcmMixer extends Transform {
                 let mixedSample = 0;
 
                 // Add samples from all chunks with volume applied
-                const streamIds = Array.from(this.activeStreams.keys());
-                for (let i = 0; i < chunks.length && i < streamIds.length; i++) {
-                    const streamId = streamIds[i];
-                    if (!streamId) continue;
-
-                    const streamState = this.activeStreams.get(streamId);
-                    if (!streamState) continue;
-
+                for (let i = 0; i < chunks.length; i++) {
                     const chunk = chunks[i];
+                    const volume = volumes[i] ?? 1.0;
+
                     if (!chunk || chunk.length <= byteIndex + 1) continue;
 
                     const sample = chunk.readInt16LE(byteIndex);
-                    mixedSample += sample * streamState.info.volume;
+                    mixedSample += sample * volume;
                 }
 
                 // Clamp to prevent clipping
