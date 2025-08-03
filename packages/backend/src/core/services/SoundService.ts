@@ -8,7 +8,7 @@ import type { FileManager } from "./FileManager";
 
 export type SoundService = {
     readonly addSound: (name: string, source: string) => Promise<void>;
-    readonly getSound: (nameOrSource: string) => Promise<Readable>;
+    readonly getSound: (nameOrSource: string, abortSignal?: AbortSignal) => Promise<Readable>;
     readonly listSounds: () => Promise<string[]>;
     readonly deleteSound: (name: string) => Promise<void>;
 };
@@ -31,34 +31,44 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
 
             try {
                 console.log(`[SoundService] Fetching audio stream for: ${source}`);
-                const audioStream = await audioFetcher.fetchUrlAudio(source);
+                // Create abort controller with timeout for addSound operations
+                const abortController = new AbortController();
+                const timeout = setTimeout(() => abortController.abort(), 60000); // 60 second timeout for downloads
+                
+                try {
+                    const audioStream = await audioFetcher.fetchUrlAudio(source, abortController.signal);
+                    clearTimeout(timeout);
 
-                console.log(`[SoundService] Reading stream to bytes for: ${name}`);
-                const audio: Uint8Array = await readStreamToBytes(audioStream);
-                console.log(`[SoundService] Read ${audio.length} bytes for: ${name}`);
+                    console.log(`[SoundService] Reading stream to bytes for: ${name}`);
+                    const audio: Uint8Array = await readStreamToBytes(audioStream);
+                    console.log(`[SoundService] Read ${audio.length} bytes for: ${name}`);
 
-                console.log(`[SoundService] Processing audio for: ${name}`);
-                const processedAudio = await audioProcessor.deepProcessAudio(audio);
-                console.log(`[SoundService] Processed audio result: ${processedAudio.length} bytes for: ${name}`);
+                    console.log(`[SoundService] Processing audio for: ${name}`);
+                    const processedAudio = await audioProcessor.deepProcessAudio(audio);
+                    console.log(`[SoundService] Processed audio result: ${processedAudio.length} bytes for: ${name}`);
 
-                const path = `/${name}.ogg`;
-                const fullPath = `${AUDIO_FILE_STORE_PATH}${path}`;
+                    const path = `/${name}.pcm`;
+                    const fullPath = `${AUDIO_FILE_STORE_PATH}${path}`;
 
-                console.log(`[SoundService] Writing binary audio file to: ${fullPath}`);
-                // Convert Uint8Array to Readable stream for writeStream
-                const binaryAudioStream = Readable.from(processedAudio);
-                await fileManager.writeStream(fullPath, binaryAudioStream);
+                    console.log(`[SoundService] Writing binary audio file to: ${fullPath}`);
+                    // Convert Uint8Array to Readable stream for writeStream
+                    const binaryAudioStream = Readable.from(processedAudio);
+                    await fileManager.writeStream(fullPath, binaryAudioStream);
 
-                console.log(`[SoundService] Adding sound to repository: ${name} -> ${path}`);
-                await soundRepository.addSound({ name, path });
+                    console.log(`[SoundService] Adding sound to repository: ${name} -> ${path}`);
+                    await soundRepository.addSound({ name, path });
 
-                console.log(`[SoundService] Successfully added sound: ${name}`);
+                    console.log(`[SoundService] Successfully added sound: ${name}`);
+                } catch (fetchError) {
+                    clearTimeout(timeout);
+                    throw fetchError;
+                }
             } catch (error) {
                 console.error(`[SoundService] Error adding sound ${name}:`, error);
                 throw error;
             }
         },
-        getSound: async (nameOrSource: string): Promise<Readable> => {
+        getSound: async (nameOrSource: string, abortSignal?: AbortSignal): Promise<Readable> => {
             const startTime = Date.now();
             console.log(`[SoundService] Getting sound: ${nameOrSource}`);
 
@@ -90,14 +100,14 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                     case "url":
                     case "youtube": {
                         console.log(`[SoundService] Fetching and processing URL/YouTube audio: ${nameOrSource}`);
-                        const audioStream = await audioFetcher.fetchUrlAudio(nameOrSource);
+                        const audioStream = await audioFetcher.fetchUrlAudio(nameOrSource, abortSignal);
                         console.log(`[SoundService] Got audio stream, processing for: ${nameOrSource}`);
 
                         const processedStream = audioProcessor.processAudioStream(audioStream);
                         console.log(`[SoundService] Pre-buffering processed stream for: ${nameOrSource}`);
 
                         // Use pre-buffering for URL/YouTube content to ensure smooth playback
-                        const preBufferedStream = await createPreBufferedStream(processedStream, `url:${nameOrSource}`);
+                        const preBufferedStream = await createPreBufferedStream(processedStream, `url:${nameOrSource}`, abortSignal);
 
                         const elapsedTime = Date.now() - startTime;
                         console.log(`[SoundService] Successfully pre-buffered audio stream for: ${nameOrSource} in ${elapsedTime}ms`);

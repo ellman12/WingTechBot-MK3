@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 describe("Audio File Normalization Integration Test", () => {
     const testDir = "./tests/integration/ffmpeg";
     const inputFilePath = join(testDir, "test.mp3");
-    const outputFilePath = join(testDir, "test-output.ogg");
+    const outputFilePath = join(testDir, "test-output.pcm");
 
     let ffmpegAudioService: ReturnType<typeof createFfmpegAudioProcessingService>;
     let tempFiles: string[] = [];
@@ -112,7 +112,7 @@ describe("Audio File Normalization Integration Test", () => {
         expect(finalOutput.length).toBe(totalBytes);
 
         // Write stream output for comparison
-        const streamOutputPath = join(testDir, "test-stream-output.ogg");
+        const streamOutputPath = join(testDir, "test-stream-output.pcm");
         await writeFile(streamOutputPath, finalOutput);
         tempFiles.push(streamOutputPath);
 

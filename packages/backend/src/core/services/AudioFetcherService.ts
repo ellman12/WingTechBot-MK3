@@ -11,7 +11,7 @@ export type YoutubeService = {
 
 export type AudioFetcherService = {
     readonly parseAudioSource: (source: string) => audioSource;
-    readonly fetchUrlAudio: (link: string) => Promise<Readable>;
+    readonly fetchUrlAudio: (link: string, abortSignal?: AbortSignal) => Promise<Readable>;
     readonly fetchSoundboardAudio: (name: string) => Promise<Readable>;
 };
 
@@ -55,7 +55,7 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
         }
     };
 
-    const fetchUrlAudio = async (link: string): Promise<Readable> => {
+    const fetchUrlAudio = async (link: string, abortSignal?: AbortSignal): Promise<Readable> => {
         console.log(`[AudioFetcherService] Fetching URL audio: ${link}`);
 
         if (link.startsWith("https://www.youtube.com/") || link.startsWith("https://youtu.be/")) {
@@ -65,7 +65,24 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
 
         console.log(`[AudioFetcherService] Fetching direct URL audio: ${link}`);
         try {
-            const response = await fetch(link);
+            // Create a timeout controller if no abort signal provided
+            const timeoutController = new AbortController();
+            const timeout = setTimeout(() => {
+                timeoutController.abort();
+            }, 30000); // 30 second timeout
+
+            // Combine user abort signal with timeout
+            const combinedSignal = abortSignal ? AbortSignal.any([abortSignal, timeoutController.signal]) : timeoutController.signal;
+
+            const response = await fetch(link, {
+                signal: combinedSignal,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
+            });
+
+            clearTimeout(timeout);
+
             if (!response.ok || response.body == null) {
                 const error = new Error(`Failed to fetch audio from URL: ${link} (Status: ${response.status})`);
                 console.error(`[AudioFetcherService] ${error.message}`);
@@ -76,6 +93,20 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
             return Readable.fromWeb(response.body);
         } catch (error) {
             console.error(`[AudioFetcherService] Error fetching URL audio:`, error);
+            
+            // Provide more specific error messages
+            if (error instanceof Error) {
+                if (error.name === 'AbortError') {
+                    throw new Error(`Request timeout or cancelled while fetching: ${link}`);
+                }
+                if (error.message.includes('ETIMEDOUT')) {
+                    throw new Error(`Connection timeout while fetching: ${link}`);
+                }
+                if (error.message.includes('ENOTFOUND')) {
+                    throw new Error(`Host not found: ${link}`);
+                }
+            }
+            
             throw error;
         }
     };
