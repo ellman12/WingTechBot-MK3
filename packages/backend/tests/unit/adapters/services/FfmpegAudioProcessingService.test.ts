@@ -31,7 +31,7 @@ describe("FfmpegAudioProcessingService", () => {
     });
 
     describe("deepProcessAudio", () => {
-        it("should normalize and convert audio to Opus", async () => {
+        it("should normalize and convert audio to PCM", async () => {
             const inputAudio = new Uint8Array([1, 2, 3, 4]);
             const normalizedAudio = new Uint8Array([5, 6, 7, 8]);
             const finalAudio = new Uint8Array([9, 10, 11, 12]);
@@ -44,11 +44,10 @@ describe("FfmpegAudioProcessingService", () => {
             expect(mockFfmpegService.normalizeAudio).toHaveBeenCalledWith(inputAudio, {});
             expect(mockFfmpegService.convertAudio).toHaveBeenCalledWith(normalizedAudio, {
                 inputFormat: "wav",
-                outputFormat: "opus",
-                codec: "libopus",
+                outputFormat: "s16le",
+                codec: "pcm_s16le",
                 sampleRate: 48000,
                 channels: 2,
-                bitrate: "128k",
             });
             expect(result).toBe(finalAudio);
         });
@@ -72,11 +71,10 @@ describe("FfmpegAudioProcessingService", () => {
             const result = audioProcessingService.processAudioStream(inputStream);
 
             expect(mockFfmpegService.convertStreamToStream).toHaveBeenCalledWith(inputStream, {
-                outputFormat: "opus",
-                codec: "libopus",
+                outputFormat: "s16le",
+                codec: "pcm_s16le",
                 sampleRate: 48000,
                 channels: 2,
-                bitrate: "128k",
                 extraArgs: ["-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11:linear=true"],
             });
             expect(result).toBeInstanceOf(Readable);
@@ -101,7 +99,7 @@ describe("FfmpegAudioProcessingService", () => {
             vi.mocked(mockFfmpegService.convertStreamToStream).mockImplementation(() => {
                 const errorStream = new Readable({
                     read() {
-                        this.emit("error", new Error("Stream processing failed"));
+                        this.destroy(new Error("FFmpeg stream processing failed"));
                     },
                 });
                 return errorStream;
@@ -109,13 +107,44 @@ describe("FfmpegAudioProcessingService", () => {
 
             const result = audioProcessingService.processAudioStream(inputStream);
 
-            // Should still return a stream, but it will emit an error
             expect(result).toBeInstanceOf(Readable);
 
-            // Test that the error is properly propagated
-            result.on("error", error => {
-                expect(error.message).toBe("Stream processing failed");
+            // The stream should propagate errors
+            return new Promise<void>((resolve, reject) => {
+                result.on("error", error => {
+                    expect(error.message).toBe("FFmpeg stream processing failed");
+                    resolve();
+                });
+
+                result.on("data", () => {
+                    // Should not reach here
+                });
+
+                result.on("end", () => {
+                    reject(new Error("Stream ended without error"));
+                });
             });
+        });
+    });
+
+    describe("error handling", () => {
+        it("should handle FFmpeg spawn failures", async () => {
+            const inputAudio = new Uint8Array([1, 2, 3, 4]);
+
+            // Mock spawn failure
+            vi.mocked(mockFfmpegService.normalizeAudio).mockRejectedValue(new Error("ffmpeg not found"));
+
+            await expect(audioProcessingService.deepProcessAudio(inputAudio)).rejects.toThrow("ffmpeg not found");
+        });
+
+        it("should handle conversion errors", async () => {
+            const inputAudio = new Uint8Array([1, 2, 3, 4]);
+            const normalizedAudio = new Uint8Array([5, 6, 7, 8]);
+
+            vi.mocked(mockFfmpegService.normalizeAudio).mockResolvedValue(normalizedAudio);
+            vi.mocked(mockFfmpegService.convertAudio).mockRejectedValue(new Error("ffmpeg conversion failed"));
+
+            await expect(audioProcessingService.deepProcessAudio(inputAudio)).rejects.toThrow("ffmpeg conversion failed");
         });
     });
 });

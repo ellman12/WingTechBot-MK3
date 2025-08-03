@@ -49,30 +49,28 @@ export const createFfmpegAudioProcessingService = ({ ffmpeg }: FfmpegAudioServic
 
             return ffmpeg.convertAudio(normalizedAudio, {
                 inputFormat: "wav",
-                outputFormat: "opus",
-                codec: "libopus",
+                outputFormat: "s16le",
+                codec: "pcm_s16le",
                 sampleRate: 48000,
                 channels: 2,
-                bitrate: "128k",
             });
         },
         processAudioStream: (audioStream: Readable): Readable => {
             console.log(`[FfmpegAudioProcessingService] Processing audio stream with real-time normalization`);
 
-            // Use real-time normalization + Opus encoding in a single pass for optimal streaming
+            // Use real-time normalization + PCM output for overlapping audio mixer
             const processedStream = ffmpeg.convertStreamToStream(audioStream, {
                 // Don't specify inputFormat to let FFmpeg auto-detect
-                outputFormat: "opus",
-                codec: "libopus",
+                outputFormat: "s16le",
+                codec: "pcm_s16le",
                 sampleRate: 48000,
                 channels: 2,
-                bitrate: "128k",
-                // Add real-time loudness normalization - this will be processed by createConvertArgs
+                // Add real-time loudness normalization
                 extraArgs: ["-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11:linear=true"],
             });
 
             // Return buffered version of the processed stream
-            return createBufferedProcessingStream(processedStream, "ffmpeg-normalized-opus");
+            return createBufferedProcessingStream(processedStream, "ffmpeg-normalized-pcm");
         },
     };
 };

@@ -109,6 +109,7 @@ export const createFfmpegService = (): FfmpegService => {
             });
 
             ffmpegInstance.on("error", err => {
+                console.error(`ffmpeg process error: ${err.message}`);
                 reject(err);
             });
         });
@@ -151,6 +152,7 @@ export const createFfmpegService = (): FfmpegService => {
             });
 
             ffmpegInstance.on("error", err => {
+                console.error(`ffmpeg process error: ${err.message}`);
                 reject(err);
             });
         });
@@ -188,6 +190,7 @@ export const createFfmpegService = (): FfmpegService => {
             });
 
             ffmpegInstance.on("error", err => {
+                console.error(`ffmpeg process error: ${err.message}`);
                 reject(err);
             });
         });
@@ -203,12 +206,11 @@ export const createFfmpegService = (): FfmpegService => {
         }
 
         const args = [];
+        // Only specify input format if explicitly provided, let FFmpeg auto-detect otherwise
         if (options.inputFormat) {
             args.push("-f", options.inputFormat);
         }
-        if (options.outputFormat) {
-            args.push("-f", options.outputFormat);
-        }
+        // Only specify output format for the output, not input
         if (options.sampleRate) {
             args.push("-ar", options.sampleRate.toString());
         }
@@ -224,6 +226,8 @@ export const createFfmpegService = (): FfmpegService => {
         if (options.extraArgs) {
             args.push(...options.extraArgs);
         }
+        // Add output format at the end
+        args.push("-f", options.outputFormat);
 
         return args;
     };

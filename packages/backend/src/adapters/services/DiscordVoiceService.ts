@@ -1,8 +1,10 @@
+import { OverlappingAudioPlayer } from "@adapters/audio/OverlappingAudioPlayer.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
-import { type AudioPlayer, AudioPlayerStatus, type AudioResource, NoSubscriberBehavior, StreamType, type VoiceConnection, VoiceConnectionStatus, createAudioPlayer, createAudioResource, joinVoiceChannel } from "@discordjs/voice";
+import { AudioPlayerStatus, type VoiceConnection, VoiceConnectionStatus, joinVoiceChannel } from "@discordjs/voice";
 import type { Client, VoiceChannel as DiscordVoiceChannel } from "discord.js";
-import { Readable } from "stream";
+
+import { createPlayingSound } from "../../core/entities/PlayingSound.js";
 
 export type DiscordVoiceServiceDeps = {
     readonly client: Client;
@@ -11,26 +13,16 @@ export type DiscordVoiceServiceDeps = {
 
 type VoiceState = {
     connection: VoiceConnection;
-    player: AudioPlayer;
-    currentResource?: AudioResource;
+    player: OverlappingAudioPlayer;
     volume: number;
-    isPlaying: boolean;
     isReady: boolean;
 };
 
 export const createDiscordVoiceService = ({ client, soundService }: DiscordVoiceServiceDeps): VoiceService => {
     const voiceStates = new Map<string, VoiceState>();
 
-    const audioStreamToResource = (stream: Readable): AudioResource => {
-        console.log(`[DiscordVoiceService] Creating audio resource with auto-detection and no inline volume`);
-
-        // Try letting Discord.js auto-detect the format and disable inline volume
-        // which might be causing processing hitches
-        return createAudioResource(stream, {
-            inputType: StreamType.Arbitrary, // Let Discord.js detect the format
-            inlineVolume: false, // Disable inline volume processing to reduce CPU load
-        });
-    };
+    // Note: We no longer create AudioResources for individual streams
+    // Raw PCM streams are fed directly to the mixer
 
     const connect = async (channelId: string, serverId: string): Promise<void> => {
         console.log(`[DiscordVoiceService] Attempting to connect to channel ${channelId} in server ${serverId}`);
@@ -69,13 +61,14 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
             });
             console.log(`[DiscordVoiceService] Voice connection created`);
 
-            console.log(`[DiscordVoiceService] Creating audio player`);
-            const player: AudioPlayer = createAudioPlayer({
-                behaviors: {
-                    noSubscriber: NoSubscriberBehavior.Play,
-                },
+            console.log(`[DiscordVoiceService] Creating overlapping audio player`);
+            const player = new OverlappingAudioPlayer({
+                sampleRate: 48000,
+                channels: 2,
+                bitDepth: 16,
+                maxConcurrentStreams: 8,
             });
-            console.log(`[DiscordVoiceService] Audio player created`);
+            console.log(`[DiscordVoiceService] Overlapping audio player created`);
 
             console.log(`[DiscordVoiceService] Subscribing player to connection`);
             connection.subscribe(player);
@@ -109,8 +102,7 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
                 if (state) {
                     console.log(`[VOICE SERVICE] Audio player in server ${serverId} is now playing.`);
                     console.log(`[VOICE SERVICE] Player status: ${player.state.status}`);
-                    console.log(`[VOICE SERVICE] Current resource:`, state.currentResource?.metadata);
-                    state.isPlaying = true;
+                    console.log(`[VOICE SERVICE] Player is now playing.`);
                 }
             });
 
@@ -118,10 +110,8 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
                 const state = voiceStates.get(serverId);
                 if (state) {
                     console.log(`[VOICE SERVICE] Audio player in server ${serverId} is idle.`);
-                    console.log(`[VOICE SERVICE] Previous resource:`, state.currentResource?.metadata);
+                    console.log(`[VOICE SERVICE] Player is now idle.`);
                     console.log(`[VOICE SERVICE] Idle reason: ${player.state.status}`);
-                    state.isPlaying = false;
-                    state.currentResource = undefined;
                 }
             });
 
@@ -142,7 +132,6 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
                 connection,
                 player,
                 volume: 100,
-                isPlaying: false,
                 isReady: false,
             });
             console.log(`[DiscordVoiceService] Successfully connected to voice channel ${channel.name} in server ${serverId}`);
@@ -180,9 +169,8 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
         return connected;
     };
 
-    const playAudio = async (serverId: string, nameOrSource: string): Promise<void> => {
-        const playStartTime = Date.now();
-        console.log(`[DiscordVoiceService] playAudio called with serverId: ${serverId}, source: ${nameOrSource}`);
+    const playAudio = async (serverId: string, nameOrSource: string, volume: number = 1.0): Promise<string> => {
+        console.log(`[DiscordVoiceService] Playing audio: ${nameOrSource} in server ${serverId}`);
 
         const state = voiceStates.get(serverId);
         if (!state) {
@@ -191,17 +179,9 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
             throw error;
         }
 
-        console.log(`[DiscordVoiceService] Voice state found for server ${serverId}:`, {
-            volume: state.volume,
-            isPlaying: state.isPlaying,
-            isReady: state.isReady,
-            playerStatus: state.player.state.status,
-            connectionStatus: state.connection.state.status,
-        });
-
         // Wait for connection to be ready
         if (!state.isReady) {
-            console.log(`[VOICE SERVICE] Connection not ready, waiting...`);
+            console.log(`[DiscordVoiceService] Waiting for connection to be ready...`);
             await new Promise<void>((resolve, reject) => {
                 const timeout = setTimeout(() => {
                     reject(new Error("Connection timeout - voice connection not ready after 10 seconds"));
@@ -217,108 +197,38 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
                 };
                 checkReady();
             });
-            console.log(`[VOICE SERVICE] Connection is now ready`);
         }
 
         try {
-            console.log(`[VOICE SERVICE] Creating audio resource for source: ${nameOrSource}`);
-            console.log(`[VOICE SERVICE] Server ID: ${serverId}`);
-            console.log(`[VOICE SERVICE] Current player status: ${state.player.state.status}`);
-            console.log(`[VOICE SERVICE] Connection ready: ${state.isReady}`);
+            // Create abort controller for the entire operation
+            const abortController = new AbortController();
+            const audioId = `audio_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
-            // Use AudioFetcher to handle all audio sources
-            console.log(`[DiscordVoiceService] Calling soundService.getSound for: ${nameOrSource}`);
-            const streamStartTime = Date.now();
-            const audioStream = await soundService.getSound(nameOrSource);
-            const streamElapsed = Date.now() - streamStartTime;
-            console.log(`[DiscordVoiceService] Got audio stream from soundService in ${streamElapsed}ms`);
-
-            console.log(`[DiscordVoiceService] Converting stream to Discord audio resource`);
-
-            // Add stream debugging
-            let bytesReceived = 0;
-            audioStream.on("data", chunk => {
-                bytesReceived += chunk.length;
-                console.log(`[DiscordVoiceService] Received ${chunk.length} bytes, total: ${bytesReceived}`);
+            const audioStream = await soundService.getSound(nameOrSource, abortController.signal);
+            const audioSource = createPlayingSound(audioId, audioStream, volume, {
+                source: nameOrSource,
+                server: serverId,
             });
 
-            audioStream.on("end", () => {
-                console.log(`[DiscordVoiceService] Audio stream ended, total bytes: ${bytesReceived}`);
+            // Replace the abort controller with our pre-existing one
+            Object.defineProperty(audioSource, "abortController", {
+                value: abortController,
+                writable: false,
             });
 
-            audioStream.on("error", error => {
+            // Add error handling for stream
+            audioSource.stream.on("error", error => {
                 console.error(`[DiscordVoiceService] Audio stream error:`, error);
+                audioSource.abort();
             });
 
-            audioStream.on("close", () => {
-                console.log(`[DiscordVoiceService] Audio stream closed`);
-            });
+            // Add audio source to the player
+            const resultId = state.player.addAudioSource(audioSource);
 
-            const resource = audioStreamToResource(audioStream);
-
-            console.log(`[VOICE SERVICE] Audio resource created successfully`);
-            console.log(`[VOICE SERVICE] Resource metadata:`, resource.metadata);
-            console.log(`[VOICE SERVICE] Resource volume available:`, !!resource.volume);
-            console.log(`[VOICE SERVICE] Resource readable:`, resource.readable);
-            console.log(`[VOICE SERVICE] Resource playStream available:`, !!resource.playStream);
-
-            // Add resource stream debugging
-            if (resource.playStream) {
-                resource.playStream.on("end", () => {
-                    console.log(`[DiscordVoiceService] Resource playStream ended`);
-                });
-
-                resource.playStream.on("error", error => {
-                    console.error(`[DiscordVoiceService] Resource playStream error:`, error);
-                });
-
-                resource.playStream.on("close", () => {
-                    console.log(`[DiscordVoiceService] Resource playStream closed`);
-                });
-            }
-
-            if (resource.volume) {
-                console.log(`[VOICE SERVICE] Setting volume to ${state.volume / 100}`);
-                resource.volume.setVolume(state.volume / 100);
-                console.log(`[VOICE SERVICE] Volume set successfully`);
-            } else {
-                console.log(`[VOICE SERVICE] No volume control available on resource`);
-            }
-
-            console.log(`[VOICE SERVICE] Playing audio resource...`);
-
-            state.player.play(resource);
-            state.currentResource = resource;
-            state.isPlaying = true;
-
-            const totalElapsed = Date.now() - playStartTime;
-            console.log(`[VOICE SERVICE] Audio resource queued for playback in ${totalElapsed}ms total`);
-            console.log(`[VOICE SERVICE] Player status after play: ${state.player.state.status}`);
-
-            // Set up a timeout to detect if the stream doesn't start playing
-            if (nameOrSource.startsWith("http://") || nameOrSource.startsWith("https://")) {
-                const playTimeout = setTimeout(() => {
-                    if (state.player.state.status === "buffering") {
-                        console.warn(`[VOICE SERVICE] Remote URL stream is still buffering after 10 seconds - may be an issue with the URL`);
-                    }
-                }, 10000);
-
-                // Clear timeout when playing starts
-                const clearTimeoutOnPlay = () => {
-                    clearTimeout(playTimeout);
-                    state.player.off(AudioPlayerStatus.Playing, clearTimeoutOnPlay);
-                };
-                state.player.on(AudioPlayerStatus.Playing, clearTimeoutOnPlay);
-            }
+            console.log(`[DiscordVoiceService] Added audio ${resultId.substring(0, 8)} (${state.player.getActiveAudioCount()} active)`);
+            return resultId;
         } catch (error) {
-            console.error(`[VOICE SERVICE] Error in playAudio:`, error);
-            console.error(`[VOICE SERVICE] Error details:`, {
-                name: error instanceof Error ? error.name : "Unknown",
-                message: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined,
-                serverId,
-                audioSource: nameOrSource,
-            });
+            console.error(`[DiscordVoiceService] Failed to play audio ${nameOrSource}:`, error);
             throw new Error(`Failed to play audio: ${error}`);
         }
     };
@@ -326,15 +236,32 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
     const stopAudio = async (serverId: string): Promise<void> => {
         const state = voiceStates.get(serverId);
         if (state) {
-            state.player.stop();
-            state.isPlaying = false;
-            state.currentResource = undefined;
+            state.player.stopAll();
         }
+    };
+
+    const stopAudioById = async (serverId: string, audioId: string): Promise<boolean> => {
+        const state = voiceStates.get(serverId);
+        if (state) {
+            const success = state.player.stopAudio(audioId);
+            return success;
+        }
+        return false;
     };
 
     const isPlaying = (serverId: string): boolean => {
         const state = voiceStates.get(serverId);
-        return state?.isPlaying ?? false;
+        return state ? state.player.getActiveAudioCount() > 0 : false;
+    };
+
+    const getActiveAudioCount = (serverId: string): number => {
+        const state = voiceStates.get(serverId);
+        return state?.player.getActiveAudioCount() ?? 0;
+    };
+
+    const getActiveAudioIds = (serverId: string): string[] => {
+        const state = voiceStates.get(serverId);
+        return state?.player.getActiveAudioIds() ?? [];
     };
 
     const getVolume = (serverId: string): number => {
@@ -345,25 +272,22 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
     const setVolume = async (serverId: string, volume: number): Promise<void> => {
         const state = voiceStates.get(serverId);
         if (state) {
+            // Volume should be 0-100 scale for compatibility with commands
             const clampedVolume = Math.max(0, Math.min(100, volume));
             state.volume = clampedVolume;
-
-            if (state.currentResource?.volume) {
-                state.currentResource.volume.setVolume(clampedVolume / 100);
-            }
         }
     };
 
     const pause = async (serverId: string): Promise<void> => {
         const state = voiceStates.get(serverId);
-        if (state && state.isPlaying) {
+        if (state && state.player.getActiveAudioCount() > 0) {
             state.player.pause();
         }
     };
 
     const resume = async (serverId: string): Promise<void> => {
         const state = voiceStates.get(serverId);
-        if (state && !state.isPlaying) {
+        if (state) {
             state.player.unpause();
         }
     };
@@ -374,7 +298,11 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
         isConnected,
         playAudio,
         stopAudio,
+        stopAudioById,
+        stopAllAudio: stopAudio, // Alias for compatibility
         isPlaying,
+        getActiveAudioCount,
+        getActiveAudioIds,
         getVolume,
         setVolume,
         pause,

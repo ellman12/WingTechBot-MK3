@@ -15,7 +15,8 @@ const mockAudioFetcher: AudioFetcherService = {
     fetchUrlAudio: async (url: string): Promise<Readable> => {
         // Return the test MP3 file as a stream for URL requests
         if (url.startsWith("http")) {
-            const testFilePath = join(__dirname, "../ffmpeg/test.mp3");
+            const testDir = "./tests/integration/audio";
+            const testFilePath = join(testDir, "test.mp3");
             const fileBuffer = readFileSync(testFilePath);
             return Readable.from([fileBuffer]);
         }
@@ -94,14 +95,14 @@ describe("SoundService Integration Tests", () => {
         await soundService.addSound(soundName, testUrl);
 
         // Track the created file for cleanup
-        const expectedPath = `./sounds/${soundName}.ogg`;
+        const expectedPath = `./sounds/${soundName}.pcm`;
         tempFiles.push(expectedPath);
 
         // Verify the sound was added to repository
         const savedSound = await mockSoundRepository.getSoundByName(soundName);
         expect(savedSound).not.toBeNull();
         expect(savedSound?.name).toBe(soundName);
-        expect(savedSound?.path).toBe(`/${soundName}.ogg`);
+        expect(savedSound?.path).toBe(`/${soundName}.pcm`);
 
         // Verify the file was created
         expect(existsSync(expectedPath)).toBe(true);
@@ -131,14 +132,14 @@ describe("SoundService Integration Tests", () => {
 
         // Add first sound
         await soundService.addSound(soundName1, testUrl);
-        tempFiles.push(`./sounds/${soundName1}.ogg`);
+        tempFiles.push(`./sounds/${soundName1}.pcm`);
 
         sounds = await soundService.listSounds();
         expect(sounds).toEqual([soundName1]);
 
         // Add second sound
         await soundService.addSound(soundName2, testUrl);
-        tempFiles.push(`./sounds/${soundName2}.ogg`);
+        tempFiles.push(`./sounds/${soundName2}.pcm`);
 
         sounds = await soundService.listSounds();
         expect(sounds).toHaveLength(2);
@@ -152,7 +153,7 @@ describe("SoundService Integration Tests", () => {
 
         // Add the sound
         await soundService.addSound(soundName, testUrl);
-        const filePath = `./sounds/${soundName}.ogg`;
+        const filePath = `./sounds/${soundName}.pcm`;
 
         // Verify it exists
         expect(existsSync(filePath)).toBe(true);

@@ -2,15 +2,15 @@ import type { SoundRepository } from "@core/repositories/SoundRepository";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService";
 import type { AudioProcessingService } from "@core/services/AudioProcessingService";
 import type { FileManager } from "@core/services/FileManager";
-import { type SoundServiceDeps, createSoundService } from "@core/services/SoundService";
+import { createSoundService } from "@core/services/SoundService";
 import { Readable } from "stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock dependencies
 const mockAudioFetcher: AudioFetcherService = {
-    fetchSoundboardAudio: vi.fn(),
     fetchUrlAudio: vi.fn(),
     parseAudioSource: vi.fn(),
+    fetchSoundboardAudio: vi.fn(),
 };
 
 const mockAudioProcessor: AudioProcessingService = {
@@ -19,12 +19,12 @@ const mockAudioProcessor: AudioProcessingService = {
 };
 
 const mockFileManager: FileManager = {
-    readFile: vi.fn(),
     readStream: vi.fn(),
-    writeFile: vi.fn(),
     writeStream: vi.fn(),
     deleteFile: vi.fn(),
     fileExists: vi.fn(),
+    readFile: vi.fn(),
+    writeFile: vi.fn(),
     listFiles: vi.fn(),
 };
 
@@ -37,11 +37,10 @@ const mockSoundRepository: SoundRepository = {
 
 describe("SoundService", () => {
     let soundService: ReturnType<typeof createSoundService>;
-    let deps: SoundServiceDeps;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        deps = {
+        const deps = {
             audioFetcher: mockAudioFetcher,
             audioProcessor: mockAudioProcessor,
             fileManager: mockFileManager,
@@ -62,12 +61,12 @@ describe("SoundService", () => {
 
             await soundService.addSound("test-sound", "https://example.com/audio.mp3");
 
-            expect(mockAudioFetcher.fetchUrlAudio).toHaveBeenCalledWith("https://example.com/audio.mp3");
+            expect(mockAudioFetcher.fetchUrlAudio).toHaveBeenCalledWith("https://example.com/audio.mp3", expect.any(AbortSignal));
             expect(mockAudioProcessor.deepProcessAudio).toHaveBeenCalledWith(Buffer.from(testAudio));
-            expect(mockFileManager.writeStream).toHaveBeenCalledWith("./sounds/test-sound.ogg", expect.any(Readable));
+            expect(mockFileManager.writeStream).toHaveBeenCalledWith("./sounds/test-sound.pcm", expect.any(Readable));
             expect(mockSoundRepository.addSound).toHaveBeenCalledWith({
                 name: "test-sound",
-                path: "/test-sound.ogg",
+                path: "/test-sound.pcm",
             });
         });
 
@@ -85,7 +84,7 @@ describe("SoundService", () => {
             vi.mocked(mockAudioFetcher.parseAudioSource).mockReturnValue("soundboard");
             vi.mocked(mockSoundRepository.getSoundByName).mockResolvedValue({
                 name: "test-sound",
-                path: "/test-sound.ogg",
+                path: "/test-sound.pcm",
             });
             vi.mocked(mockFileManager.readStream).mockReturnValue(mockFileStream);
 
@@ -93,7 +92,7 @@ describe("SoundService", () => {
 
             expect(result).toBe(mockFileStream);
             expect(mockSoundRepository.getSoundByName).toHaveBeenCalledWith("test-sound");
-            expect(mockFileManager.readStream).toHaveBeenCalledWith("./sounds/test-sound.ogg");
+            expect(mockFileManager.readStream).toHaveBeenCalledWith("./sounds/test-sound.pcm");
         });
 
         it("should throw error for non-existent soundboard audio", async () => {
@@ -113,7 +112,7 @@ describe("SoundService", () => {
 
             const result = await soundService.getSound("https://youtube.com/watch?v=test");
 
-            expect(mockAudioFetcher.fetchUrlAudio).toHaveBeenCalledWith("https://youtube.com/watch?v=test");
+            expect(mockAudioFetcher.fetchUrlAudio).toHaveBeenCalledWith("https://youtube.com/watch?v=test", undefined);
             expect(mockAudioProcessor.processAudioStream).toHaveBeenCalledWith(mockAudioStream);
             expect(result).toBeInstanceOf(Readable);
         });
@@ -122,8 +121,8 @@ describe("SoundService", () => {
     describe("listSounds", () => {
         it("should return list of sound names", async () => {
             const mockSounds = [
-                { name: "sound1", path: "/sound1.ogg" },
-                { name: "sound2", path: "/sound2.ogg" },
+                { name: "sound1", path: "/sound1.pcm" },
+                { name: "sound2", path: "/sound2.pcm" },
             ];
 
             vi.mocked(mockSoundRepository.getAllSounds).mockResolvedValue(mockSounds);
@@ -145,7 +144,7 @@ describe("SoundService", () => {
 
     describe("deleteSound", () => {
         it("should successfully delete a sound", async () => {
-            const mockSound = { name: "test-sound", path: "/test-sound.ogg" };
+            const mockSound = { name: "test-sound", path: "/test-sound.pcm" };
 
             vi.mocked(mockSoundRepository.getSoundByName).mockResolvedValue(mockSound);
             vi.mocked(mockFileManager.deleteFile).mockResolvedValue(undefined);
@@ -153,11 +152,12 @@ describe("SoundService", () => {
 
             await soundService.deleteSound("test-sound");
 
-            expect(mockFileManager.deleteFile).toHaveBeenCalledWith("./sounds/test-sound.ogg");
+            expect(mockSoundRepository.getSoundByName).toHaveBeenCalledWith("test-sound");
+            expect(mockFileManager.deleteFile).toHaveBeenCalledWith("./sounds/test-sound.pcm");
             expect(mockSoundRepository.deleteSound).toHaveBeenCalledWith("test-sound");
         });
 
-        it("should throw error when trying to delete non-existent sound", async () => {
+        it("should throw error for non-existent sound", async () => {
             vi.mocked(mockSoundRepository.getSoundByName).mockResolvedValue(null);
 
             await expect(soundService.deleteSound("non-existent")).rejects.toThrow("Sound with name non-existent not found");

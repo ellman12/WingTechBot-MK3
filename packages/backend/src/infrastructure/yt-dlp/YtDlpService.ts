@@ -59,9 +59,8 @@ export const createYtDlpService = (): YtDlpService => {
                 });
 
                 ytDlpProcess.on("error", error => {
-                    const errorMsg = `yt-dlp process error: ${error.message}`;
-                    console.error(`[YtDlpService] ${errorMsg}`);
-                    reject(new Error(errorMsg));
+                    console.error(`[YtDlpService] yt-dlp process error: ${error.message}`);
+                    reject(error);
                 });
 
                 let hasResolved = false;
@@ -131,9 +130,8 @@ export const createYtDlpService = (): YtDlpService => {
                 });
 
                 ytDlpProcess.on("error", error => {
-                    const errorMsg = `yt-dlp video info process error: ${error.message}`;
-                    console.error(`[YtDlpService] ${errorMsg}`);
-                    reject(new Error(errorMsg));
+                    console.error(`[YtDlpService] yt-dlp video info process error: ${error.message}`);
+                    reject(error);
                 });
 
                 ytDlpProcess.on("close", code => {

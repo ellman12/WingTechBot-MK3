@@ -38,7 +38,8 @@
         "dev:with-db": "pnpm docker:db && pnpm dev",
         "docs:dev": "pnpm --filter docs dev",
         "docs:build": "pnpm --filter docs build",
-        "docs:preview": "pnpm --filter docs preview"
+        "docs:preview": "pnpm --filter docs preview",
+        "prepare": "husky"
     },
     "repository": {
         "type": "git",
