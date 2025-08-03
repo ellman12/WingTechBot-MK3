@@ -19,7 +19,7 @@ export const createPreBufferedStream = async (sourceStream: Readable, sourceName
         if (abortSignal?.aborted) {
             sourceStream.destroy();
             bufferedStream.destroy();
-            reject(new Error('Pre-buffering aborted'));
+            reject(new Error("Pre-buffering aborted"));
             return;
         }
 
@@ -29,11 +29,11 @@ export const createPreBufferedStream = async (sourceStream: Readable, sourceName
                 sourceStream.destroy();
                 bufferedStream.destroy();
                 isResolved = true;
-                reject(new Error('Pre-buffering aborted'));
+                reject(new Error("Pre-buffering aborted"));
             }
         };
 
-        abortSignal?.addEventListener('abort', abortHandler);
+        abortSignal?.addEventListener("abort", abortHandler);
 
         const onData = (chunk: Buffer) => {
             bytesBuffered += chunk.length;
@@ -48,7 +48,7 @@ export const createPreBufferedStream = async (sourceStream: Readable, sourceName
                 const prebufferTime = Date.now() - prebufferStartTime;
                 console.log(`[SoundService] Pre-buffer target reached for ${sourceName}: ${bytesBuffered} bytes in ${prebufferTime}ms`);
                 isResolved = true;
-                abortSignal?.removeEventListener('abort', abortHandler);
+                abortSignal?.removeEventListener("abort", abortHandler);
                 resolve(bufferedStream);
             }
         };
@@ -63,7 +63,7 @@ export const createPreBufferedStream = async (sourceStream: Readable, sourceName
             if (!isResolved) {
                 console.log(`[SoundService] Stream ended before pre-buffer target, resolving with ${bytesBuffered} bytes`);
                 isResolved = true;
-                abortSignal?.removeEventListener('abort', abortHandler);
+                abortSignal?.removeEventListener("abort", abortHandler);
                 resolve(bufferedStream);
             }
         };
@@ -86,7 +86,7 @@ export const createPreBufferedStream = async (sourceStream: Readable, sourceName
             if (!isResolved) {
                 console.log(`[SoundService] Pre-buffer timeout for ${sourceName}, resolving with ${bytesBuffered} bytes`);
                 isResolved = true;
-                abortSignal?.removeEventListener('abort', abortHandler);
+                abortSignal?.removeEventListener("abort", abortHandler);
                 resolve(bufferedStream);
             }
         }, 10000);

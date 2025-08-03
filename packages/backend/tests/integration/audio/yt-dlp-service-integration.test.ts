@@ -9,7 +9,7 @@ const isYtDlpAvailable = async (): Promise<boolean> => {
         const { exec } = await import("child_process");
         const { promisify } = await import("util");
         const execAsync = promisify(exec);
-        
+
         await execAsync("yt-dlp --version");
         return true;
     } catch {
@@ -65,7 +65,7 @@ describe("YtDlpService Integration Tests", () => {
                 expect(bytesReceived).toBeGreaterThan(0);
                 expect(chunkCount).toBeGreaterThan(0);
             } catch (error) {
-                console.log(`⏭️ Skipping test due to yt-dlp error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                console.log(`⏭️ Skipping test due to yt-dlp error: ${error instanceof Error ? error.message : "Unknown error"}`);
                 // Don't fail the test, just skip it
                 return;
             }
@@ -100,7 +100,7 @@ describe("YtDlpService Integration Tests", () => {
                 expect(videoInfo.title.length).toBeGreaterThan(0);
                 expect(videoInfo.duration).toBeGreaterThan(0);
             } catch (error) {
-                console.log(`⏭️ Skipping test due to yt-dlp error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                console.log(`⏭️ Skipping test due to yt-dlp error: ${error instanceof Error ? error.message : "Unknown error"}`);
                 // Don't fail the test, just skip it
                 return;
             }

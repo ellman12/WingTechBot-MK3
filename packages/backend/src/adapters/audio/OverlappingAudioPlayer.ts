@@ -1,7 +1,8 @@
-import { AudioPlayer, AudioPlayerStatus, type AudioPlayerState, type AudioResource, NoSubscriberBehavior, StreamType, createAudioResource } from "@discordjs/voice";
+import { AudioPlayer, type AudioPlayerState, AudioPlayerStatus, type AudioResource, NoSubscriberBehavior, StreamType, createAudioResource } from "@discordjs/voice";
 import { Readable } from "stream";
-import { PcmMixer, type PcmStreamInfo } from "./PcmMixer.js";
+
 import type { PlayingSound } from "../../core/entities/PlayingSound.js";
+import { PcmMixer, type PcmStreamInfo } from "./PcmMixer.js";
 
 export type OverlappingAudioPlayerOptions = {
     readonly sampleRate?: number;
@@ -58,7 +59,7 @@ export class OverlappingAudioPlayer extends AudioPlayer {
             mixerOutput.push(null);
         });
 
-        this.mixer.on("error", (error) => {
+        this.mixer.on("error", error => {
             console.error(`[OverlappingAudioPlayer] Mixer error:`, error);
             mixerOutput.destroy(error);
         });
@@ -75,7 +76,7 @@ export class OverlappingAudioPlayer extends AudioPlayer {
 
     private handleStateChange(oldState: AudioPlayerState, newState: AudioPlayerState): void {
         console.log(`[OverlappingAudioPlayer] State change: ${oldState.status} -> ${newState.status} (${this.playingAudio.size} active streams)`);
-        
+
         if (newState.status === AudioPlayerStatus.Idle && this.playingAudio.size > 0) {
             // If player goes idle but we still have audio to play, restart the mixed resource
             console.log(`[OverlappingAudioPlayer] Player idle but ${this.playingAudio.size} streams active, restarting mixed resource`);
@@ -94,7 +95,7 @@ export class OverlappingAudioPlayer extends AudioPlayer {
 
         // Convert AudioResource to a stream that we can add to the mixer
         const pcmStream = this.extractPcmFromResource(resource);
-        
+
         const streamInfo: PcmStreamInfo = {
             id: audioId,
             stream: pcmStream,
@@ -117,9 +118,9 @@ export class OverlappingAudioPlayer extends AudioPlayer {
                     if (!pcmStream.destroyed) {
                         pcmStream.destroy();
                     }
-                }
+                },
             };
-            
+
             this.playingAudio.set(audioId, {
                 audioSource,
                 startTime: Date.now(),
@@ -162,13 +163,13 @@ export class OverlappingAudioPlayer extends AudioPlayer {
 
     public stopAudio(audioId: string): boolean {
         console.log(`[OverlappingAudioPlayer] Stopping audio ${audioId}`);
-        
+
         // Get the audio info to call abort
         const audioInfo = this.playingAudio.get(audioId);
         if (audioInfo) {
             audioInfo.audioSource.abort();
         }
-        
+
         const success = this.mixer.removeStream(audioId);
         if (success) {
             this.playingAudio.delete(audioId);
@@ -178,12 +179,12 @@ export class OverlappingAudioPlayer extends AudioPlayer {
 
     public stopAll(): void {
         console.log(`[OverlappingAudioPlayer] Stopping all audio`);
-        
+
         // Abort all audio sources
         for (const audioInfo of this.playingAudio.values()) {
             audioInfo.audioSource.abort();
         }
-        
+
         const audioIds = Array.from(this.playingAudio.keys());
         for (const audioId of audioIds) {
             this.mixer.removeStream(audioId);
@@ -203,7 +204,6 @@ export class OverlappingAudioPlayer extends AudioPlayer {
         return Array.from(this.playingAudio.values());
     }
 
-
     private extractPcmFromResource(resource: AudioResource): Readable {
         // Since we're now using PCM pipeline, the resource should already contain PCM data
         // We can directly use the playStream from the AudioResource
@@ -217,7 +217,7 @@ export class OverlappingAudioPlayer extends AudioPlayer {
     public override stop(force?: boolean): boolean {
         const stack = new Error().stack;
         console.log(`[OverlappingAudioPlayer] Player stop called (force: ${force}) - but keeping individual streams active`);
-        console.log(`[OverlappingAudioPlayer] Stop called from stack trace:`, stack?.split('\n').slice(1, 5).join('\n'));
+        console.log(`[OverlappingAudioPlayer] Stop called from stack trace:`, stack?.split("\n").slice(1, 5).join("\n"));
         // Don't stop individual audio streams when Discord player stops
         // Only stop the underlying Discord player
         return super.stop(force);

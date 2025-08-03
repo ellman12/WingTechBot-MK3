@@ -34,7 +34,7 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                 // Create abort controller with timeout for addSound operations
                 const abortController = new AbortController();
                 const timeout = setTimeout(() => abortController.abort(), 60000); // 60 second timeout for downloads
-                
+
                 try {
                     const audioStream = await audioFetcher.fetchUrlAudio(source, abortController.signal);
                     clearTimeout(timeout);

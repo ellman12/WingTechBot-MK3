@@ -1,7 +1,7 @@
+import type { SoundRepository } from "@core/repositories/SoundRepository";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService";
 import type { AudioProcessingService } from "@core/services/AudioProcessingService";
 import type { FileManager } from "@core/services/FileManager";
-import type { SoundRepository } from "@core/repositories/SoundRepository";
 import { createSoundService } from "@core/services/SoundService";
 import { Readable } from "stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";

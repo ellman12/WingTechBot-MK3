@@ -407,9 +407,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
     };
 
     const listActiveCommand = {
-        data: new SlashCommandBuilder()
-            .setName("list-active")
-            .setDescription("List all currently playing audio streams"),
+        data: new SlashCommandBuilder().setName("list-active").setDescription("List all currently playing audio streams"),
         execute: async (interaction: ChatInputCommandInteraction) => {
             try {
                 if (!interaction.guildId) {
@@ -446,11 +444,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
         data: new SlashCommandBuilder()
             .setName("stop-id")
             .setDescription("Stop a specific audio stream by ID")
-            .addStringOption(option =>
-                option.setName("id")
-                    .setDescription("The audio ID to stop (first 8 characters)")
-                    .setRequired(true)
-            ),
+            .addStringOption(option => option.setName("id").setDescription("The audio ID to stop (first 8 characters)").setRequired(true)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             try {
                 if (!interaction.guildId) {
@@ -489,9 +483,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
     };
 
     const stopAllCommand = {
-        data: new SlashCommandBuilder()
-            .setName("stop-all")
-            .setDescription("Stop all currently playing audio streams"),
+        data: new SlashCommandBuilder().setName("stop-all").setDescription("Stop all currently playing audio streams"),
         execute: async (interaction: ChatInputCommandInteraction) => {
             try {
                 if (!interaction.guildId) {

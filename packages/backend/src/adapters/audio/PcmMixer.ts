@@ -14,8 +14,8 @@ type StreamState = {
 
 export type PcmMixerOptions = {
     readonly sampleRate: number; // 48000 for Discord
-    readonly channels: number;   // 2 for stereo
-    readonly bitDepth: number;   // 16 for signed 16-bit
+    readonly channels: number; // 2 for stereo
+    readonly bitDepth: number; // 16 for signed 16-bit
     readonly maxConcurrentStreams?: number;
 };
 
@@ -25,7 +25,7 @@ export class PcmMixer extends Transform {
     private readonly bitDepth: number;
     private readonly bytesPerSample: number;
     private readonly maxConcurrentStreams: number;
-    
+
     private activeStreams = new Map<string, StreamState>();
     private streamBuffers = new Map<string, Buffer>();
     private isProcessing = false;
@@ -58,10 +58,10 @@ export class PcmMixer extends Transform {
         }
 
         console.log(`[PcmMixer] Adding stream: ${streamInfo.id} with volume ${streamInfo.volume}`);
-        
+
         this.activeStreams.set(streamInfo.id, {
             info: streamInfo,
-            hasEnded: false
+            hasEnded: false,
         });
         this.streamBuffers.set(streamInfo.id, Buffer.alloc(0));
 
@@ -79,7 +79,7 @@ export class PcmMixer extends Transform {
             // Don't call onEnd yet - wait until buffer is drained
         });
 
-        streamInfo.stream.on("error", (error) => {
+        streamInfo.stream.on("error", error => {
             console.error(`[PcmMixer] Stream ${streamInfo.id} error:`, error);
             this.removeStream(streamInfo.id);
         });
@@ -102,7 +102,7 @@ export class PcmMixer extends Transform {
         if (streamState) {
             streamState.info.onEnd?.(); // Call onEnd when force removing
         }
-        
+
         this.activeStreams.delete(streamId);
         this.streamBuffers.delete(streamId);
 
@@ -176,17 +176,17 @@ export class PcmMixer extends Transform {
 
     private cleanupFinishedStreams(): void {
         const streamsToRemove: string[] = [];
-        
+
         for (const [streamId, streamState] of this.activeStreams.entries()) {
             const buffer = this.streamBuffers.get(streamId);
-            
+
             // Remove stream if it has ended AND its buffer is empty (or very small)
             if (streamState.hasEnded && (!buffer || buffer.length < this.bytesPerSample)) {
                 console.log(`[PcmMixer] Stream ${streamId} finished playing buffered data, removing`);
                 streamsToRemove.push(streamId);
             }
         }
-        
+
         // Remove finished streams
         for (const streamId of streamsToRemove) {
             const streamState = this.activeStreams.get(streamId);
@@ -196,7 +196,7 @@ export class PcmMixer extends Transform {
             this.activeStreams.delete(streamId);
             this.streamBuffers.delete(streamId);
         }
-        
+
         // Stop processing only if NO streams remain (not even ended ones with buffered data)
         if (this.activeStreams.size === 0) {
             console.log(`[PcmMixer] All streams finished, stopping processing`);
@@ -213,7 +213,7 @@ export class PcmMixer extends Transform {
         for (const streamId of streamIds) {
             const buffer = this.streamBuffers.get(streamId);
             if (!buffer) continue;
-            
+
             if (buffer.length >= chunkSize) {
                 const chunk = buffer.subarray(0, chunkSize);
                 chunks.push(chunk);
@@ -230,18 +230,18 @@ export class PcmMixer extends Transform {
 
     private mixPcmChunks(chunks: Buffer[]): Buffer {
         if (chunks.length === 0) return Buffer.alloc(0);
-        
+
         const firstChunk = chunks[0];
         if (!firstChunk) return Buffer.alloc(0);
-        
+
         if (chunks.length === 1) {
             // Apply volume to single stream
             const firstStreamId = Array.from(this.activeStreams.keys())[0];
             if (!firstStreamId) return firstChunk;
-            
+
             const streamState = this.activeStreams.get(firstStreamId);
             if (!streamState) return firstChunk;
-            
+
             return this.applyVolume(firstChunk, streamState.info.volume);
         }
 
@@ -260,13 +260,13 @@ export class PcmMixer extends Transform {
                 for (let i = 0; i < chunks.length && i < streamIds.length; i++) {
                     const streamId = streamIds[i];
                     if (!streamId) continue;
-                    
+
                     const streamState = this.activeStreams.get(streamId);
                     if (!streamState) continue;
-                    
+
                     const chunk = chunks[i];
                     if (!chunk || chunk.length <= byteIndex + 1) continue;
-                    
+
                     const sample = chunk.readInt16LE(byteIndex);
                     mixedSample += sample * streamState.info.volume;
                 }

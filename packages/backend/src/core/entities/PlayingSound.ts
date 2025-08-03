@@ -9,14 +9,9 @@ export type PlayingSound = {
     readonly abort: () => void;
 };
 
-export const createPlayingSound = (
-    id: string,
-    stream: Readable,
-    volume: number = 1.0,
-    metadata?: Record<string, unknown>
-): PlayingSound => {
+export const createPlayingSound = (id: string, stream: Readable, volume: number = 1.0, metadata?: Record<string, unknown>): PlayingSound => {
     const abortController = new AbortController();
-    
+
     const abort = () => {
         abortController.abort();
         if (!stream.destroyed) {
@@ -25,7 +20,7 @@ export const createPlayingSound = (
     };
 
     // Handle stream cleanup when aborted
-    abortController.signal.addEventListener('abort', () => {
+    abortController.signal.addEventListener("abort", () => {
         if (!stream.destroyed) {
             stream.destroy();
         }

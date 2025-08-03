@@ -44,6 +44,10 @@ src/
 - Node.js >= 18.0.0
 - pnpm (install with `npm install -g pnpm`)
 - Discord Application (for bot token)
+- Ffmpeg
+- yt-dlp
+- libopus-dev
+- build-tools
 
 ### Environment Setup
 

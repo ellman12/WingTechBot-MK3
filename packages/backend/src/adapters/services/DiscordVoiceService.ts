@@ -1,9 +1,10 @@
 import { OverlappingAudioPlayer } from "@adapters/audio/OverlappingAudioPlayer.js";
-import { createPlayingSound } from "../../core/entities/PlayingSound.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { AudioPlayerStatus, type AudioResource, NoSubscriberBehavior, type VoiceConnection, VoiceConnectionStatus, joinVoiceChannel } from "@discordjs/voice";
 import type { Client, VoiceChannel as DiscordVoiceChannel } from "discord.js";
+
+import { createPlayingSound } from "../../core/entities/PlayingSound.js";
 
 export type DiscordVoiceServiceDeps = {
     readonly client: Client;
@@ -203,17 +204,17 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
             // Create abort controller for the entire operation
             const abortController = new AbortController();
             const audioId = `audio_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            
+
             const audioStream = await soundService.getSound(nameOrSource, abortController.signal);
             const audioSource = createPlayingSound(audioId, audioStream, volume, {
                 source: nameOrSource,
-                server: serverId
+                server: serverId,
             });
-            
+
             // Replace the abort controller with our pre-existing one
-            Object.defineProperty(audioSource, 'abortController', {
+            Object.defineProperty(audioSource, "abortController", {
                 value: abortController,
-                writable: false
+                writable: false,
             });
 
             // Add error handling for stream
@@ -255,7 +256,6 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
         return false;
     };
 
-
     const isPlaying = (serverId: string): boolean => {
         const state = voiceStates.get(serverId);
         return state ? state.player.getActiveAudioCount() > 0 : false;
@@ -284,7 +284,6 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
             state.volume = clampedVolume;
         }
     };
-
 
     const pause = async (serverId: string): Promise<void> => {
         const state = voiceStates.get(serverId);
