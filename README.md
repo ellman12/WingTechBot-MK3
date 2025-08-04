@@ -27,7 +27,6 @@ WingTechBot-MK3/
 - **Express.js** - Web framework
 - **TypeScript** - Type safety
 - **Discord.js** - Discord bot functionality
-- **Prisma** - Database ORM
 - **Kysely** - Type-safe SQL query builder
 - **Vitest** - Testing framework
 - **Hexagonal Architecture** - Clean code organization
