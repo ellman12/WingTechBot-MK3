@@ -6,7 +6,14 @@ import type { Kysely, Selectable } from "kysely";
 
 //Transform database reaction emote to domain reaction emote
 const transformReaction = (dbReaction: Selectable<Reactions>): Reaction => {
-    return { id: dbReaction.id, giverId: dbReaction.giver_id, receiverId: dbReaction.receiver_id, channelId: dbReaction.channel_id, messageId: dbReaction.message_id, emoteId: dbReaction.emote_id };
+    return {
+        id: dbReaction.id,
+        giverId: dbReaction.giver_id,
+        receiverId: dbReaction.receiver_id,
+        channelId: dbReaction.channel_id,
+        messageId: dbReaction.message_id,
+        emoteId: dbReaction.emote_id,
+    };
 };
 
 //Factory function to create ReactionRepository instance

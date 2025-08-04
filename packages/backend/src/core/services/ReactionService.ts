@@ -75,7 +75,13 @@ export const createReactionService = ({ reactionRepository, emoteRepository }: R
 
         removeReactionsForEmote: async (reaction): Promise<void> => {
             try {
-                const emote = await emoteRepository.findByNameAndDiscordId(reaction.emoji.name!, reaction.emoji.id);
+                const name = reaction.emoji.name;
+
+                if (!name) {
+                    throw new Error("Missing emoji name in removeReactionsForEmote");
+                }
+
+                const emote = await emoteRepository.findByNameAndDiscordId(name, reaction.emoji.id);
 
                 if (!emote) {
                     throw new Error("Emote not found in removeReactionsForEmote");
