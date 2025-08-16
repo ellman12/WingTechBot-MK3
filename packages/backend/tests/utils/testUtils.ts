@@ -163,5 +163,5 @@ export async function createMessagesAndReactions(botChannel: TextChannel, tester
 export async function checkReactionAmount(db: Kysely<DB>, expectedReactions: number) {
     const reactions = await db.selectFrom("reactions").selectAll().execute();
     expect(reactions.length).toStrictEqual(expectedReactions);
-    expect(reactions.filter(r => r.giver_id !== process.env.DISCORD_CLIENT_ID).length).toStrictEqual(0);
+    expect(reactions.filter(r => r.giver_id !== process.env.TESTER_DISCORD_CLIENT_ID).length).toStrictEqual(0);
 }

@@ -45,7 +45,7 @@ describe("Remove Reactions For Message", () => {
             await testerChannel.fetch(true);
             const messages = await createMessagesAndReactions(channel, testerChannel, totalMessages, reactionsPerMessage, emotes);
 
-            await sleep(8 * 1000);
+            await sleep(12 * 1000);
             await checkReactionAmount(db, totalMessages * reactionsPerMessage);
 
             for (const id of messages.map(m => m.id)) {
@@ -53,7 +53,7 @@ describe("Remove Reactions For Message", () => {
                 await foundMessage.reactions.removeAll();
             }
 
-            await sleep(8 * 1000);
+            await sleep(12 * 1000);
             await checkReactionAmount(db, 0);
         },
         timeout

@@ -45,12 +45,15 @@ describe("Create Messages, Add Reactions, Then Remove Them", () => {
             await testerChannel.fetch(true);
             const messages = await createMessagesAndReactions(channel, testerChannel, totalMessages, reactionsPerMessage, emotes);
 
-            await sleep(8 * 1000);
+            await sleep(12 * 1000);
             await checkReactionAmount(db, totalMessages * reactionsPerMessage);
 
+            const wtf = messages.map(m => m.id);
+            console.log(wtf);
             //Remove the reactions
-            for (const id of messages.map(m => m.id)) {
+            for (const id of wtf) {
                 const foundMessage = await testerChannel.messages.cache.get(id)!.fetch(true);
+                console.log(foundMessage);
 
                 for (let j = 0; j < reactionsPerMessage; j++) {
                     const [name, discordId] = emotes[j]!;
@@ -58,7 +61,7 @@ describe("Create Messages, Add Reactions, Then Remove Them", () => {
                 }
             }
 
-            await sleep(8 * 1000);
+            await sleep(12 * 1000);
             await checkReactionAmount(db, 0);
         },
         timeout

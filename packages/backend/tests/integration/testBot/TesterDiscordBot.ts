@@ -7,8 +7,8 @@ import path from "path";
 //Used with WTB MK3's integration tests. Sends messages, adds reactions, etc.
 export const createTesterDiscordBot = async (): Promise<DiscordBot> => {
     resetConfig();
-    config({ path: path.resolve(__dirname, ".env"), strict: true, override: true });
-    const testerConfig = getConfig();
+    config({ path: path.resolve(__dirname, ".env.test"), strict: false, override: true });
+    const testerConfig = getConfig("tester");
 
     const client = new Client({
         intents: [],
