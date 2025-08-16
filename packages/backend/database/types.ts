@@ -28,6 +28,25 @@ export interface Soundtags {
     name: string;
 }
 
+export interface ReactionEmotes {
+    created_at: Generated<Timestamp>;
+    discord_id: string | null;
+    id: Generated<number>;
+    karma_value: Generated<number>;
+    name: string;
+    updated_at: Generated<Timestamp>;
+}
+
+export interface Reactions {
+    channel_id: string;
+    created_at: Generated<Timestamp>;
+    emote_id: number;
+    giver_id: string;
+    id: Generated<number>;
+    message_id: string;
+    receiver_id: string;
+}
+
 export interface Users {
     avatar: string | null;
     created_at: Generated<Timestamp>;
@@ -42,5 +61,7 @@ export interface DB {
     sound_soundtags: SoundSoundtags;
     sounds: Sounds;
     soundtags: Soundtags;
+    reaction_emotes: ReactionEmotes;
+    reactions: Reactions;
     users: Users;
 }
