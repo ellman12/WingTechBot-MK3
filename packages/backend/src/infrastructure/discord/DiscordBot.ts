@@ -1,13 +1,16 @@
 import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
+import { registerReactionEvents } from "@application/eventHandlers/Reactions";
+import type { ReactionService } from "@core/services/ReactionService";
 import type { SoundService } from "@core/services/SoundService";
-import { Client, type ClientEvents, Events, GatewayIntentBits } from "discord.js";
+import { Client, type ClientEvents, Events, GatewayIntentBits, Partials } from "discord.js";
 
 import type { Config } from "../config/Config.js";
 
 export type DiscordBotDeps = {
     readonly config: Config;
     readonly soundService: SoundService;
+    readonly reactionService: ReactionService;
 };
 
 export type DiscordBot = {
@@ -18,9 +21,18 @@ export type DiscordBot = {
     readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
 };
 
-export const createDiscordBot = ({ config, soundService }: DiscordBotDeps): DiscordBot => {
+export const createDiscordBot = ({ config, soundService, reactionService }: DiscordBotDeps): DiscordBot => {
     const client = new Client({
-        intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.DirectMessages, GatewayIntentBits.GuildVoiceStates],
+        intents: [
+            GatewayIntentBits.Guilds,
+            GatewayIntentBits.GuildMessages,
+            GatewayIntentBits.MessageContent,
+            GatewayIntentBits.GuildMembers,
+            GatewayIntentBits.DirectMessages,
+            GatewayIntentBits.GuildVoiceStates,
+            GatewayIntentBits.GuildMessageReactions,
+        ],
+        partials: [Partials.User, Partials.GuildMember, Partials.ThreadMember, Partials.Channel, Partials.Message, Partials.Reaction],
     });
 
     let isReadyState = false;
@@ -46,6 +58,8 @@ export const createDiscordBot = ({ config, soundService }: DiscordBotDeps): Disc
         });
 
         registerCommands(soundService, voiceService, registerEventHandler);
+
+        registerReactionEvents(reactionService, registerEventHandler);
     };
 
     const start = async (): Promise<void> => {
