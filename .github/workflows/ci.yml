@@ -257,6 +257,16 @@ jobs:
                   NODE_ENV: test
                   CI: true
 
+                  DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+                  DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+                  DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+                  DISCORD_BOT_CHANNEL_ID: ${{ secrets.DISCORD_BOT_CHANNEL_ID }}
+
+                  TESTER_DISCORD_TOKEN: ${{ secrets.TESTER_DISCORD_TOKEN }}
+                  TESTER_DISCORD_CLIENT_ID: ${{ secrets.TESTER_DISCORD_CLIENT_ID }}
+                  TESTER_DISCORD_GUILD_ID: ${{ secrets.TESTER_DISCORD_GUILD_ID }}
+                  TESTER_DISCORD_BOT_CHANNEL_ID: ${{ secrets.TESTER_DISCORD_BOT_CHANNEL_ID }}
+
             - name: Upload test coverage
               uses: codecov/codecov-action@v5
               if: matrix.package == 'backend'

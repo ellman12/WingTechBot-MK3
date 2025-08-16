@@ -8,7 +8,7 @@ import path from "path";
 export const createTesterDiscordBot = async (): Promise<DiscordBot> => {
     resetConfig();
     config({ path: path.resolve(__dirname, ".env.test"), strict: false, override: true });
-    const testerConfig = getConfig();
+    const testerConfig = getConfig(true);
 
     const client = new Client({
         intents: [],

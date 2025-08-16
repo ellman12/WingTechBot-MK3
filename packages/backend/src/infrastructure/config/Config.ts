@@ -14,6 +14,14 @@ const loadConfig = (): Config => {
     };
 };
 
+const loadTesterBotConfig = (): Config => {
+    return {
+        server: { port: Number(process.env.PORT) || 3000, environment: process.env.NODE_ENV || "development" },
+        database: { url: process.env.DATABASE_URL || "postgresql://wingtechbot:wingtechbot_password@localhost:5432/wingtechbot" },
+        discord: { token: process.env.TESTER_DISCORD_TOKEN || "", clientId: process.env.TESTER_DISCORD_CLIENT_ID || "", ...(process.env.TESTER_DISCORD_GUILD_ID && { serverId: process.env.TESTER_DISCORD_GUILD_ID }) },
+    };
+};
+
 const validateConfig = (config: Config): void => {
     const errors: string[] = [];
 
@@ -40,9 +48,9 @@ const validateConfig = (config: Config): void => {
     }
 };
 
-export const getConfig = (): Config => {
+export const getConfig = (testerBotConfig: boolean = false): Config => {
     if (!configInstance) {
-        configInstance = loadConfig();
+        configInstance = testerBotConfig ? loadTesterBotConfig() : loadConfig();
         validateConfig(configInstance);
     }
     return configInstance;
