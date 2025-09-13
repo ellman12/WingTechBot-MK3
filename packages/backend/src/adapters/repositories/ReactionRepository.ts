@@ -28,7 +28,7 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
 
     const createReaction = async (data: CreateReactionData): Promise<Reaction> => {
         const ids = [data.giverId, data.receiverId, data.channelId, data.messageId];
-        if (ids.find(i => i === "" || i === "0")) {
+        if (ids.some(i => !i || i === "0")) {
             throw new Error("Invalid id");
         }
 
