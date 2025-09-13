@@ -28,7 +28,6 @@ export interface ReactionEmotes {
 
 export interface Reactions {
     channel_id: string;
-    created_at: Generated<Timestamp>;
     emote_id: number;
     giver_id: string;
     id: Generated<number>;
