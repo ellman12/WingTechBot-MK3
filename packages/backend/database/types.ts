@@ -8,24 +8,13 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U> ? Col
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
-export interface Sounds {
+export interface Messages {
+    author_id: string;
+    channel_id: string;
+    content: string;
     created_at: Generated<Timestamp>;
-    id: Generated<number>;
-    name: string;
-    path: string;
-}
-
-export interface SoundSoundtags {
-    created_at: Generated<Timestamp>;
-    id: Generated<number>;
-    sound: Generated<number>;
-    tag: Generated<number>;
-}
-
-export interface Soundtags {
-    created_at: Generated<Timestamp>;
-    id: Generated<number>;
-    name: string;
+    edited_at: Timestamp | null;
+    id: string;
 }
 
 export interface ReactionEmotes {
@@ -47,6 +36,26 @@ export interface Reactions {
     receiver_id: string;
 }
 
+export interface Sounds {
+    created_at: Generated<Timestamp>;
+    id: Generated<number>;
+    name: string;
+    path: string;
+}
+
+export interface SoundSoundtags {
+    created_at: Generated<Timestamp>;
+    id: Generated<number>;
+    sound: Generated<number>;
+    tag: Generated<number>;
+}
+
+export interface Soundtags {
+    created_at: Generated<Timestamp>;
+    id: Generated<number>;
+    name: string;
+}
+
 export interface Users {
     avatar: string | null;
     created_at: Generated<Timestamp>;
@@ -58,10 +67,11 @@ export interface Users {
 }
 
 export interface DB {
+    messages: Messages;
+    reaction_emotes: ReactionEmotes;
+    reactions: Reactions;
     sound_soundtags: SoundSoundtags;
     sounds: Sounds;
     soundtags: Soundtags;
-    reaction_emotes: ReactionEmotes;
-    reactions: Reactions;
     users: Users;
 }
