@@ -1,4 +1,4 @@
-import type { CreateMessageData, DeleteMessageData, EditMessageData, FindMessageData, Message } from "@core/entities/Message";
+import type { CreateMessageData, DeleteMessageData, EditMessageData, Message } from "@core/entities/Message";
 import type { MessageRepository } from "@core/repositories/MessageRepository";
 import type { DB, Messages } from "@db/types";
 import { type Kysely, type Selectable, sql } from "kysely";
@@ -14,12 +14,6 @@ const transformMessage = (dbMessage: Selectable<Messages>): Message => {
 
 export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
     const messages = db.selectFrom("messages").selectAll();
-
-    const findMessage = async (data: FindMessageData): Promise<Message | null> => {
-        const { authorId, channelId, content } = data;
-        const message = await messages.where("author_id", "=", authorId).where("channel_id", "=", channelId).where("content", "=", content).executeTakeFirst();
-        return message ? transformMessage(message) : null;
-    };
 
     const findMessageById = async (id: string): Promise<Message | null> => {
         const message = await messages.where("id", "=", id).executeTakeFirst();
@@ -93,7 +87,6 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
 
     return {
         findById: findMessageById,
-        find: findMessage,
         create: createMessage,
         delete: deleteMessage,
         edit: editMessage,

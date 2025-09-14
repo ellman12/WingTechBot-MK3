@@ -3,9 +3,9 @@ export type Message = {
     readonly authorId: string;
     readonly channelId: string;
     readonly content: string;
+    readonly referencedMessageId?: string | null;
 };
 
-export type FindMessageData = Omit<Message, "id">;
 export type CreateMessageData = Message;
 export type DeleteMessageData = Pick<Message, "id">;
 export type EditMessageData = Pick<Message, "id" | "content">;
