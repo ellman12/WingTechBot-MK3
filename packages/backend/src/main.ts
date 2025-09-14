@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import { createKyselySoundRepository } from "@adapters/repositories/KyselySoundRepository";
+import { createMessageRepository } from "@adapters/repositories/MessageRepository";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService";
+import { createMessageService } from "@core/services/MessageService";
 import { createReactionService } from "@core/services/ReactionService";
 import { createSoundService } from "@core/services/SoundService";
 import { runMigrations } from "@db/migrations";
@@ -39,6 +41,7 @@ export const createApplication = async (): Promise<App> => {
     const ytdl = createYtdlYoutubeService();
 
     const soundRepository = createKyselySoundRepository(db);
+    const messageRepository = createMessageRepository(db);
     const reactionRepository = createReactionRepository(db);
     const emoteRepository = createReactionEmoteRepository(db);
 
@@ -51,9 +54,10 @@ export const createApplication = async (): Promise<App> => {
         soundRepository,
     });
     const reactionService = createReactionService({ reactionRepository, emoteRepository });
+    const messageService = createMessageService({ messageRepository, reactionRepository, emoteRepository });
 
     const expressApp = createExpressApp({ db, config: serverConfig });
-    const discordBot = createDiscordBot({ config, soundService, reactionService });
+    const discordBot = createDiscordBot({ config, soundService, reactionService, messageService });
 
     const start = async (): Promise<void> => {
         try {
@@ -62,6 +66,9 @@ export const createApplication = async (): Promise<App> => {
             await runMigrations();
             await discordBot.start();
             expressApp.start();
+
+            const guild = discordBot.client.guilds.cache.get(config.discord.serverId!);
+            messageService.processAllChannels(guild!);
 
             console.log("✅ Application started successfully!");
         } catch (error) {

@@ -1,6 +1,7 @@
 import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
 import { registerReactionEvents } from "@application/eventHandlers/Reactions";
+import type { MessageService } from "@core/services/MessageService";
 import type { ReactionService } from "@core/services/ReactionService";
 import type { SoundService } from "@core/services/SoundService";
 import { Client, type ClientEvents, Events, GatewayIntentBits, Partials } from "discord.js";
@@ -11,6 +12,7 @@ export type DiscordBotDeps = {
     readonly config: Config;
     readonly soundService: SoundService;
     readonly reactionService: ReactionService;
+    readonly messageService: MessageService;
 };
 
 export type DiscordBot = {
