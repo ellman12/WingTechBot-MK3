@@ -31,7 +31,8 @@ async function processMessage(message: Message, messageRepository: MessageReposi
 
     const existingMsg = await messageRepository.findById(message.id);
     if (!existingMsg && message.content.trim() !== "") {
-        await messageRepository.create({ id: messageId, authorId, channelId, content: message.content });
+        const referencedMessageId = message.reference ? message.reference.messageId : undefined;
+        await messageRepository.create({ id: messageId, authorId, channelId, content: message.content, referencedMessageId });
         console.log(`Added message "${message.content}"`);
         created = true;
     }

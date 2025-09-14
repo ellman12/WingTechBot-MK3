@@ -3,7 +3,7 @@ export type Message = {
     readonly authorId: string;
     readonly channelId: string;
     readonly content: string;
-    readonly referencedMessageId?: string | null;
+    readonly referencedMessageId?: string;
 };
 
 export type CreateMessageData = Message;

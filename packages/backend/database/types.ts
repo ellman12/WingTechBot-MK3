@@ -15,6 +15,7 @@ export interface Messages {
     created_at: Generated<Timestamp>;
     edited_at: Timestamp | null;
     id: string;
+    referenced_message_id: string | null;
 }
 
 export interface ReactionEmotes {

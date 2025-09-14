@@ -9,6 +9,7 @@ const transformMessage = (dbMessage: Selectable<Messages>): Message => {
         authorId: dbMessage.author_id,
         channelId: dbMessage.channel_id,
         content: dbMessage.content,
+        referencedMessageId: dbMessage.referenced_message_id ?? undefined,
     };
 };
 
@@ -21,7 +22,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
     };
 
     const createMessage = async (data: CreateMessageData): Promise<Message> => {
-        const { id, authorId, channelId, content } = data;
+        const { id, authorId, channelId, content, referencedMessageId } = data;
         const ids = [id, authorId, channelId];
         if (ids.some(i => !i || i === "0")) {
             throw new Error("Invalid id");
@@ -32,7 +33,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
             throw new Error("Message exists");
         }
 
-        const message = await db.insertInto("messages").values({ id, author_id: authorId, channel_id: channelId, content }).returningAll().executeTakeFirst();
+        const message = await db.insertInto("messages").values({ id, author_id: authorId, channel_id: channelId, content, referenced_message_id: referencedMessageId }).returningAll().executeTakeFirst();
         if (!message) {
             throw new Error("Failed to create message");
         }

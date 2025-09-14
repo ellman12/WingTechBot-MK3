@@ -8,6 +8,7 @@ export async function up(db: Kysely<any>): Promise<void> {
         .addColumn("author_id", "text", col => col.notNull())
         .addColumn("channel_id", "text", col => col.notNull())
         .addColumn("content", "text", col => col.notNull())
+        .addColumn("referenced_message_id", "text", col => col.defaultTo(null)) //Intentionally skipping foreign key because if it tries to reference a message we haven't processed yet it'd error out.
         .addColumn("created_at", "timestamp", col => col.notNull().defaultTo(sql`timezone('utc', now())`))
         .addColumn("edited_at", "timestamp", col => col.defaultTo(null))
         .execute();
