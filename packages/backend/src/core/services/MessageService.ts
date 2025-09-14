@@ -30,7 +30,7 @@ async function processMessage(message: Message, messageRepository: MessageReposi
     let created = false;
 
     const existingMsg = await messageRepository.findById(message.id);
-    if (!existingMsg && message.content.trim() !== "") {
+    if (!existingMsg) {
         const referencedMessageId = message.reference ? message.reference.messageId : undefined;
         await messageRepository.create({ id: messageId, authorId, channelId, content: message.content, referencedMessageId });
         console.log(`Added message "${message.content}"`);
@@ -77,7 +77,7 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
             }
 
             if (amountAdded > 0) {
-                console.log(`Added ${amountAdded} to #${name}`);
+                console.log(`Added ${amountAdded} messages to #${name}`);
             }
         }
     }
