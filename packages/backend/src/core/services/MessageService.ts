@@ -2,11 +2,14 @@ import { fetchAllMessages } from "@adapters/messages/MessageFetcher";
 import type { MessageRepository } from "@core/repositories/MessageRepository";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository";
-import { ChannelType, type Guild, type Message } from "discord.js";
+import { ChannelType, DiscordAPIError, type Guild, type Message, type TextChannel } from "discord.js";
 
 export type MessageService = {
     //Walk backwards through each channel, and store/update each message until told to stop or hit the last message.
-    readonly processAllChannels: (guild: Guild) => void;
+    readonly processAllChannels: (guild: Guild, endYear?: number) => Promise<void>;
+
+    //Remove any messages from the DB that no longer exist on Discord.
+    readonly removeDeletedMessages: (guild: Guild, endYear?: number) => Promise<void>;
 
     // readonly messageCreated: () => void;
     // readonly messageEdited: () => void;
@@ -19,7 +22,7 @@ export type MessageServiceDeps = {
     emoteRepository: ReactionEmoteRepository;
 };
 
-async function processMessage(message: Message, messageRepository: MessageRepository, reactionRepository: ReactionRepository, emoteRepository: ReactionEmoteRepository) {
+async function processMessage(message: Message, messageRepository: MessageRepository, reactionRepository: ReactionRepository, emoteRepository: ReactionEmoteRepository): Promise<boolean> {
     if (message.partial) {
         await message.fetch();
     }
@@ -58,7 +61,7 @@ async function processMessage(message: Message, messageRepository: MessageReposi
 export const createMessageService = ({ messageRepository, reactionRepository, emoteRepository }: MessageServiceDeps): MessageService => {
     console.log("[MessageService] Creating message service");
 
-    async function processAllChannels(guild: Guild, endYear?: number) {
+    async function processAllChannels(guild: Guild, endYear?: number): Promise<void> {
         console.log("💬 Begin processing messages in all channels");
         await guild.channels.fetch();
         const textChannels = guild.channels.cache.filter(c => c.type === ChannelType.GuildText).values();
@@ -82,7 +85,35 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
         }
     }
 
+    async function removeDeletedMessages(guild: Guild, endYear?: number) {
+        await guild.channels.fetch();
+
+        const messages = endYear ? await messageRepository.getAllMessagesForYear(endYear) : await messageRepository.getAllMessages();
+
+        let deleted = 0;
+
+        for (const message of messages) {
+            //Instead of returning null it errors if the message doesn't exist :(
+            try {
+                const channel = (await guild.channels.fetch(message.channelId)) as TextChannel;
+                await channel.messages.fetch(message.id);
+            } catch (error) {
+                if (error instanceof DiscordAPIError && error.code === 10008) {
+                    await messageRepository.delete({ id: message.id });
+                    deleted++;
+                } else {
+                    console.error(`❌ Failed to fetch message ${message.id}`, error);
+                }
+            }
+        }
+
+        if (deleted > 0) {
+            console.log(`🗑️ Removed ${deleted} deleted messages`);
+        }
+    }
+
     return {
         processAllChannels,
+        removeDeletedMessages,
     };
 };

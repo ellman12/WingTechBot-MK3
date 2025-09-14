@@ -1,9 +1,9 @@
-import type { FetchMessagesOptions, Message, TextChannel } from "discord.js";
+import { type FetchMessagesOptions, type Message, type TextChannel } from "discord.js";
 
 //Fetch all messages from the provided channel, optionally stopping once we reach messages on or before the end year.
 export async function fetchAllMessages(channel: TextChannel, endYear?: number) {
     let allMessages: Message[] = [];
-    let lastId = null;
+    let lastId: string | null = null;
 
     while (true) {
         const options: FetchMessagesOptions = { limit: 100, before: lastId ? lastId : undefined };
@@ -15,7 +15,7 @@ export async function fetchAllMessages(channel: TextChannel, endYear?: number) {
         }
 
         allMessages = allMessages.concat(Array.from(messages.values()));
-        lastId = messages.last()!.id;
+        lastId = messages.last()?.id ?? null;
     }
 
     return allMessages;
