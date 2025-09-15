@@ -1,5 +1,6 @@
 import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
+import { registerMessageEvents } from "@application/eventHandlers/Messages";
 import { registerReactionEvents } from "@application/eventHandlers/Reactions";
 import type { MessageService } from "@core/services/MessageService";
 import type { ReactionService } from "@core/services/ReactionService";
@@ -23,7 +24,7 @@ export type DiscordBot = {
     readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
 };
 
-export const createDiscordBot = ({ config, soundService, reactionService }: DiscordBotDeps): DiscordBot => {
+export const createDiscordBot = ({ config, soundService, reactionService, messageService }: DiscordBotDeps): DiscordBot => {
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
@@ -62,6 +63,7 @@ export const createDiscordBot = ({ config, soundService, reactionService }: Disc
         registerCommands(soundService, voiceService, registerEventHandler);
 
         registerReactionEvents(reactionService, registerEventHandler);
+        registerMessageEvents(messageService, registerEventHandler);
     };
 
     const start = async (): Promise<void> => {

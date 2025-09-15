@@ -2,7 +2,7 @@ import { fetchAllMessages } from "@adapters/messages/MessageFetcher";
 import type { MessageRepository } from "@core/repositories/MessageRepository";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository";
-import { ChannelType, DiscordAPIError, type Guild, type Message, type TextChannel } from "discord.js";
+import { ChannelType, DiscordAPIError, type Guild, type Message, type OmitPartialGroupDMChannel, type PartialMessage, type TextChannel } from "discord.js";
 
 export type MessageService = {
     //Walk backwards through each channel, and store/update each message until told to stop or hit the last message.
@@ -11,9 +11,11 @@ export type MessageService = {
     //Remove any messages from the DB that no longer exist on Discord.
     readonly removeDeletedMessages: (guild: Guild, endYear?: number) => Promise<void>;
 
-    // readonly messageCreated: () => void;
-    // readonly messageEdited: () => void;
-    // readonly messageDeleted: () => void;
+    readonly messageCreated: (message: Message) => Promise<void>;
+
+    readonly messageDeleted: (message: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>) => Promise<void>;
+
+    readonly messageEdited: (oldMessage: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, newMessage: OmitPartialGroupDMChannel<Message<boolean>>) => Promise<void>;
 };
 
 export type MessageServiceDeps = {
@@ -58,6 +60,22 @@ async function processMessage(message: Message, messageRepository: MessageReposi
     return created;
 }
 
+async function getReferencedMessage(guild: Guild, channelId: string, messageId: string): Promise<Message | null> {
+    //Instead of returning null it errors if the message doesn't exist :(
+    try {
+        const channel = (await guild.channels.fetch(channelId)) as TextChannel;
+        return await channel.messages.fetch(messageId);
+    } catch (error) {
+        if (error instanceof DiscordAPIError && error.code === 10008) {
+            return null;
+        } else {
+            console.error(`❌ Failed to fetch message ${messageId}`, error);
+        }
+    }
+
+    return null;
+}
+
 export const createMessageService = ({ messageRepository, reactionRepository, emoteRepository }: MessageServiceDeps): MessageService => {
     console.log("[MessageService] Creating message service");
 
@@ -93,17 +111,10 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
         let deleted = 0;
 
         for (const message of messages) {
-            //Instead of returning null it errors if the message doesn't exist :(
-            try {
-                const channel = (await guild.channels.fetch(message.channelId)) as TextChannel;
-                await channel.messages.fetch(message.id);
-            } catch (error) {
-                if (error instanceof DiscordAPIError && error.code === 10008) {
-                    await messageRepository.delete({ id: message.id });
-                    deleted++;
-                } else {
-                    console.error(`❌ Failed to fetch message ${message.id}`, error);
-                }
+            const fetched = await getReferencedMessage(guild, message.channelId, message.id);
+            if (!fetched) {
+                await messageRepository.delete({ id: message.id });
+                deleted++;
             }
         }
 
@@ -112,8 +123,48 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
         }
     }
 
+    async function messageCreated(message: Message): Promise<void> {
+        if (message.partial) {
+            await message.fetch();
+        }
+
+        try {
+            const referencedMessageId = (await getReferencedMessage(message.guild!, message.channelId, message.id))?.id;
+            const data = { id: message.id, authorId: message.author.id, channelId: message.channelId, content: message.content, referencedMessageId };
+            await messageRepository.create(data);
+        } catch (e: unknown) {
+            console.error("Error adding message to database", e, message.content);
+        }
+    }
+
+    async function messageDeleted(message: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>): Promise<void> {
+        if (message.partial) {
+            await message.fetch();
+        }
+
+        try {
+            await messageRepository.delete({ id: message.id });
+        } catch (e: unknown) {
+            console.error("Error removing message from database", e, message.content);
+        }
+    }
+
+    async function messageEdited(oldMessage: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, newMessage: OmitPartialGroupDMChannel<Message<boolean>>): Promise<void> {
+        await newMessage.fetch();
+
+        try {
+            const id = newMessage.id;
+            await messageRepository.edit({ id, content: newMessage.content });
+        } catch (e: unknown) {
+            console.error("Error updating content of message", e, newMessage.content);
+        }
+    }
+
     return {
         processAllChannels,
         removeDeletedMessages,
+        messageCreated,
+        messageDeleted,
+        messageEdited,
     };
 };
