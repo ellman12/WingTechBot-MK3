@@ -164,7 +164,8 @@ export async function createMessagesAndReactions(botChannel: TextChannel, tester
     return messages;
 }
 
-export async function checkReactionAmount(db: Kysely<DB>, expectedReactions: number) {
+//Verifies the DB only has reactions from the tester bot and in the right amount.
+export async function verifyTesterReactions(db: Kysely<DB>, expectedReactions: number) {
     const reactions = await db.selectFrom("reactions").selectAll().execute();
     expect(reactions.length).toStrictEqual(expectedReactions);
     expect(reactions.filter(r => r.giver_id !== process.env.TESTER_DISCORD_CLIENT_ID).length).toStrictEqual(0);
