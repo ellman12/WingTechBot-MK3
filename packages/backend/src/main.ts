@@ -68,12 +68,15 @@ export const createApplication = async (): Promise<App> => {
             expressApp.start();
 
             //If first boot, pull in all messages from all time. Otherwise, just get this year's.
-            const guild = discordBot.client.guilds.cache.get(config.discord.serverId!)!;
-            const year = (await messageRepository.getAllMessages()).length === 0 ? undefined : new Date().getUTCFullYear();
-            await messageService.processAllChannels(guild, year);
+            //Prevented from running on CI/CD.
+            if (process.env.NODE_ENV !== "test") {
+                const guild = discordBot.client.guilds.cache.get(config.discord.serverId!)!;
+                const year = (await messageRepository.getAllMessages()).length === 0 ? undefined : new Date().getUTCFullYear();
+                await messageService.processAllChannels(guild, year);
 
-            //Remove any messages that were deleted while bot offline.
-            await messageService.removeDeletedMessages(guild, year);
+                //Remove any messages that were deleted while bot offline.
+                await messageService.removeDeletedMessages(guild, year);
+            }
 
             console.log("✅ Application started successfully!");
         } catch (error) {
