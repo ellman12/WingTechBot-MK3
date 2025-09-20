@@ -2,6 +2,7 @@ import type { CreateReactionData, DeleteReactionData, FindReactionData, Reaction
 
 export type ReactionRepository = {
     find(data: FindReactionData): Promise<Reaction | null>;
+    findForMessage(messageId: string): Promise<Reaction[]>;
     create(data: CreateReactionData): Promise<Reaction>;
     delete(data: DeleteReactionData): Promise<void>;
     deleteReactionsForMessage(messageId: string): Promise<void>;

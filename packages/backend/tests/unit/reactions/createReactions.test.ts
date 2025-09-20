@@ -24,6 +24,9 @@ describe("Create Reaction, valid data", () => {
         await reactions.create({ giverId, receiverId, channelId, messageId, emoteId: emote!.id });
         const reaction = await reactions.find({ giverId, receiverId, channelId, messageId, emoteId: emote!.id });
         expect(reaction).not.toBeNull();
+
+        const foundReactions = await reactions.findForMessage(messageId);
+        expect(foundReactions).toHaveLength(1);
     });
 });
 
