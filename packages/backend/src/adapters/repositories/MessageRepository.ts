@@ -82,49 +82,26 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         return transformMessage(updated);
     };
 
-    //Gets all messages and their reactions as an array.
-    const getAllMessages = async (): Promise<Message[]> => {
-        const result = await db
-            .selectFrom("messages")
-            .leftJoin("reactions", "reactions.message_id", "messages.id")
-            .select([
-                "messages.id",
-                "messages.author_id",
-                "messages.channel_id",
-                "messages.content",
-                "messages.referenced_message_id",
-                "messages.created_at",
-                "messages.edited_at",
-                sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.id IS NOT NULL), '[]')`.as("reactions"),
-            ])
-            .groupBy("messages.id")
-            .orderBy("messages.created_at")
-            .execute();
+    //Gets all messages (optionally filtered by year) and their reactions as an array.
+    const getAllMessages = async (year?: number): Promise<Message[]> => {
+        let query = db
+            .selectFrom("messages as m")
+            .leftJoin("reactions", "reactions.message_id", "m.id")
+            .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.id IS NOT NULL), '[]')`.as("reactions")])
+            .groupBy("m.id")
+            .orderBy("m.created_at");
 
+        if (year !== undefined) {
+            query = query.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year);
+        }
+
+        const result = await query.execute();
         return result.map(m => transformMessage(m, m.reactions));
     };
 
-    //Gets all messages for a year and their reactions as an array.
-    const getAllMessagesForYear = async (year: number): Promise<Message[]> => {
-        const result = await db
-            .selectFrom("messages")
-            .where(sql`extract(year from ${sql.ref("created_at")})`, "=", year)
-            .leftJoin("reactions", "reactions.message_id", "messages.id")
-            .select([
-                "messages.id",
-                "messages.author_id",
-                "messages.channel_id",
-                "messages.content",
-                "messages.referenced_message_id",
-                "messages.created_at",
-                "messages.edited_at",
-                sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.id IS NOT NULL), '[]')`.as("reactions"),
-            ])
-            .groupBy("messages.id")
-            .orderBy("messages.created_at")
-            .execute();
-
-        return result.map(m => transformMessage(m, m.reactions));
+    //Identical to getAllMessages but returns Map of messages with their ids for keys.
+    const getAllMessagesAsMap = async (year?: number): Promise<Map<string, Message>> => {
+        return new Map((await getAllMessages(year)).map(m => [m.id, m]));
     };
 
     return {
@@ -133,6 +110,6 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         delete: deleteMessage,
         edit: editMessage,
         getAllMessages,
-        getAllMessagesForYear,
+        getAllMessagesAsMap,
     };
 };

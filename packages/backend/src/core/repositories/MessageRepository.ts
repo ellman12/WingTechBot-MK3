@@ -5,6 +5,6 @@ export type MessageRepository = {
     create(data: CreateMessageData): Promise<Message>;
     delete(data: DeleteMessageData): Promise<Message>;
     edit(data: EditMessageData): Promise<Message>;
-    getAllMessages(): Promise<Message[]>;
-    getAllMessagesForYear(year: number): Promise<Message[]>;
+    getAllMessages(year?: number): Promise<Message[]>;
+    getAllMessagesAsMap(year?: number): Promise<Map<string, Message>>;
 };

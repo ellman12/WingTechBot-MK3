@@ -145,7 +145,7 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
                 console.log(`🗨️ Begin processing messages in #${name}`);
 
                 const discordMessages = await fetchAllMessages(channel, endYear);
-                const existingMessages = new Map((endYear ? await messageRepository.getAllMessagesForYear(endYear) : await messageRepository.getAllMessages()).map(m => [m.id, m]));
+                const existingMessages = await messageRepository.getAllMessagesAsMap(endYear);
                 console.log(`🗨️ Fetched ${discordMessages.length} messages from #${name}`);
                 let amountAdded = 0;
 
@@ -169,7 +169,7 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
     async function removeDeletedMessages(guild: Guild, endYear?: number) {
         await guild.channels.fetch();
 
-        const messages = endYear ? await messageRepository.getAllMessagesForYear(endYear) : await messageRepository.getAllMessages();
+        const messages = await messageRepository.getAllMessages(endYear);
 
         let deleted = 0;
 
