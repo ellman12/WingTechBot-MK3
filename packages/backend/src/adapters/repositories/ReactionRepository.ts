@@ -5,9 +5,9 @@ import type { Reactions } from "@db/types";
 import type { Kysely, Selectable } from "kysely";
 
 //Transform database reaction emote to domain reaction emote
-const transformReaction = (dbReaction: Selectable<Reactions>): Reaction => {
+export const transformReaction = (dbReaction: Selectable<Reactions> | Reactions): Reaction => {
     return {
-        id: dbReaction.id,
+        id: dbReaction.id as number, //IDK if this is bad or not. Also this id field isn't really necessary and could be removed.
         giverId: dbReaction.giver_id,
         receiverId: dbReaction.receiver_id,
         channelId: dbReaction.channel_id,
