@@ -8,6 +8,34 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U> ? Col
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export interface Messages {
+    author_id: string;
+    channel_id: string;
+    content: string;
+    created_at: Generated<Timestamp>;
+    edited_at: Timestamp | null;
+    id: string;
+    referenced_message_id: string | null;
+}
+
+export interface ReactionEmotes {
+    created_at: Generated<Timestamp>;
+    discord_id: string | null;
+    id: Generated<number>;
+    karma_value: Generated<number>;
+    name: string;
+    updated_at: Generated<Timestamp>;
+}
+
+export interface Reactions {
+    channel_id: string;
+    emote_id: number;
+    giver_id: string;
+    id: Generated<number>;
+    message_id: string;
+    receiver_id: string;
+}
+
 export interface Sounds {
     created_at: Generated<Timestamp>;
     id: Generated<number>;
@@ -28,25 +56,6 @@ export interface Soundtags {
     name: string;
 }
 
-export interface ReactionEmotes {
-    created_at: Generated<Timestamp>;
-    discord_id: string | null;
-    id: Generated<number>;
-    karma_value: Generated<number>;
-    name: string;
-    updated_at: Generated<Timestamp>;
-}
-
-export interface Reactions {
-    channel_id: string;
-    created_at: Generated<Timestamp>;
-    emote_id: number;
-    giver_id: string;
-    id: Generated<number>;
-    message_id: string;
-    receiver_id: string;
-}
-
 export interface Users {
     avatar: string | null;
     created_at: Generated<Timestamp>;
@@ -58,10 +67,11 @@ export interface Users {
 }
 
 export interface DB {
+    messages: Messages;
+    reaction_emotes: ReactionEmotes;
+    reactions: Reactions;
     sound_soundtags: SoundSoundtags;
     sounds: Sounds;
     soundtags: Soundtags;
-    reaction_emotes: ReactionEmotes;
-    reactions: Reactions;
     users: Users;
 }
