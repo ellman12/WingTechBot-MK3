@@ -26,6 +26,11 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         return reaction ? transformReaction(reaction) : null;
     };
 
+    const findReactionsForMessage = async (messageId: string): Promise<Reaction[]> => {
+        const result = await reactions.where("message_id", "=", messageId).execute();
+        return result.map(transformReaction);
+    };
+
     const createReaction = async (data: CreateReactionData): Promise<Reaction> => {
         const ids = [data.giverId, data.receiverId, data.channelId, data.messageId];
         if (ids.some(i => !i || i === "0")) {
@@ -81,5 +86,5 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         }
     };
 
-    return { find: findReaction, create: createReaction, delete: deleteReaction, deleteReactionsForMessage, deleteReactionsForEmote };
+    return { find: findReaction, findForMessage: findReactionsForMessage, create: createReaction, delete: deleteReaction, deleteReactionsForMessage, deleteReactionsForEmote };
 };
