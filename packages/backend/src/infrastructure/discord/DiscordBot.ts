@@ -57,6 +57,14 @@ export const createDiscordBot = ({ config, soundService, reactionService }: Disc
             console.error("❌ Discord client error:", error);
         });
 
+        client.on(RESTEvents.RateLimited, rateLimitData => {
+            console.warn("⚠️ Rate limited:");
+            console.log(`Route: ${rateLimitData.route}`);
+            console.log(`Method: ${rateLimitData.method}`);
+            console.log(`Retry after: ${rateLimitData.retryAfter}ms`);
+            console.log(`Global: ${rateLimitData.global}`);
+        });
+
         registerCommands(soundService, voiceService, registerEventHandler);
 
         registerReactionEvents(reactionService, registerEventHandler);
