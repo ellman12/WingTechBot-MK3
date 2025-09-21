@@ -3,7 +3,7 @@ import type { Reaction } from "@core/entities/Reaction";
 import type { MessageRepository } from "@core/repositories/MessageRepository";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository";
-import { ChannelType, DiscordAPIError, type FetchMessagesOptions, type Guild, type Message, type OmitPartialGroupDMChannel, type PartialMessage, type TextChannel } from "discord.js";
+import { ChannelType, Collection, DiscordAPIError, type FetchMessagesOptions, type Guild, type Message, type OmitPartialGroupDMChannel, type PartialMessage, type TextChannel } from "discord.js";
 import equal from "fast-deep-equal/es6";
 
 export type MessageService = {
@@ -106,30 +106,20 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
     console.log("[MessageService] Creating message service");
 
     async function fetchAllMessages(channel: TextChannel, endYear?: number) {
-        let allMessages: Message[] = [];
+        const allMessages: Message[] = [];
+        let messages = new Collection<string, Message>();
         let lastId: string | null = null;
 
-        while (true) {
+        do {
             const options: FetchMessagesOptions = { limit: 100, before: lastId ?? undefined };
-            const messages = await channel.messages.fetch(options);
-
-            if (messages.size === 0) break;
-
-            //Filter after storing lastId from the unfiltered batch
+            messages = await channel.messages.fetch(options);
             lastId = messages.last()?.id ?? null;
+            for (const message of messages.values()) {
+                if (endYear !== undefined && message.createdAt.getUTCFullYear() >= endYear) break;
 
-            let filtered = messages;
-            if (endYear !== undefined) {
-                //Stop fetching once we've crossed the cutoff
-                if (messages.some(m => m.createdAt.getUTCFullYear() < endYear)) {
-                    filtered = messages.filter(m => m.createdAt.getUTCFullYear() >= endYear);
-                    allMessages = allMessages.concat(Array.from(filtered.values()));
-                    break; //exit, since older ones will all be before endYear
-                }
+                allMessages.push(message);
             }
-
-            allMessages = allMessages.concat(Array.from(filtered.values()));
-        }
+        } while (messages.size > 0);
 
         return allMessages;
     }
