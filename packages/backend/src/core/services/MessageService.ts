@@ -135,7 +135,7 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
     }
 
     async function processAllChannels(guild: Guild, endYear?: number): Promise<void> {
-        console.log("💬 Begin processing messages in all channels");
+        console.log(`💬 Begin processing messages in all channels ${endYear ? `for ${endYear}` : "for all years"}`);
         await guild.channels.fetch();
         const textChannels = Array.from(guild.channels.cache.filter(c => c.type === ChannelType.GuildText).values());
 
