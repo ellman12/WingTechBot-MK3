@@ -7,7 +7,6 @@ import type { Kysely, Selectable } from "kysely";
 //Transform database reaction emote to domain reaction emote
 export const transformReaction = (dbReaction: Selectable<Reactions> | Reactions): Reaction => {
     return {
-        id: dbReaction.id as number, //IDK if this is bad or not. Also this id field isn't really necessary and could be removed.
         giverId: dbReaction.giver_id,
         receiverId: dbReaction.receiver_id,
         channelId: dbReaction.channel_id,
@@ -53,14 +52,12 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
     };
 
     const deleteReaction = async (data: DeleteReactionData): Promise<void> => {
-        const reaction = await findReaction(data);
-        if (!reaction) {
-            throw new Error("Reaction does not exist");
-        }
+        const { giverId, receiverId, channelId, messageId, emoteId } = data;
 
-        const result = await db.deleteFrom("reactions").where("id", "=", reaction.id).executeTakeFirst();
+        const result = await db.deleteFrom("reactions").where("giver_id", "=", giverId).where("receiver_id", "=", receiverId).where("channel_id", "=", channelId).where("message_id", "=", messageId).where("emote_id", "=", emoteId).executeTakeFirst();
+
         if (result.numDeletedRows <= 0) {
-            throw new Error("Failed to delete reaction");
+            throw new Error("Failed to delete reaction, or it doesn't exist");
         }
     };
 

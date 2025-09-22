@@ -87,7 +87,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         let query = db
             .selectFrom("messages as m")
             .leftJoin("reactions", "reactions.message_id", "m.id")
-            .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.id IS NOT NULL), '[]')`.as("reactions")])
+            .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.giver_id IS NOT NULL), '[]')`.as("reactions")])
             .groupBy("m.id")
             .orderBy("m.created_at");
 
