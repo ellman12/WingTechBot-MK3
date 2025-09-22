@@ -52,7 +52,7 @@ async function processMessage(discordMessage: Message, existingMessages: Map<str
     }
 
     //Handle reactions
-    const existingReactions = existingMsg!.reactions.map(({ id: _id, ...rest }) => rest);
+    const existingReactions = existingMsg!.reactions;
 
     //Build a set of "current reactions" from Discord.
     const discordReactions: Omit<Reaction, "id">[] = [];

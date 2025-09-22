@@ -31,7 +31,6 @@ export interface Reactions {
     channel_id: string;
     emote_id: number;
     giver_id: string;
-    id: Generated<number>;
     message_id: string;
     receiver_id: string;
 }
