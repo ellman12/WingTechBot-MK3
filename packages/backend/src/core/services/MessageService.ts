@@ -1,5 +1,4 @@
 import type { CreateMessageData, Message as DBMessage } from "@core/entities/Message";
-import type { Reaction } from "@core/entities/Reaction";
 import type { MessageRepository } from "@core/repositories/MessageRepository";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository";
@@ -55,7 +54,7 @@ async function processMessage(discordMessage: Message, existingMessages: Map<str
     const existingReactions = existingMsg!.reactions;
 
     //Build a set of "current reactions" from Discord.
-    const discordReactions: Omit<Reaction, "id">[] = [];
+    const discordReactions: typeof existingReactions = [];
 
     for (const reaction of discordMessage.reactions.cache.values()) {
         const discordId = reaction.emoji.id;
@@ -137,13 +136,9 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
                 const discordMessages = await fetchAllMessages(channel, endYear);
                 const existingMessages = await messageRepository.getAllMessagesAsMap(endYear);
                 console.log(`🗨️ Fetched ${discordMessages.length} messages from #${name}`);
-                let amountAdded = 0;
 
-                for (const message of discordMessages) {
-                    if (await processMessage(message, existingMessages, messageRepository, reactionRepository, emoteRepository)) {
-                        amountAdded++;
-                    }
-                }
+                const results = await Promise.all(discordMessages.map(message => processMessage(message, existingMessages, messageRepository, reactionRepository, emoteRepository)));
+                const amountAdded = results.filter(Boolean).length;
 
                 if (amountAdded > 0) {
                     console.log(`💾 Added ${amountAdded} messages from #${name}`);
