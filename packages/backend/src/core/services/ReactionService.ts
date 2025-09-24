@@ -21,6 +21,12 @@ export const createReactionService = ({ reactionRepository, emoteRepository }: R
         addReaction: async (reaction, user): Promise<void> => {
             const message = await reaction.message.fetch();
             const channel = message.channel;
+            const year = message.createdAt.getUTCFullYear();
+
+            if (year < new Date().getUTCFullYear()) {
+                console.warn("🚫 Ignoring added reaction older than this year.");
+                return;
+            }
 
             try {
                 const emoteName = reaction.emoji.name;
@@ -42,6 +48,12 @@ export const createReactionService = ({ reactionRepository, emoteRepository }: R
         removeReaction: async (reaction, user): Promise<void> => {
             const message = await reaction.message.fetch();
             const channel = message.channel;
+            const year = message.createdAt.getUTCFullYear();
+
+            if (year < new Date().getUTCFullYear()) {
+                console.warn("🚫 Ignoring removed reaction older than this year.");
+                return;
+            }
 
             try {
                 const emoteName = reaction.emoji.name;
@@ -66,6 +78,14 @@ export const createReactionService = ({ reactionRepository, emoteRepository }: R
         },
 
         removeReactionsForMessage: async (message): Promise<void> => {
+            await message.fetch();
+            const year = message.createdAt.getUTCFullYear();
+
+            if (year < new Date().getUTCFullYear()) {
+                console.warn("🚫 Ignoring removed reactions from message older than this year.");
+                return;
+            }
+
             try {
                 await reactionRepository.deleteReactionsForMessage(message.id);
             } catch (e: unknown) {
@@ -74,9 +94,16 @@ export const createReactionService = ({ reactionRepository, emoteRepository }: R
         },
 
         removeReactionsForEmote: async (reaction): Promise<void> => {
-            try {
-                const name = reaction.emoji.name;
+            await reaction.fetch();
+            const year = reaction.message.createdAt.getUTCFullYear();
+            const name = reaction.emoji.name;
 
+            if (year < new Date().getUTCFullYear()) {
+                console.warn(`🚫 Ignoring removed reaction for emote ${name} older than this year.`);
+                return;
+            }
+
+            try {
                 if (!name) {
                     throw new Error("Missing emoji name in removeReactionsForEmote");
                 }

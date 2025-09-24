@@ -1,3 +1,4 @@
+import { createMessageRepository } from "@adapters/repositories/MessageRepository";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
 import { expect } from "vitest";
@@ -9,6 +10,7 @@ describe("Delete Reaction, reaction exists", () => {
     test.each(validReactions)("%s, %s, %s, %s, %s, %s", async (giverId, receiverId, channelId, messageId, emoteName, emoteId) => {
         const messageCount = 4;
         const db = await createTestDb();
+        const messages = createMessageRepository(db);
         const reactions = createReactionRepository(db);
         const emotes = createReactionEmoteRepository(db);
 
@@ -20,6 +22,7 @@ describe("Delete Reaction, reaction exists", () => {
 
         for (let i = 1; i <= messageCount; i++) {
             const msgId = messageId + i.toString();
+            await messages.create({ id: msgId, authorId: receiverId, channelId, content: "message lol", createdAt: new Date(), editedAt: null });
             const reactionData = { giverId, receiverId, channelId, messageId: msgId, emoteId: emote.id };
 
             const reaction = await reactions.create(reactionData);

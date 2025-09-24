@@ -1,3 +1,4 @@
+import { createMessageRepository } from "@adapters/repositories/MessageRepository";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
 import { getKyselyForMigrations, runMigrations } from "@db/migrations";
@@ -98,10 +99,14 @@ export const recreateDatabase = async (): Promise<void> => {
 };
 
 export async function createTestReactions(db: Kysely<DB>, messageCount: number, reactionsPerMessage: number, baseMsgId: string) {
+    const messages = createMessageRepository(db);
     const reactions = createReactionRepository(db);
     const emotes = createReactionEmoteRepository(db);
 
     for (let i = 0; i < messageCount; i++) {
+        const messageId = baseMsgId + i.toString();
+        await messages.create({ id: messageId, authorId: "456", channelId: "789", content: "message content", createdAt: new Date(), editedAt: null });
+
         for (let j = 0; j < reactionsPerMessage; j++) {
             const [name, id] = validEmotes[j] ?? ["", null];
             const emote = await emotes.findOrCreate(name, id);
@@ -109,7 +114,6 @@ export async function createTestReactions(db: Kysely<DB>, messageCount: number, 
             const foundEmote = await emotes.findById(emote.id);
             expect(foundEmote).not.toBeNull();
 
-            const messageId = baseMsgId + i.toString();
             const reactionData = { giverId: "123", receiverId: "456", channelId: "789", messageId, emoteId: emote.id };
             await reactions.create(reactionData);
 
@@ -160,7 +164,8 @@ export async function createMessagesAndReactions(botChannel: TextChannel, tester
     return messages;
 }
 
-export async function checkReactionAmount(db: Kysely<DB>, expectedReactions: number) {
+//Verifies the DB only has reactions from the tester bot and in the right amount.
+export async function verifyTesterReactions(db: Kysely<DB>, expectedReactions: number) {
     const reactions = await db.selectFrom("reactions").selectAll().execute();
     expect(reactions.length).toStrictEqual(expectedReactions);
     expect(reactions.filter(r => r.giver_id !== process.env.TESTER_DISCORD_CLIENT_ID).length).toStrictEqual(0);

@@ -1,9 +1,11 @@
 import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
+import { registerMessageEvents } from "@application/eventHandlers/Messages";
 import { registerReactionEvents } from "@application/eventHandlers/Reactions";
+import type { MessageService } from "@core/services/MessageService";
 import type { ReactionService } from "@core/services/ReactionService";
 import type { SoundService } from "@core/services/SoundService";
-import { Client, type ClientEvents, Events, GatewayIntentBits, Partials } from "discord.js";
+import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, RESTEvents } from "discord.js";
 
 import type { Config } from "../config/Config.js";
 
@@ -11,6 +13,7 @@ export type DiscordBotDeps = {
     readonly config: Config;
     readonly soundService: SoundService;
     readonly reactionService: ReactionService;
+    readonly messageService: MessageService;
 };
 
 export type DiscordBot = {
@@ -21,7 +24,7 @@ export type DiscordBot = {
     readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
 };
 
-export const createDiscordBot = ({ config, soundService, reactionService }: DiscordBotDeps): DiscordBot => {
+export const createDiscordBot = ({ config, soundService, reactionService, messageService }: DiscordBotDeps): DiscordBot => {
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
@@ -57,9 +60,18 @@ export const createDiscordBot = ({ config, soundService, reactionService }: Disc
             console.error("❌ Discord client error:", error);
         });
 
+        client.on(RESTEvents.RateLimited, rateLimitData => {
+            console.warn("⚠️ Rate limited:");
+            console.log(`Route: ${rateLimitData.route}`);
+            console.log(`Method: ${rateLimitData.method}`);
+            console.log(`Retry after: ${rateLimitData.retryAfter}ms`);
+            console.log(`Global: ${rateLimitData.global}`);
+        });
+
         registerCommands(soundService, voiceService, registerEventHandler);
 
         registerReactionEvents(reactionService, registerEventHandler);
+        registerMessageEvents(messageService, registerEventHandler);
     };
 
     const start = async (): Promise<void> => {

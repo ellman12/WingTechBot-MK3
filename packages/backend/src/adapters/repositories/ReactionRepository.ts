@@ -5,9 +5,8 @@ import type { Reactions } from "@db/types";
 import type { Kysely, Selectable } from "kysely";
 
 //Transform database reaction emote to domain reaction emote
-const transformReaction = (dbReaction: Selectable<Reactions>): Reaction => {
+export const transformReaction = (dbReaction: Selectable<Reactions> | Reactions): Reaction => {
     return {
-        id: dbReaction.id,
         giverId: dbReaction.giver_id,
         receiverId: dbReaction.receiver_id,
         channelId: dbReaction.channel_id,
@@ -26,9 +25,14 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         return reaction ? transformReaction(reaction) : null;
     };
 
+    const findReactionsForMessage = async (messageId: string): Promise<Reaction[]> => {
+        const result = await reactions.where("message_id", "=", messageId).execute();
+        return result.map(transformReaction);
+    };
+
     const createReaction = async (data: CreateReactionData): Promise<Reaction> => {
         const ids = [data.giverId, data.receiverId, data.channelId, data.messageId];
-        if (ids.find(i => i === "" || i === "0")) {
+        if (ids.some(i => !i || i === "0")) {
             throw new Error("Invalid id");
         }
 
@@ -48,14 +52,12 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
     };
 
     const deleteReaction = async (data: DeleteReactionData): Promise<void> => {
-        const reaction = await findReaction(data);
-        if (!reaction) {
-            throw new Error("Reaction does not exist");
-        }
+        const { giverId, receiverId, channelId, messageId, emoteId } = data;
 
-        const result = await db.deleteFrom("reactions").where("id", "=", reaction.id).executeTakeFirst();
+        const result = await db.deleteFrom("reactions").where("giver_id", "=", giverId).where("receiver_id", "=", receiverId).where("channel_id", "=", channelId).where("message_id", "=", messageId).where("emote_id", "=", emoteId).executeTakeFirst();
+
         if (result.numDeletedRows <= 0) {
-            throw new Error("Failed to delete reaction");
+            throw new Error("Failed to delete reaction, or it doesn't exist");
         }
     };
 
@@ -81,5 +83,5 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         }
     };
 
-    return { find: findReaction, create: createReaction, delete: deleteReaction, deleteReactionsForMessage, deleteReactionsForEmote };
+    return { find: findReaction, findForMessage: findReactionsForMessage, create: createReaction, delete: deleteReaction, deleteReactionsForMessage, deleteReactionsForEmote };
 };
