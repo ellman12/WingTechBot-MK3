@@ -4,7 +4,7 @@ import type { Kysely, Selectable } from "kysely";
 
 import type { Sound } from "@/core/entities/Sound";
 
-export const createKyselySoundRepository = (db: Kysely<DB>): SoundRepository => {
+export const createSoundRepository = (db: Kysely<DB>): SoundRepository => {
     const transformSound = (sound: Selectable<Sounds>): Sound => {
         return {
             name: sound.name,
