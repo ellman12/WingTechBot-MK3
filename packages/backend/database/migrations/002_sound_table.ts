@@ -6,7 +6,7 @@ export async function up(db: Kysely<any>): Promise<void> {
         .createTable("soundtags")
         .addColumn("id", "serial", col => col.notNull().primaryKey())
         .addColumn("name", "text", col => col.notNull().unique())
-        .addColumn("created_at", "timestamp", col => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
+        .addColumn("created_at", "timestamp", col => col.notNull().defaultTo(sql`timezone('utc', now())`))
         .execute();
 
     await db.schema
@@ -14,7 +14,7 @@ export async function up(db: Kysely<any>): Promise<void> {
         .addColumn("id", "serial", col => col.notNull().primaryKey())
         .addColumn("name", "text", col => col.notNull().unique())
         .addColumn("path", "text", col => col.notNull().unique())
-        .addColumn("created_at", "timestamp", col => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
+        .addColumn("created_at", "timestamp", col => col.notNull().defaultTo(sql`timezone('utc', now())`))
         .execute();
 
     await db.schema
@@ -22,7 +22,7 @@ export async function up(db: Kysely<any>): Promise<void> {
         .addColumn("id", "serial", col => col.notNull().primaryKey())
         .addColumn("sound", "serial", col => col.notNull().references("sounds.id").onDelete("cascade"))
         .addColumn("tag", "serial", col => col.notNull().references("soundtags.id").onDelete("cascade"))
-        .addColumn("created_at", "timestamp", col => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
+        .addColumn("created_at", "timestamp", col => col.notNull().defaultTo(sql`timezone('utc', now())`))
         .addForeignKeyConstraint("fk_sound_soundtags_sound", ["sound"], "sounds", ["id"])
         .addForeignKeyConstraint("fk_sound_soundtags_tag", ["tag"], "soundtags", ["id"])
         .execute();
