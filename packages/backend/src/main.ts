@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { createKyselySoundRepository } from "@adapters/repositories/KyselySoundRepository";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
+import { createSoundRepository } from "@adapters/repositories/SoundRepository";
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService";
@@ -40,7 +40,7 @@ export const createApplication = async (): Promise<App> => {
     const ffmpeg = createFfmpegService();
     const ytdl = createYtdlYoutubeService();
 
-    const soundRepository = createKyselySoundRepository(db);
+    const soundRepository = createSoundRepository(db);
     const messageRepository = createMessageRepository(db);
     const reactionRepository = createReactionRepository(db);
     const emoteRepository = createReactionEmoteRepository(db);
