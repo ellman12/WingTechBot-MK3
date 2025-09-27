@@ -77,12 +77,16 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
     };
 
     const listSounds: Command = {
-        data: new SlashCommandBuilder().setName("list-sounds").setDescription("List all sounds in the soundboard"),
+        data: new SlashCommandBuilder()
+            .setName("list-sounds")
+            .setDescription("List all sounds in the soundboard")
+            .addStringOption(option => option.setName("tag-name").setDescription("List sounds with this tag name").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
-            const sounds = await soundService.listSounds();
+            const tagName = interaction.options.getString("tag-name")?.trim();
+            const sounds = await soundService.listSounds(tagName);
             if (sounds.length === 0) {
                 await interaction.reply({
-                    content: "No sounds found in the soundboard.",
+                    content: tagName ? `No sounds with tag "${tagName}" found in the soundboard` : "No sounds found in the soundboard.",
                     flags: MessageFlags.Ephemeral,
                 });
                 return;

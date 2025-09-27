@@ -9,7 +9,7 @@ import type { FileManager } from "./FileManager";
 export type SoundService = {
     readonly addSound: (name: string, source: string) => Promise<void>;
     readonly getSound: (nameOrSource: string, abortSignal?: AbortSignal) => Promise<Readable>;
-    readonly listSounds: () => Promise<string[]>;
+    readonly listSounds: (tagName?: string) => Promise<string[]>;
     readonly deleteSound: (name: string) => Promise<void>;
 };
 
@@ -119,11 +119,11 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                 throw error;
             }
         },
-        listSounds: async (): Promise<string[]> => {
+        listSounds: async (tagName?: string): Promise<string[]> => {
             console.log(`[SoundService] Listing all sounds`);
 
             try {
-                const sounds = await soundRepository.getAllSounds();
+                const sounds = tagName ? await soundRepository.getAllSoundsWithTagName(tagName) : await soundRepository.getAllSounds();
                 const soundNames = sounds.map(sound => sound.name);
                 console.log(`[SoundService] Found ${soundNames.length} sounds:`, soundNames);
                 return soundNames;
