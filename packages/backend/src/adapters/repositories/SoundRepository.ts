@@ -64,5 +64,17 @@ export const createSoundRepository = (db: Kysely<DB>): SoundRepository => {
 
             return sounds.map(s => transformSound(s, s.soundtags));
         },
+        getAllSoundsWithTagName: async (tagName: string): Promise<Sound[]> => {
+            const sounds = await db
+                .selectFrom("sounds as s")
+                .leftJoin("sound_soundtags as st", "s.id", "st.sound")
+                .leftJoin("soundtags as t", "st.tag", "t.id")
+                .select(["s.id", "s.name", "s.path", "s.created_at", sql<Soundtags[]>`COALESCE(JSON_AGG(t) FILTER (WHERE t.id IS NOT NULL), '[]')`.as("soundtags")])
+                .where("t.name", "=", tagName)
+                .groupBy(["s.id", "s.name"])
+                .execute();
+
+            return sounds.map(s => transformSound(s, s.soundtags));
+        },
     };
 };
