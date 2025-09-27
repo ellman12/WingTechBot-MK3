@@ -5,6 +5,7 @@ import type { Kysely, Selectable } from "kysely";
 
 export const transformSoundTag = (dbSoundTag: Selectable<Soundtags>): SoundTag => {
     return {
+        id: dbSoundTag.id,
         name: dbSoundTag.name,
     };
 };

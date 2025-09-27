@@ -6,7 +6,7 @@ import type { SoundRepository } from "@core/repositories/SoundRepository";
 import { createTestDb } from "../../utils/testUtils";
 import { createTag } from "./createTag.test";
 
-export const sharedSound: Sound = { name: "sound1", path: "path/to/sound1", soundtags: [] };
+export const sharedSound: Sound = { id: 1, name: "sound1", path: "path/to/sound1", soundtags: [] };
 
 export async function createSound(soundRepo: SoundRepository) {
     const sound = await soundRepo.addSound(sharedSound);
