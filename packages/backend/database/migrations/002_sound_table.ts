@@ -28,6 +28,9 @@ export async function up(db: Kysely<any>): Promise<void> {
         .execute();
 
     await db.schema.createIndex("idx_sounds_name").on("sounds").column("name").execute();
+
+    //Necessary for our use of ON CONFLICT (plus it should make it faster).
+    await db.schema.createIndex("idx_sound_tag_unique").on("sound_soundtags").columns(["sound", "tag"]).unique().execute();
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
