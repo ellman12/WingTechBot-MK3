@@ -25,6 +25,11 @@ export const createSoundTagRepository = (db: Kysely<DB>): SoundTagRepository => 
         return transformSoundTag(result);
     }
 
+    async function getTagByName(name: string): Promise<SoundTag | null> {
+        const tag = await db.selectFrom("soundtags").where("name", "=", name).selectAll().executeTakeFirst();
+        return tag ? transformSoundTag(tag) : null;
+    }
+
     async function addTagToSound(soundId: number, tagId: number) {
         if (soundId <= 0 || tagId <= 0) {
             throw new Error("Invalid sound or tag id");
@@ -51,6 +56,7 @@ export const createSoundTagRepository = (db: Kysely<DB>): SoundTagRepository => 
 
     return {
         create: createTag,
+        getTagByName,
         addTagToSound,
         removeTagFromSound,
         getAllTags,
