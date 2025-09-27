@@ -1,6 +1,6 @@
 import type { SoundService } from "@core/services/SoundService";
 import type { VoiceService } from "@core/services/VoiceService.js";
-import { ChatInputCommandInteraction, Events, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
+import { ChatInputCommandInteraction, Events, MessageFlags, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
 
 import type { DiscordBot } from "@/infrastructure/discord/DiscordBot.js";
 
@@ -85,7 +85,7 @@ export const registerCommands = (soundService: SoundService, voiceService: Voice
             await command.execute(interaction);
         } catch (error) {
             console.error(error);
-            await interaction.reply({ content: "There was an error while executing this command!", ephemeral: true });
+            await interaction.reply({ content: "There was an error while executing this command!", flags: MessageFlags.Ephemeral });
         }
     });
 };
