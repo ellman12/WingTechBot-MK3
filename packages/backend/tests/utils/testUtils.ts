@@ -32,7 +32,7 @@ async function applyMigrations(kysely: Kysely<DB>) {
             continue;
         }
 
-        up(kysely);
+        await up(kysely);
     }
 }
 

@@ -89,7 +89,7 @@ export const createDiscordBot = ({ config, soundService, soundTagService, reacti
     const stop = async (): Promise<void> => {
         try {
             console.log("🛑 Stopping Discord bot...");
-            client.destroy();
+            await client.destroy();
             isReadyState = false;
             console.log("✅ Discord bot stopped");
         } catch (error) {
