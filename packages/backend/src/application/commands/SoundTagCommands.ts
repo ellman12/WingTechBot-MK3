@@ -1,0 +1,51 @@
+import type { SoundTagService } from "@core/services/SoundTagService";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+
+import type { Command } from "./Commands";
+
+export type SoundTagCommandDeps = {
+    readonly soundTagService: SoundTagService;
+};
+
+export const createSoundTagCommands = ({ soundTagService }: SoundTagCommandDeps): Record<string, Command> => {
+    const tagSound: Command = {
+        data: new SlashCommandBuilder()
+            .setName("tag-sound")
+            .setDescription("Adds a tag to a soundboard sound")
+            .addStringOption(option => option.setName("sound-name").setDescription("The name of the sound").setRequired(true))
+            .addStringOption(option => option.setName("tag-name").setDescription("The name of the tag").setRequired(true)),
+        execute: async (interaction: ChatInputCommandInteraction) => {
+            const soundName = interaction.options.getString("sound-name")?.trim().toLowerCase();
+            const tagName = interaction.options.getString("tag-name")?.trim().toLowerCase();
+
+            if (!soundName) throw new Error("Missing sound name");
+            if (!tagName) throw new Error("Missing tag name");
+
+            await soundTagService.addTagToSound(soundName, tagName);
+            await interaction.reply(`Added tag "${tagName}" to "${soundName}"`);
+        },
+    };
+
+    const untagSound: Command = {
+        data: new SlashCommandBuilder()
+            .setName("untag-sound")
+            .setDescription("Removes a tag from a soundboard sound")
+            .addStringOption(option => option.setName("sound-name").setDescription("The name of the sound").setRequired(true))
+            .addStringOption(option => option.setName("tag-name").setDescription("The name of the tag").setRequired(true)),
+        execute: async (interaction: ChatInputCommandInteraction) => {
+            const soundName = interaction.options.getString("sound-name")?.trim().toLowerCase();
+            const tagName = interaction.options.getString("tag-name")?.trim().toLowerCase();
+
+            if (!soundName) throw new Error("Missing sound name");
+            if (!tagName) throw new Error("Missing tag name");
+
+            await soundTagService.removeTagFromSound(soundName, tagName);
+            await interaction.reply(`Removed tag "${tagName}" from "${soundName}"`);
+        },
+    };
+
+    return {
+        "tag-sound": tagSound,
+        "untag-sound": untagSound,
+    };
+};
