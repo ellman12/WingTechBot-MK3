@@ -1,9 +1,11 @@
+import type { SoundTag } from "@core/entities/SoundTag";
 import type { SoundRepository } from "@core/repositories/SoundRepository";
 import type { SoundTagRepository } from "@core/repositories/SoundTagRepository";
 
 export type SoundTagService = {
     readonly addTagToSound: (soundName: string, tagName: string) => Promise<boolean>;
     readonly removeTagFromSound: (soundName: string, tagName: string) => Promise<boolean>;
+    readonly listTags: () => Promise<SoundTag[]>;
 };
 
 export type SoundTagServiceDeps = {
@@ -56,6 +58,10 @@ export const createSoundTagService = ({ soundRepository, soundTagRepository }: S
             }
 
             return false;
+        },
+
+        listTags: async (): Promise<SoundTag[]> => {
+            return await soundTagRepository.getAllTags();
         },
     };
 };

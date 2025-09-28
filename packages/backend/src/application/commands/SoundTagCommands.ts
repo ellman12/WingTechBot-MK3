@@ -1,5 +1,5 @@
 import type { SoundTagService } from "@core/services/SoundTagService";
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
 import type { Command } from "./Commands";
 
@@ -44,8 +44,23 @@ export const createSoundTagCommands = ({ soundTagService }: SoundTagCommandDeps)
         },
     };
 
+    const listTags: Command = {
+        data: new SlashCommandBuilder().setName("list-tags").setDescription("List all tags in the soundboard"),
+
+        execute: async (interaction: ChatInputCommandInteraction) => {
+            const tags = await soundTagService.listTags();
+            if (tags.length === 0) {
+                await interaction.reply({ content: "No tags found in the soundboard.", flags: MessageFlags.Ephemeral });
+                return;
+            }
+
+            await interaction.reply({ content: `Available tags:\n${tags.map(tag => `- ${tag.name}`).join("\n")}`, flags: MessageFlags.Ephemeral });
+        },
+    };
+
     return {
         "tag-sound": tagSound,
         "untag-sound": untagSound,
+        "list-tags": listTags,
     };
 };
