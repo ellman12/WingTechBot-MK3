@@ -79,7 +79,16 @@ export const createDiscordBot = ({ config, soundService, soundTagService, reacti
     const start = async (): Promise<void> => {
         try {
             console.log("🚀 Starting Discord bot...");
+
             await client.login(config.discord.token);
+
+            //If first boot, pull in all messages from all time. Otherwise, just get this year's.
+            const guild = client.guilds.cache.get(config.discord.serverId!)!;
+            const year = (await messageService.getAllDBMessages()).length === 0 ? undefined : new Date().getUTCFullYear();
+            await messageService.processAllChannels(guild, year);
+
+            //Remove any messages that were deleted while bot offline.
+            await messageService.removeDeletedMessages(guild, year);
         } catch (error) {
             console.error("❌ Failed to start Discord bot:", error);
             throw error;
