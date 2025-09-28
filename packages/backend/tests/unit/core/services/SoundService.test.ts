@@ -33,6 +33,7 @@ const mockSoundRepository: SoundRepository = {
     getSoundByName: vi.fn(),
     getAllSounds: vi.fn(),
     deleteSound: vi.fn(),
+    getAllSoundsWithTagName: vi.fn(),
 };
 
 describe("SoundService", () => {

@@ -1,14 +1,16 @@
 #!/usr/bin/env node
-import { createKyselySoundRepository } from "@adapters/repositories/KyselySoundRepository";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
+import { createSoundRepository } from "@adapters/repositories/SoundRepository";
+import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository";
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService";
 import { createMessageService } from "@core/services/MessageService";
 import { createReactionService } from "@core/services/ReactionService";
 import { createSoundService } from "@core/services/SoundService";
+import { createSoundTagService } from "@core/services/SoundTagService";
 import { runMigrations } from "@db/migrations";
 import "@dotenvx/dotenvx/config";
 import { getConfig } from "@infrastructure/config/Config.js";
@@ -40,7 +42,8 @@ export const createApplication = async (): Promise<App> => {
     const ffmpeg = createFfmpegService();
     const ytdl = createYtdlYoutubeService();
 
-    const soundRepository = createKyselySoundRepository(db);
+    const soundRepository = createSoundRepository(db);
+    const soundTagRepository = createSoundTagRepository(db);
     const messageRepository = createMessageRepository(db);
     const reactionRepository = createReactionRepository(db);
     const emoteRepository = createReactionEmoteRepository(db);
@@ -53,11 +56,12 @@ export const createApplication = async (): Promise<App> => {
         fileManager,
         soundRepository,
     });
+    const soundTagService = createSoundTagService({ soundRepository, soundTagRepository });
     const reactionService = createReactionService({ reactionRepository, emoteRepository });
     const messageService = createMessageService({ messageRepository, reactionRepository, emoteRepository });
 
     const expressApp = createExpressApp({ db, config: serverConfig });
-    const discordBot = createDiscordBot({ config, soundService, reactionService, messageService });
+    const discordBot = createDiscordBot({ config, soundService, soundTagService, reactionService, messageService });
 
     const start = async (): Promise<void> => {
         try {

@@ -1,19 +1,21 @@
 import type { SoundService } from "@core/services/SoundService";
-import type { VoiceService } from "@core/services/VoiceService.js";
-import { ChatInputCommandInteraction, Events, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
+import type { SoundTagService } from "@core/services/SoundTagService";
+import type { VoiceService } from "@core/services/VoiceService";
+import { ChatInputCommandInteraction, Events, MessageFlags, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
 
-import type { DiscordBot } from "@/infrastructure/discord/DiscordBot.js";
+import type { DiscordBot } from "@/infrastructure/discord/DiscordBot";
 
-import { createAudioCommands } from "./AudioCommands.js";
-import { createVoiceCommands } from "./VoiceCommands.js";
+import { createAudioCommands } from "./AudioCommands";
+import { createSoundTagCommands } from "./SoundTagCommands";
+import { createVoiceCommands } from "./VoiceCommands";
 
 export type Command = {
     readonly data: SlashCommandOptionsOnlyBuilder;
     readonly execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 };
 
-export const createCommands = (soundService: SoundService, voiceService: VoiceService): Record<string, Command> => {
-    const commandRecords = [createAudioCommands({ soundService }), createVoiceCommands({ voiceService, soundService })];
+export const createCommands = (soundService: SoundService, soundTagService: SoundTagService, voiceService: VoiceService): Record<string, Command> => {
+    const commandRecords = [createAudioCommands({ soundService }), createSoundTagCommands({ soundTagService }), createVoiceCommands({ voiceService, soundService })];
 
     // Assert that there are no duplicate command name in a way where we can have an arbitrary number of commands
     const commandNames = new Set<string>();
@@ -36,11 +38,11 @@ export const createCommands = (soundService: SoundService, voiceService: VoiceSe
     return commandMap;
 };
 
-export const deployCommands = async (soundService: SoundService, voiceService: VoiceService, token: string, clientId: string, guildId?: string): Promise<void> => {
+export const deployCommands = async (soundService: SoundService, soundTagService: SoundTagService, voiceService: VoiceService, token: string, clientId: string, guildId?: string): Promise<void> => {
     try {
         console.log("🚀 Deploying Discord commands...");
 
-        const commandMap = createCommands(soundService, voiceService);
+        const commandMap = createCommands(soundService, soundTagService, voiceService);
         const commands = Object.values(commandMap).map(command => command.data.toJSON());
 
         console.log(`📋 Deploying ${commands.length} commands:`);
@@ -66,10 +68,10 @@ export const deployCommands = async (soundService: SoundService, voiceService: V
     }
 };
 
-export const registerCommands = (soundService: SoundService, voiceService: VoiceService, registerEventHandler: DiscordBot["registerEventHandler"]): void => {
+export const registerCommands = (soundService: SoundService, soundTagService: SoundTagService, voiceService: VoiceService, registerEventHandler: DiscordBot["registerEventHandler"]): void => {
     console.log("🔄 Registering commands...");
 
-    const commands = createCommands(soundService, voiceService);
+    const commands = createCommands(soundService, soundTagService, voiceService);
     console.log(`✅ Registered ${Object.keys(commands).length} Commands:`);
     Object.keys(commands).forEach(command => {
         console.log(`- ${command}`);
@@ -85,7 +87,7 @@ export const registerCommands = (soundService: SoundService, voiceService: Voice
             await command.execute(interaction);
         } catch (error) {
             console.error(error);
-            await interaction.reply({ content: "There was an error while executing this command!", ephemeral: true });
+            await interaction.reply({ content: "There was an error while executing this command!", flags: MessageFlags.Ephemeral });
         }
     });
 };

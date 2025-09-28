@@ -50,6 +50,10 @@ const mockSoundRepository = {
     async deleteSound(name: string): Promise<void> {
         this.sounds.delete(name);
     },
+
+    async getAllSoundsWithTagName(_name: string): Promise<Sound[]> {
+        return []
+    }
 };
 
 describe("SoundService Integration Tests", () => {

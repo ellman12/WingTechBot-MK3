@@ -101,6 +101,10 @@ async function getMessage(guild: Guild, channelId: string, messageId: string): P
     return null;
 }
 
+function validMessage(message: Message): boolean {
+    return message.interactionMetadata === null;
+}
+
 export const createMessageService = ({ messageRepository, reactionRepository, emoteRepository }: MessageServiceDeps): MessageService => {
     console.log("[MessageService] Creating message service");
 
@@ -176,6 +180,10 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
             await message.fetch();
         }
 
+        if (!validMessage(message)) {
+            return;
+        }
+
         try {
             const referencedMessageId = message.reference ? message.reference.messageId : undefined;
             const data: CreateMessageData = {
@@ -198,6 +206,10 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
             await message.fetch();
         }
 
+        if (!validMessage(message as Message)) {
+            return;
+        }
+
         try {
             await messageRepository.delete({ id: message.id });
         } catch (e: unknown) {
@@ -207,6 +219,10 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
 
     async function messageEdited(oldMessage: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, newMessage: OmitPartialGroupDMChannel<Message<boolean>>): Promise<void> {
         await newMessage.fetch();
+
+        if (!validMessage(newMessage)) {
+            return;
+        }
 
         try {
             const id = newMessage.id;

@@ -1,5 +1,5 @@
 import type { SoundService } from "@core/services/SoundService";
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
 import type { Command } from "./Commands.js";
 
@@ -19,7 +19,7 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
             if (!interaction.guildId) {
                 await interaction.reply({
                     content: "This command can only be used in a server!",
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
                 return;
             }
@@ -29,7 +29,7 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
             if (!soundName) {
                 await interaction.reply({
                     content: "You must provide a name for the sound.",
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
                 return;
             }
@@ -40,7 +40,7 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
             if (urlInput && fileInput) {
                 await interaction.reply({
                     content: "You can only provide either a URL or a file attachment, not both.",
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
                 return;
             }
@@ -50,13 +50,13 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
             if (!url) {
                 await interaction.reply({
                     content: "You must provide either a URL or a file attachment.",
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
                 return;
             }
 
             // Send initial response immediately to avoid timeout
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
             try {
                 const formattedSoundName = soundName.toLowerCase();
@@ -77,20 +77,24 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
     };
 
     const listSounds: Command = {
-        data: new SlashCommandBuilder().setName("list-sounds").setDescription("List all sounds in the soundboard"),
+        data: new SlashCommandBuilder()
+            .setName("list-sounds")
+            .setDescription("List all sounds in the soundboard")
+            .addStringOption(option => option.setName("tag-name").setDescription("List sounds with this tag name").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
-            const sounds = await soundService.listSounds();
+            const tagName = interaction.options.getString("tag-name")?.trim();
+            const sounds = await soundService.listSounds(tagName);
             if (sounds.length === 0) {
                 await interaction.reply({
-                    content: "No sounds found in the soundboard.",
-                    ephemeral: true,
+                    content: tagName ? `No sounds with tag "${tagName}" found in the soundboard` : "No sounds found in the soundboard.",
+                    flags: MessageFlags.Ephemeral,
                 });
                 return;
             }
 
-            interaction.reply({
+            await interaction.reply({
                 content: `Available sounds:\n${sounds.map(sound => `- ${sound}`).join("\n")}`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         },
     };
@@ -106,7 +110,7 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
             if (!soundName) {
                 await interaction.reply({
                     content: "You must provide the name of the sound to delete.",
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
                 return;
             }
@@ -117,12 +121,12 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
                 await soundService.deleteSound(formattedSoundName);
                 await interaction.reply({
                     content: `Sound "${soundName}" deleted successfully!`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             } catch (error) {
                 await interaction.reply({
                     content: `Failed to delete sound: ${error instanceof Error ? error.message : "Unknown error"}`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
         },
