@@ -21,36 +21,33 @@ describe("processAllChannels", async () => {
         await recreateDatabase();
     });
 
-    it(
-        "should read all messages and reactions on load",
-        async () => {
-            const { bot, testerChannel, db } = await setUpIntegrationTest();
+    //prettier-ignore
+    it("should read all messages and reactions on load", async () => {
+        const { bot, testerChannel, db } = await setUpIntegrationTest();
 
-            //Go offline and send messages for bot to process later.
-            await bot.stop();
+        //Go offline and send messages for bot to process later.
+        await bot.stop();
 
-            const messages: Message[] = [];
-            for (let i = 1; i <= 3; i++) {
-                messages.push(await testerChannel.send(`Message to process later #${i}`));
-            }
+        const messages: Message[] = [];
+        for (let i = 1; i <= 3; i++) {
+            messages.push(await testerChannel.send(`Message to process later #${i}`));
+        }
 
-            let existingMessages = await db.selectFrom("messages").selectAll().execute();
-            for (const message of messages) {
-                expect(existingMessages.find(m => m.id === message.id)).toBeUndefined();
-            }
+        let existingMessages = await db.selectFrom("messages").selectAll().execute();
+        for (const message of messages) {
+            expect(existingMessages.find(m => m.id === message.id)).toBeUndefined();
+        }
 
-            await bot.start();
-            await sleep(delay * 4);
+        await bot.start();
+        await sleep(delay * 4);
 
-            existingMessages = await db.selectFrom("messages").selectAll().execute();
-            for (const message of messages) {
-                expect(existingMessages.find(m => m.id === message.id)).not.toBeUndefined();
-            }
+        existingMessages = await db.selectFrom("messages").selectAll().execute();
+        for (const message of messages) {
+            expect(existingMessages.find(m => m.id === message.id)).not.toBeUndefined();
+        }
 
-            for (const message of messages) {
-                await message.delete();
-            }
-        },
-        timeout
-    );
+        for (const message of messages) {
+            await message.delete();
+        }
+    }, timeout);
 });
