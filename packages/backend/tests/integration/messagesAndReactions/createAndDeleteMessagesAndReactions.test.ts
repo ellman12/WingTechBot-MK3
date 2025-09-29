@@ -1,5 +1,3 @@
-import { afterAll, beforeAll, beforeEach } from "vitest";
-
 import { getApp } from "@/main";
 
 import { createMessagesAndReactions, getTestingChannel, recreateDatabase, setUpIntegrationTest, sleep, verifyTesterReactions } from "../../utils/testUtils";
@@ -18,15 +16,8 @@ describe(
             await channel.send("Starting Create/Delete Messages/Reactions tests");
         });
 
-        afterAll(async () => {
-            const bot = getApp().discordBot;
-            const channel = await getTestingChannel(bot);
-            await channel.send("Finish Create/Delete Messages/Reactions tests");
-        });
-
         beforeEach(async () => {
             await sleep(delay);
-
             await recreateDatabase();
         });
 

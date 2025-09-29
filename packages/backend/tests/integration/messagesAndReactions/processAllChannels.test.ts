@@ -16,15 +16,8 @@ describe("processAllChannels", async () => {
         await channel.send("Starting processAllChannels tests");
     });
 
-    afterAll(async () => {
-        const bot = getApp().discordBot;
-        const channel = await getTestingChannel(bot);
-        await channel.send("Finish processAllChannels tests");
-    });
-
     beforeEach(async () => {
         await sleep(delay);
-
         await recreateDatabase();
     });
 
