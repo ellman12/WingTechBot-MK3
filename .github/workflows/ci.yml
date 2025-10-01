@@ -254,7 +254,7 @@ jobs:
               run: pnpm --filter ${{ matrix.package }} test${{ matrix.package == 'backend' && ':ci' || '' }}
               env:
                   DATABASE_URL: postgresql://wingtechbot:wingtechbot_password@localhost:5432/wingtechbot_test
-                  NODE_ENV: test
+                  NODE_ENV: CICD
                   CI: true
 
                   DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}

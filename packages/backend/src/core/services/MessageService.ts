@@ -19,6 +19,8 @@ export type MessageService = {
     readonly messageDeleted: (message: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>) => Promise<void>;
 
     readonly messageEdited: (oldMessage: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, newMessage: OmitPartialGroupDMChannel<Message<boolean>>) => Promise<void>;
+
+    readonly getAllDBMessages: (year?: number) => Promise<DBMessage[]>;
 };
 
 export type MessageServiceDeps = {
@@ -232,6 +234,16 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
         }
     }
 
+    async function getAllDBMessages(year?: number): Promise<DBMessage[]> {
+        try {
+            return await messageRepository.getAllMessages(year);
+        } catch (e: unknown) {
+            console.error("Error getting all DB messages", e);
+        }
+
+        return [];
+    }
+
     return {
         fetchAllMessages,
         processAllChannels,
@@ -239,5 +251,6 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
         messageCreated,
         messageDeleted,
         messageEdited,
+        getAllDBMessages,
     };
 };

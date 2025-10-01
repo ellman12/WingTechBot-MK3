@@ -65,19 +65,18 @@ export function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export function getTestingGuild(bot: DiscordBot): Guild {
-    const guilds = bot.client.guilds.cache;
-    return guilds.get(process.env.DISCORD_GUILD_ID!)!;
+export async function getTestingGuild(bot: DiscordBot): Promise<Guild> {
+    return bot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
 }
 
 export async function getTestingChannel(bot: DiscordBot): Promise<TextChannel> {
-    const guild = getTestingGuild(bot);
+    const guild = await getTestingGuild(bot);
     await guild.channels.fetch();
     return guild.channels.cache.get(process.env.DISCORD_BOT_CHANNEL_ID!) as TextChannel;
 }
 
-export function getTestingEmotes(bot: DiscordBot): TestReactionEmote[] {
-    const guild = getTestingGuild(bot);
+export async function getTestingEmotes(bot: DiscordBot): Promise<TestReactionEmote[]> {
+    const guild = await getTestingGuild(bot);
     const emotes: TestReactionEmote[] = [
         ["👀", null],
         ["🐈‍⬛", null],
@@ -134,7 +133,7 @@ export async function createTestReactions(db: Kysely<DB>, messageCount: number, 
 export async function setUpIntegrationTest() {
     const bot = getApp().discordBot;
     const channel = await getTestingChannel(bot);
-    const emotes = getTestingEmotes(bot);
+    const emotes = await getTestingEmotes(bot);
 
     const db = getKysely();
 

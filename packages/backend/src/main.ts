@@ -24,6 +24,7 @@ export type App = {
     readonly start: () => Promise<void>;
     readonly stop: () => Promise<void>;
     readonly discordBot: DiscordBot;
+    readonly isReady: () => boolean;
 };
 
 export const createApplication = async (): Promise<App> => {
@@ -63,6 +64,8 @@ export const createApplication = async (): Promise<App> => {
     const expressApp = createExpressApp({ db, config: serverConfig });
     const discordBot = createDiscordBot({ config, soundService, soundTagService, reactionService, messageService });
 
+    let isReadyState = false;
+
     const start = async (): Promise<void> => {
         try {
             console.log("🚀 Starting WingTechBot MK3...");
@@ -71,18 +74,8 @@ export const createApplication = async (): Promise<App> => {
             await discordBot.start();
             expressApp.start();
 
-            //If first boot, pull in all messages from all time. Otherwise, just get this year's.
-            //Prevented from running on CI/CD.
-            if (process.env.NODE_ENV !== "test") {
-                const guild = discordBot.client.guilds.cache.get(config.discord.serverId!)!;
-                const year = (await messageRepository.getAllMessages()).length === 0 ? undefined : new Date().getUTCFullYear();
-                await messageService.processAllChannels(guild, year);
-
-                //Remove any messages that were deleted while bot offline.
-                await messageService.removeDeletedMessages(guild, year);
-            }
-
             console.log("✅ Application started successfully!");
+            isReadyState = true;
         } catch (error) {
             console.error("❌ Failed to start application:", error);
             throw error;
@@ -90,6 +83,8 @@ export const createApplication = async (): Promise<App> => {
     };
 
     const stop = async (): Promise<void> => {
+        isReadyState = false;
+
         try {
             console.log("🛑 Shutting down application...");
 
@@ -104,10 +99,13 @@ export const createApplication = async (): Promise<App> => {
         }
     };
 
+    const isReady = (): boolean => isReadyState;
+
     return {
         start,
         stop,
         discordBot,
+        isReady,
     };
 };
 

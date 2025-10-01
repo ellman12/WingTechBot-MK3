@@ -15,18 +15,17 @@ describe("Create ReactionEmote, valid data", () => {
     });
 });
 
-describe("Create ReactionEmote, throws when emote exists", () => {
+describe("Create ReactionEmote, returns input when emote exists", () => {
     test.each(validEmotes)("%s %s", async (name, discordId) => {
         const db = await createTestDb();
         const emotes = createReactionEmoteRepository(db);
 
         const data = { name, discordId, karmaValue: 0 };
 
-        await emotes.create(data);
+        const created = await emotes.create(data);
         const found = await emotes.findByNameAndDiscordId(name, discordId);
         expect(found).not.toBeNull();
-
-        await expect(emotes.create(data)).rejects.toThrow();
+        expect(found).toEqual(created);
     });
 });
 
