@@ -2,6 +2,7 @@ import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceServic
 import { deployCommands, registerCommands } from "@application/commands/Commands";
 import { registerMessageEvents } from "@application/eventHandlers/Messages";
 import { registerReactionEvents } from "@application/eventHandlers/Reactions";
+import type { LlmChatService } from "@core/services/LlmChatService";
 import type { MessageService } from "@core/services/MessageService";
 import type { ReactionService } from "@core/services/ReactionService";
 import type { SoundService } from "@core/services/SoundService";
@@ -16,6 +17,7 @@ export type DiscordBotDeps = {
     readonly soundTagService: SoundTagService;
     readonly reactionService: ReactionService;
     readonly messageService: MessageService;
+    readonly llmChatService: LlmChatService;
 };
 
 export type DiscordBot = {

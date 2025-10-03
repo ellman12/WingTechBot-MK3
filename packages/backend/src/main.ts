@@ -5,6 +5,7 @@ import { createReactionRepository } from "@adapters/repositories/ReactionReposit
 import { createSoundRepository } from "@adapters/repositories/SoundRepository";
 import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository";
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService";
+import { createLlmChatService } from "@adapters/services/LlmChatService";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService";
 import { createMessageService } from "@core/services/MessageService";
@@ -59,9 +60,10 @@ export const createApplication = async (): Promise<App> => {
     const soundTagService = createSoundTagService({ soundRepository, soundTagRepository });
     const reactionService = createReactionService({ reactionRepository, emoteRepository });
     const messageService = createMessageService({ messageRepository, reactionRepository, emoteRepository });
+    const llmChatService = createLlmChatService();
 
     const expressApp = createExpressApp({ db, config: serverConfig });
-    const discordBot = createDiscordBot({ config, soundService, soundTagService, reactionService, messageService });
+    const discordBot = createDiscordBot({ config, soundService, soundTagService, reactionService, messageService, llmChatService });
 
     const start = async (): Promise<void> => {
         try {
