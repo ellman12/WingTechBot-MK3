@@ -1,14 +1,14 @@
-import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService";
-import { deployCommands, registerCommands } from "@application/commands/Commands";
-import { registerMessageEvents } from "@application/eventHandlers/Messages";
-import { registerReactionEvents } from "@application/eventHandlers/Reactions";
-import type { MessageService } from "@core/services/MessageService";
-import type { ReactionService } from "@core/services/ReactionService";
-import type { SoundService } from "@core/services/SoundService";
-import type { SoundTagService } from "@core/services/SoundTagService";
+import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
+import { deployCommands, registerCommands } from "@application/commands/Commands.js";
+import { registerMessageEvents } from "@application/eventHandlers/Messages.js";
+import { registerReactionEvents } from "@application/eventHandlers/Reactions.js";
+import type { MessageService } from "@core/services/MessageService.js";
+import type { ReactionService } from "@core/services/ReactionService.js";
+import type { SoundService } from "@core/services/SoundService.js";
+import type { SoundTagService } from "@core/services/SoundTagService.js";
 import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, RESTEvents } from "discord.js";
 
-import type { Config } from "../config/Config";
+import type { Config } from "../config/Config.js";
 
 export type DiscordBotDeps = {
     readonly config: Config;

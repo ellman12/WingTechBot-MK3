@@ -1,9 +1,10 @@
-import type { DB } from "@db/types";
+import type { DB } from "@db/types.js";
 import { promises as fs } from "fs";
 import { Kysely, Migrator, PostgresDialect } from "kysely";
 import type { Migration } from "kysely";
 import { join } from "path";
 import { Pool } from "pg";
+import { pathToFileURL } from "url";
 
 export const getKyselyForMigrations = (): Kysely<DB> => {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -13,15 +14,26 @@ export const getKyselyForMigrations = (): Kysely<DB> => {
 
 const migrationProvider = {
     async getMigrations() {
-        const migrationsPath = join(".", "database", "migrations");
+        // In production (compiled), look in dist/database/migrations
+        // In development (tsx), look in database/migrations
+        const isDist = import.meta.url.includes("/dist/");
+        const migrationsPath = isDist ? join(".", "dist", "database", "migrations") : join(".", "database", "migrations");
         const files = await fs.readdir(migrationsPath);
 
         const migrations: Record<string, Migration> = {};
 
         for (const file of files) {
-            if (file.endsWith(".ts") && file !== "index.ts") {
-                const name = file.replace(".ts", "");
-                const migration = await import(join(migrationsPath, file));
+            // Skip declaration files and index files (but not files with "index" in their name)
+            if (file.endsWith(".d.ts") || file === "index.ts" || file === "index.js") {
+                continue;
+            }
+
+            const fileExt = file.split(".").pop();
+            if (fileExt === "ts" || fileExt === "js") {
+                const name = file.replace(`.${fileExt}`, "");
+                // Use pathToFileURL to create proper file:// URL for dynamic import
+                const filePath = pathToFileURL(join(migrationsPath, file)).href;
+                const migration = await import(filePath);
                 migrations[name] = { up: migration.up, down: migration.down };
             }
         }

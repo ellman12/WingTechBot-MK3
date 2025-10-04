@@ -1,7 +1,7 @@
-import { transformReaction } from "@adapters/repositories/ReactionRepository";
-import type { CreateMessageData, DeleteMessageData, EditMessageData, Message } from "@core/entities/Message";
-import type { MessageRepository } from "@core/repositories/MessageRepository";
-import type { DB, Messages, Reactions } from "@db/types";
+import { transformReaction } from "@adapters/repositories/ReactionRepository.js";
+import type { CreateMessageData, DeleteMessageData, EditMessageData, Message } from "@core/entities/Message.js";
+import type { MessageRepository } from "@core/repositories/MessageRepository.js";
+import type { DB, Messages, Reactions } from "@db/types.js";
 import { type Kysely, type Selectable, sql } from "kysely";
 
 const transformMessage = (dbMessage: Selectable<Messages>, reactions?: Reactions[]): Message => {

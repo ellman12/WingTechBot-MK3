@@ -1,9 +1,9 @@
-import { transformSoundTag } from "@adapters/repositories/SoundTagRepository";
-import type { SoundRepository } from "@core/repositories/SoundRepository";
-import type { DB, Sounds, Soundtags } from "@db/types";
+import { transformSoundTag } from "@adapters/repositories/SoundTagRepository.js";
+import type { SoundRepository } from "@core/repositories/SoundRepository.js";
+import type { DB, Sounds, Soundtags } from "@db/types.js";
 import { type Kysely, type Selectable, sql } from "kysely";
 
-import type { Sound } from "@/core/entities/Sound";
+import type { Sound } from "@/core/entities/Sound.js";
 
 export const createSoundRepository = (db: Kysely<DB>): SoundRepository => {
     const transformSound = (sound: Selectable<Sounds>, soundtags?: Selectable<Soundtags>[]): Sound => {

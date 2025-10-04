@@ -1,7 +1,7 @@
-import type { SoundTagService } from "@core/services/SoundTagService";
+import type { SoundTagService } from "@core/services/SoundTagService.js";
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
-import type { Command } from "./Commands";
+import type { Command } from "./Commands.js";
 
 export type SoundTagCommandDeps = {
     readonly soundTagService: SoundTagService;

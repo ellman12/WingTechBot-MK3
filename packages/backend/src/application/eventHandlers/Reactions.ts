@@ -1,5 +1,5 @@
-import type { ReactionService } from "@core/services/ReactionService";
-import type { DiscordBot } from "@infrastructure/discord/DiscordBot";
+import type { ReactionService } from "@core/services/ReactionService.js";
+import type { DiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { Events } from "discord.js";
 
 export const registerReactionEvents = (reactionService: ReactionService, registerEventHandler: DiscordBot["registerEventHandler"]): void => {

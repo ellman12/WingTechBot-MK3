@@ -1,6 +1,6 @@
 import type { CreateUserData, UpdateUserData, User } from "@core/entities/User.js";
 import type { UserRepository } from "@core/repositories/UserRepository.js";
-import type { DB, Users } from "@db/types";
+import type { DB, Users } from "@db/types.js";
 import type { Kysely, Selectable } from "kysely";
 
 // Transform database user to domain user

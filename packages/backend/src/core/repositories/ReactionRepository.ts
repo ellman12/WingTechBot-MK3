@@ -1,4 +1,4 @@
-import type { CreateReactionData, DeleteReactionData, FindReactionData, Reaction } from "@core/entities/Reaction";
+import type { CreateReactionData, DeleteReactionData, FindReactionData, Reaction } from "@core/entities/Reaction.js";
 
 export type ReactionRepository = {
     find(data: FindReactionData): Promise<Reaction | null>;

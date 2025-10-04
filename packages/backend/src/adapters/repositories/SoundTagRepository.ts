@@ -1,6 +1,6 @@
-import type { SoundTag } from "@core/entities/SoundTag";
-import type { SoundTagRepository } from "@core/repositories/SoundTagRepository";
-import type { DB, Soundtags } from "@db/types";
+import type { SoundTag } from "@core/entities/SoundTag.js";
+import type { SoundTagRepository } from "@core/repositories/SoundTagRepository.js";
+import type { DB, Soundtags } from "@db/types.js";
 import type { Kysely, Selectable } from "kysely";
 
 export const transformSoundTag = (dbSoundTag: Selectable<Soundtags>): SoundTag => {

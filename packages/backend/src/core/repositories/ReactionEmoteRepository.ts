@@ -1,4 +1,4 @@
-import type { CreateReactionEmoteData, ReactionEmote, UpdateReactionEmoteData } from "@core/entities/ReactionEmote";
+import type { CreateReactionEmoteData, ReactionEmote, UpdateReactionEmoteData } from "@core/entities/ReactionEmote.js";
 
 export type ReactionEmoteRepository = {
     findById(id: number): Promise<ReactionEmote | null>;

@@ -1,4 +1,4 @@
-import type { DB } from "@db/types";
+import type { DB } from "@db/types.js";
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 
