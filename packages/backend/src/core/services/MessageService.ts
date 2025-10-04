@@ -1,9 +1,9 @@
-import type { CreateMessageData, Message as DBMessage } from "@core/entities/Message";
-import type { MessageRepository } from "@core/repositories/MessageRepository";
-import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository";
-import type { ReactionRepository } from "@core/repositories/ReactionRepository";
+import type { CreateMessageData, Message as DBMessage } from "@core/entities/Message.js";
+import type { MessageRepository } from "@core/repositories/MessageRepository.js";
+import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
+import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import { ChannelType, Collection, DiscordAPIError, type FetchMessagesOptions, type Guild, type Message, type OmitPartialGroupDMChannel, type PartialMessage, type TextChannel } from "discord.js";
-import equal from "fast-deep-equal/es6";
+import equal from "fast-deep-equal/es6/index.js";
 
 export type MessageService = {
     readonly fetchAllMessages: (channel: TextChannel, endYear?: number) => Promise<Message[]>;

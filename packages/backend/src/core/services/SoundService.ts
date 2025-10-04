@@ -1,10 +1,10 @@
-import type { SoundRepository } from "@core/repositories/SoundRepository";
-import { createPreBufferedStream, readStreamToBytes } from "@core/utils/streamUtils";
+import type { SoundRepository } from "@core/repositories/SoundRepository.js";
+import { createPreBufferedStream, readStreamToBytes } from "@core/utils/streamUtils.js";
 import { Readable } from "stream";
 
-import type { AudioFetcherService } from "./AudioFetcherService";
-import type { AudioProcessingService } from "./AudioProcessingService";
-import type { FileManager } from "./FileManager";
+import type { AudioFetcherService } from "./AudioFetcherService.js";
+import type { AudioProcessingService } from "./AudioProcessingService.js";
+import type { FileManager } from "./FileManager.js";
 
 export type SoundService = {
     readonly addSound: (name: string, source: string) => Promise<void>;

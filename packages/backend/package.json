@@ -7,8 +7,8 @@
     "scripts": {
         "predev": "docker compose -f docker-compose.db.yaml up -d",
         "dev": "tsx watch src/main.ts",
-        "build": "tsc",
-        "build:with-docs": "tsc && pnpm run docs:generate",
+        "build": "tsc && tsc-alias -p tsconfig.json --resolve-full-extension .js",
+        "build:with-docs": "tsc && tsc-alias -p tsconfig.json --resolve-full-extension .js && pnpm run docs:generate",
         "start": "node dist/src/main.js",
         "test": "vitest",
         "test:ui": "vitest --ui",
@@ -22,8 +22,6 @@
         "db:migrate": "tsx -r @dotenvx/dotenvx/config scripts/run-migrations.ts",
         "db:migrate:rollback": "tsx -r @dotenvx/dotenvx/config scripts/rollback-migrations.ts",
         "discord:deploy-commands": "tsx -r @dotenvx/dotenvx/config scripts/deploy-commands.ts",
-        "docker:build": "docker build -t wingtechbot-mk3 .",
-        "docker:run": "docker run -p 3000:3000 wingtechbot-mk3",
         "docker:up": "dotenvx run -- docker compose -f docker-compose.dev.yaml up --build",
         "docker:up:detached": "docker compose -f docker-compose.dev.yaml up --build -d",
         "docker:down": "docker compose -f docker-compose.dev.yaml down",
@@ -90,6 +88,7 @@
         "nodemon": "^3.1.10",
         "prettier": "^3.6.2",
         "ts-node": "^10.9.2",
+        "tsc-alias": "^1.8.10",
         "tsx": "^4.20.3",
         "typescript": "^5.8.3",
         "vitest": "^3.2.4"

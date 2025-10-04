@@ -1,4 +1,4 @@
-import type { SoundTag } from "@core/entities/SoundTag";
+import type { SoundTag } from "@core/entities/SoundTag.js";
 
 export type SoundTagRepository = {
     readonly create: (name: string) => Promise<SoundTag>;

@@ -1,4 +1,4 @@
-import type { CreateMessageData, DeleteMessageData, EditMessageData, Message } from "@core/entities/Message";
+import type { CreateMessageData, DeleteMessageData, EditMessageData, Message } from "@core/entities/Message.js";
 
 export type MessageRepository = {
     findById(id: string): Promise<Message | null>;

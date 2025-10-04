@@ -1,4 +1,4 @@
-import type { FileManager } from "@core/services/FileManager";
+import type { FileManager } from "@core/services/FileManager.js";
 import fs from "fs";
 import path from "path";
 import type { Readable } from "stream";

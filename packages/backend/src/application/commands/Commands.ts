@@ -1,13 +1,13 @@
-import type { SoundService } from "@core/services/SoundService";
-import type { SoundTagService } from "@core/services/SoundTagService";
-import type { VoiceService } from "@core/services/VoiceService";
+import type { SoundService } from "@core/services/SoundService.js";
+import type { SoundTagService } from "@core/services/SoundTagService.js";
+import type { VoiceService } from "@core/services/VoiceService.js";
 import { ChatInputCommandInteraction, Events, MessageFlags, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
 
-import type { DiscordBot } from "@/infrastructure/discord/DiscordBot";
+import type { DiscordBot } from "@/infrastructure/discord/DiscordBot.js";
 
-import { createAudioCommands } from "./AudioCommands";
-import { createSoundTagCommands } from "./SoundTagCommands";
-import { createVoiceCommands } from "./VoiceCommands";
+import { createAudioCommands } from "./AudioCommands.js";
+import { createSoundTagCommands } from "./SoundTagCommands.js";
+import { createVoiceCommands } from "./VoiceCommands.js";
 
 export type Command = {
     readonly data: SlashCommandOptionsOnlyBuilder;

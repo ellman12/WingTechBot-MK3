@@ -1,7 +1,7 @@
-import type { SoundRepository } from "@core/repositories/SoundRepository";
+import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import { Readable } from "stream";
 
-import type { FileManager } from "./FileManager";
+import type { FileManager } from "./FileManager.js";
 
 export type audioSource = "soundboard" | "youtube" | "url";
 

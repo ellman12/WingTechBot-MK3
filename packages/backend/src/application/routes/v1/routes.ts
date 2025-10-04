@@ -1,5 +1,5 @@
-import { registerVersion } from "@infrastructure/http/api/RouteRegistry";
-import type { ApiVersionConfig, RouteGroup } from "@infrastructure/http/api/types";
+import { registerVersion } from "@infrastructure/http/api/RouteRegistry.js";
+import type { ApiVersionConfig, RouteGroup } from "@infrastructure/http/api/types.js";
 
 import { createHealthRoutes } from "./health.js";
 

@@ -1,4 +1,4 @@
-import type { DB } from "@db/types";
+import type { DB } from "@db/types.js";
 import type { Application } from "express";
 import type { Kysely } from "kysely";
 

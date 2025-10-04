@@ -1,4 +1,4 @@
-import type { SoundService } from "@core/services/SoundService";
+import type { SoundService } from "@core/services/SoundService.js";
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
 import type { Command } from "./Commands.js";

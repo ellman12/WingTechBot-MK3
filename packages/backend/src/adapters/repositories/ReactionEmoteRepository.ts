@@ -1,7 +1,7 @@
-import type { CreateReactionEmoteData, ReactionEmote, UpdateReactionEmoteData } from "@core/entities/ReactionEmote";
-import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository";
-import type { DB } from "@db/types";
-import type { ReactionEmotes } from "@db/types";
+import type { CreateReactionEmoteData, ReactionEmote, UpdateReactionEmoteData } from "@core/entities/ReactionEmote.js";
+import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
+import type { DB } from "@db/types.js";
+import type { ReactionEmotes } from "@db/types.js";
 import type { Kysely, Selectable, Updateable } from "kysely";
 
 //Transform database reaction emote to domain reaction emote

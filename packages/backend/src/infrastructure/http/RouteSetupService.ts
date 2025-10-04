@@ -1,5 +1,5 @@
 import { initializeV1Routes } from "@application/routes/v1/routes.js";
-import type { DB } from "@db/types";
+import type { DB } from "@db/types.js";
 import { getVersionRoutes } from "@infrastructure/http/api/RouteRegistry.js";
 import type { Application } from "express";
 import { Router } from "express";

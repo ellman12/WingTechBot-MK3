@@ -1,4 +1,4 @@
-import type { Reaction } from "@core/entities/Reaction";
+import type { Reaction } from "@core/entities/Reaction.js";
 
 export type Message = {
     readonly id: string;

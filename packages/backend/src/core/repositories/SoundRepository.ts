@@ -1,4 +1,4 @@
-import type { Sound } from "@core/entities/Sound";
+import type { Sound } from "@core/entities/Sound.js";
 
 export type SoundRepository = {
     readonly addSound: (audio: Omit<Sound, "id">) => Promise<Sound>;

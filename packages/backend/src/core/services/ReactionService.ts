@@ -1,5 +1,5 @@
-import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository";
-import type { ReactionRepository } from "@core/repositories/ReactionRepository";
+import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
+import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { Message, MessageReaction, OmitPartialGroupDMChannel, PartialMessage, PartialMessageReaction, PartialUser, User } from "discord.js";
 
 export type ReactionService = {

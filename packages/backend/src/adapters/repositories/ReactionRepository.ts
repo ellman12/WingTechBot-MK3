@@ -1,7 +1,7 @@
-import type { CreateReactionData, DeleteReactionData, FindReactionData, Reaction } from "@core/entities/Reaction";
-import type { ReactionRepository } from "@core/repositories/ReactionRepository";
-import type { DB } from "@db/types";
-import type { Reactions } from "@db/types";
+import type { CreateReactionData, DeleteReactionData, FindReactionData, Reaction } from "@core/entities/Reaction.js";
+import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
+import type { DB } from "@db/types.js";
+import type { Reactions } from "@db/types.js";
 import type { Kysely, Selectable } from "kysely";
 
 //Transform database reaction emote to domain reaction emote

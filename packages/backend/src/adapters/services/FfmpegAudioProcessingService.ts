@@ -1,5 +1,5 @@
-import type { AudioProcessingService } from "@core/services/AudioProcessingService";
-import type { FfmpegService } from "@infrastructure/ffmpeg/FfmpegService";
+import type { AudioProcessingService } from "@core/services/AudioProcessingService.js";
+import type { FfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { PassThrough, Readable } from "stream";
 
 export type FfmpegAudioServiceDeps = {

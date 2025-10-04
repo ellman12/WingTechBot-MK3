@@ -1,6 +1,6 @@
-import type { SoundTag } from "@core/entities/SoundTag";
-import type { SoundRepository } from "@core/repositories/SoundRepository";
-import type { SoundTagRepository } from "@core/repositories/SoundTagRepository";
+import type { SoundTag } from "@core/entities/SoundTag.js";
+import type { SoundRepository } from "@core/repositories/SoundRepository.js";
+import type { SoundTagRepository } from "@core/repositories/SoundTagRepository.js";
 
 export type SoundTagService = {
     readonly addTagToSound: (soundName: string, tagName: string) => Promise<boolean>;

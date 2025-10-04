@@ -1,4 +1,4 @@
-import type { DB } from "@db/types";
+import type { DB } from "@db/types.js";
 import { setupSwaggerUI } from "@infrastructure/http/OpenApiGenerator.js";
 import { initializeApiRouter, setupRoutes as setupApiRoutes } from "@infrastructure/http/api/ApiRouter.js";
 import cors from "cors";

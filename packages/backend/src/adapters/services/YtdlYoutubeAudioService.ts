@@ -1,5 +1,5 @@
-import type { YoutubeService } from "@core/services/AudioFetcherService";
-import { createYtDlpService } from "@infrastructure/yt-dlp/YtDlpService";
+import type { YoutubeService } from "@core/services/AudioFetcherService.js";
+import { createYtDlpService } from "@infrastructure/yt-dlp/YtDlpService.js";
 import type { Readable } from "stream";
 
 export const createYtdlYoutubeService = (): YoutubeService => {

@@ -1,24 +1,24 @@
 #!/usr/bin/env node
-import { createMessageRepository } from "@adapters/repositories/MessageRepository";
-import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository";
-import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
-import { createSoundRepository } from "@adapters/repositories/SoundRepository";
-import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository";
-import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService";
-import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService";
-import { createAudioFetcherService } from "@core/services/AudioFetcherService";
-import { createMessageService } from "@core/services/MessageService";
-import { createReactionService } from "@core/services/ReactionService";
-import { createSoundService } from "@core/services/SoundService";
-import { createSoundTagService } from "@core/services/SoundTagService";
-import { runMigrations } from "@db/migrations";
+import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
+import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
+import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
+import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
+import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
+import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
+import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
+import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
+import { createMessageService } from "@core/services/MessageService.js";
+import { createReactionService } from "@core/services/ReactionService.js";
+import { createSoundService } from "@core/services/SoundService.js";
+import { createSoundTagService } from "@core/services/SoundTagService.js";
+import { runMigrations } from "@db/migrations.js";
 import "@dotenvx/dotenvx/config";
 import { getConfig } from "@infrastructure/config/Config.js";
 import { connect, disconnect, getKysely } from "@infrastructure/database/DatabaseConnection.js";
 import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/DiscordBot.js";
-import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService";
-import { createFileManager } from "@infrastructure/filestore/FileManager";
-import { type ServerConfig, createExpressApp } from "@infrastructure/http/ExpressApp";
+import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
+import { createFileManager } from "@infrastructure/filestore/FileManager.js";
+import { type ServerConfig, createExpressApp } from "@infrastructure/http/ExpressApp.js";
 
 export type App = {
     readonly start: () => Promise<void>;
