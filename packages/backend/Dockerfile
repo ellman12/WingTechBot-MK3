@@ -53,6 +53,9 @@ FROM base AS build
 # Copy source code
 COPY . .
 
+# Use fresh install to avoid "remove modules" error
+RUN rm -rf node_modules && pnpm install --frozen-lockfile
+
 # Build the application
 RUN pnpm --filter backend run build
 
