@@ -51,7 +51,8 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
 
         const existing = await findByNameAndDiscordId(parsedName, discordId);
         if (existing !== null) {
-            throw new Error("Reaction emote exists");
+            console.warn("Reaction emote exists");
+            return existing;
         }
 
         const [emote] = await db.insertInto("reaction_emotes").values({ name: parsedName, discord_id: discordId, karma_value: karmaValue }).returningAll().execute();
