@@ -5,7 +5,7 @@ import type { ReactionRepository } from "@core/repositories/ReactionRepository.j
 import { ChannelType, Collection, DiscordAPIError, type FetchMessagesOptions, type Guild, type Message, type OmitPartialGroupDMChannel, type PartialMessage, type TextChannel } from "discord.js";
 import equal from "fast-deep-equal/es6/index.js";
 
-export type MessageService = {
+export type MessageArchiveService = {
     readonly fetchAllMessages: (channel: TextChannel, endYear?: number) => Promise<Message[]>;
 
     //Walk backwards through each channel, and store/update each message until told to stop or hit the last message.
@@ -23,7 +23,7 @@ export type MessageService = {
     readonly getAllDBMessages: (year?: number) => Promise<DBMessage[]>;
 };
 
-export type MessageServiceDeps = {
+export type MessageArchiveServiceDeps = {
     messageRepository: MessageRepository;
     reactionRepository: ReactionRepository;
     emoteRepository: ReactionEmoteRepository;
@@ -107,8 +107,8 @@ function validMessage(message: Message): boolean {
     return message.interactionMetadata === null;
 }
 
-export const createMessageService = ({ messageRepository, reactionRepository, emoteRepository }: MessageServiceDeps): MessageService => {
-    console.log("[MessageService] Creating message service");
+export const createMessageArchiveService = ({ messageRepository, reactionRepository, emoteRepository }: MessageArchiveServiceDeps): MessageArchiveService => {
+    console.log("[MessageArchiveService] Creating message archive service");
 
     async function fetchAllMessages(channel: TextChannel, endYear?: number) {
         const allMessages: Message[] = [];

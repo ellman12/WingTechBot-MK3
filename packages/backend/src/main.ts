@@ -7,7 +7,7 @@ import { createSoundTagRepository } from "@adapters/repositories/SoundTagReposit
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
-import { createMessageService } from "@core/services/MessageService.js";
+import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
 import { createReactionService } from "@core/services/ReactionService.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { createSoundTagService } from "@core/services/SoundTagService.js";
@@ -59,10 +59,10 @@ export const createApplication = async (): Promise<App> => {
     });
     const soundTagService = createSoundTagService({ soundRepository, soundTagRepository });
     const reactionService = createReactionService({ reactionRepository, emoteRepository });
-    const messageService = createMessageService({ messageRepository, reactionRepository, emoteRepository });
+    const messageArchiveService = createMessageArchiveService({ messageRepository, reactionRepository, emoteRepository });
 
     const expressApp = createExpressApp({ db, config: serverConfig });
-    const discordBot = createDiscordBot({ config, soundService, soundTagService, reactionService, messageService });
+    const discordBot = createDiscordBot({ config, soundService, soundTagService, reactionService, messageArchiveService });
 
     let isReadyState = false;
 

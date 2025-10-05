@@ -1,8 +1,8 @@
 import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
-import { registerMessageEvents } from "@application/eventHandlers/Messages.js";
+import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive";
 import { registerReactionEvents } from "@application/eventHandlers/Reactions.js";
-import type { MessageService } from "@core/services/MessageService.js";
+import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { ReactionService } from "@core/services/ReactionService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
@@ -15,7 +15,7 @@ export type DiscordBotDeps = {
     readonly soundService: SoundService;
     readonly soundTagService: SoundTagService;
     readonly reactionService: ReactionService;
-    readonly messageService: MessageService;
+    readonly messageArchiveService: MessageArchiveService;
 };
 
 export type DiscordBot = {
@@ -26,7 +26,7 @@ export type DiscordBot = {
     readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
 };
 
-export const createDiscordBot = ({ config, soundService, soundTagService, reactionService, messageService }: DiscordBotDeps): DiscordBot => {
+export const createDiscordBot = ({ config, soundService, soundTagService, reactionService, messageArchiveService }: DiscordBotDeps): DiscordBot => {
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
@@ -73,7 +73,7 @@ export const createDiscordBot = ({ config, soundService, soundTagService, reacti
         registerCommands(soundService, soundTagService, voiceService, registerEventHandler);
 
         registerReactionEvents(reactionService, registerEventHandler);
-        registerMessageEvents(messageService, registerEventHandler);
+        registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
     };
 
     const start = async (): Promise<void> => {
@@ -84,11 +84,11 @@ export const createDiscordBot = ({ config, soundService, soundTagService, reacti
 
             //If first boot, pull in all messages from all time. Otherwise, just get this year's.
             const guild = client.guilds.cache.get(config.discord.serverId!)!;
-            const year = (await messageService.getAllDBMessages()).length === 0 ? undefined : new Date().getUTCFullYear();
-            await messageService.processAllChannels(guild, year);
+            const year = (await messageArchiveService.getAllDBMessages()).length === 0 ? undefined : new Date().getUTCFullYear();
+            await messageArchiveService.processAllChannels(guild, year);
 
             //Remove any messages that were deleted while bot offline.
-            await messageService.removeDeletedMessages(guild, year);
+            await messageArchiveService.removeDeletedMessages(guild, year);
         } catch (error) {
             console.error("❌ Failed to start Discord bot:", error);
             throw error;
