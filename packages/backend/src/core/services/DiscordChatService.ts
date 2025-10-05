@@ -51,6 +51,8 @@ export const createDiscordChatService = ({ geminiLlmService }: DiscordChatServic
         }
 
         const channel = (await message.channel.fetch()) as TextChannel;
+        await channel.sendTyping();
+
         const content = await replaceUserAndRoleMentions(message);
         const response = await geminiLlmService.generateMessage(content);
         await channel.send(response);
