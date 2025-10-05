@@ -5,8 +5,10 @@ import { createReactionRepository } from "@adapters/repositories/ReactionReposit
 import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
 import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
+import { createGeminiLlmService } from "@adapters/services/GeminiLlmService";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
+import { createDiscordChatService } from "@core/services/DiscordChatService";
 import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
 import { createReactionService } from "@core/services/ReactionService.js";
 import { createSoundService } from "@core/services/SoundService.js";
@@ -59,10 +61,23 @@ export const createApplication = async (): Promise<App> => {
     });
     const soundTagService = createSoundTagService({ soundRepository, soundTagRepository });
     const reactionService = createReactionService({ reactionRepository, emoteRepository });
-    const messageArchiveService = createMessageArchiveService({ messageRepository, reactionRepository, emoteRepository });
+    const messageArchiveService = createMessageArchiveService({
+        messageRepository,
+        reactionRepository,
+        emoteRepository,
+    });
+    const geminiLlmService = createGeminiLlmService();
+    const discordChatService = createDiscordChatService({ geminiLlmService });
 
     const expressApp = createExpressApp({ db, config: serverConfig });
-    const discordBot = createDiscordBot({ config, soundService, soundTagService, reactionService, messageArchiveService });
+    const discordBot = createDiscordBot({
+        config,
+        soundService,
+        soundTagService,
+        reactionService,
+        messageArchiveService,
+        discordChatService,
+    });
 
     let isReadyState = false;
 

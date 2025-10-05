@@ -1,7 +1,9 @@
 import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
+import { registerDiscordChatEventHandlers } from "@application/eventHandlers/DiscordChat";
 import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive";
 import { registerReactionEvents } from "@application/eventHandlers/Reactions.js";
+import type { DiscordChatService } from "@core/services/DiscordChatService";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { ReactionService } from "@core/services/ReactionService.js";
 import type { SoundService } from "@core/services/SoundService.js";
@@ -16,6 +18,7 @@ export type DiscordBotDeps = {
     readonly soundTagService: SoundTagService;
     readonly reactionService: ReactionService;
     readonly messageArchiveService: MessageArchiveService;
+    readonly discordChatService: DiscordChatService;
 };
 
 export type DiscordBot = {
@@ -26,7 +29,7 @@ export type DiscordBot = {
     readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
 };
 
-export const createDiscordBot = ({ config, soundService, soundTagService, reactionService, messageArchiveService }: DiscordBotDeps): DiscordBot => {
+export const createDiscordBot = ({ config, soundService, soundTagService, reactionService, messageArchiveService, discordChatService }: DiscordBotDeps): DiscordBot => {
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
@@ -74,6 +77,7 @@ export const createDiscordBot = ({ config, soundService, soundTagService, reacti
 
         registerReactionEvents(reactionService, registerEventHandler);
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
+        registerDiscordChatEventHandlers(discordChatService, registerEventHandler);
     };
 
     const start = async (): Promise<void> => {
