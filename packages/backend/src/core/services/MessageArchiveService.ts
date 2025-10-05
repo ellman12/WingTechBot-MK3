@@ -104,7 +104,7 @@ async function getMessage(guild: Guild, channelId: string, messageId: string): P
 }
 
 function validMessage(message: Message): boolean {
-    return message.interactionMetadata === null;
+    return message.interactionMetadata === null && message.channel.type !== ChannelType.DM;
 }
 
 export const createMessageArchiveService = ({ messageRepository, reactionRepository, emoteRepository }: MessageArchiveServiceDeps): MessageArchiveService => {
