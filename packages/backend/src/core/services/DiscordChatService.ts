@@ -52,16 +52,46 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
             return;
         }
 
-        const limit = 40;
+        const limit = 10;
         const channel = (await message.channel.fetch()) as TextChannel;
         await channel.sendTyping();
 
         //Get previous messages, ensuring we don't include the message that pinged the bot.
         const previousMessages = (await messageArchiveService.getNewestDBMessages(channel.id, limit)).filter(m => m.id !== message.id);
+        await channel.sendTyping();
 
         const content = await replaceUserAndRoleMentions(message);
+        await channel.sendTyping();
         const response = await geminiLlmService.generateMessage(content, previousMessages);
-        await channel.send(response);
+
+        //Messages are capped at 2000 characters
+        const messages = splitMessage(response, 2000);
+        for (const m of messages) {
+            await channel.send(m);
+        }
+    }
+
+    //Helper function to split text intelligently
+    function splitMessage(text: string, maxLen: number): string[] {
+        if (text.length <= maxLen) return [text];
+
+        const parts: string[] = [];
+        let remaining = text;
+
+        while (remaining.length > maxLen) {
+            //Try to break at a sentence boundary or space near the limit
+            let splitIndex = remaining.lastIndexOf("\n", maxLen);
+            if (splitIndex === -1) splitIndex = remaining.lastIndexOf(". ", maxLen);
+            if (splitIndex === -1) splitIndex = remaining.lastIndexOf(" ", maxLen);
+            if (splitIndex === -1) splitIndex = maxLen; //Fallback hard split
+
+            const chunk = remaining.slice(0, splitIndex + 1).trim();
+            parts.push(chunk);
+            remaining = remaining.slice(splitIndex + 1).trim();
+        }
+
+        if (remaining.length > 0) parts.push(remaining);
+        return parts;
     }
 
     return {
