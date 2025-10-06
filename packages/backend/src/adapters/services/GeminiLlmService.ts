@@ -1,10 +1,11 @@
-import { type ContentListUnion, type GenerateContentConfig, GoogleGenAI } from "@google/genai";
+import type { Message } from "@core/entities/Message";
+import { type GenerateContentConfig, GoogleGenAI } from "@google/genai";
 
 //gemini-2.5-pro is another option but is much slower.
 const model = "gemini-2.5-flash";
 
 export type GeminiLlmService = {
-    readonly generateMessage: (input: string) => Promise<string>;
+    readonly generateMessage: (input: string, previousMessages?: Message[]) => Promise<string>;
 };
 
 export const createGeminiLlmService = (): GeminiLlmService => {
@@ -21,22 +22,16 @@ export const createGeminiLlmService = (): GeminiLlmService => {
     const ai = new GoogleGenAI({ apiKey });
     const config: GenerateContentConfig = { systemInstruction };
 
-    //Generates a message without any prior history.
-    async function generateMessage(input: string) {
-        const contents: ContentListUnion = [
-            {
-                role: "user",
-                parts: [{ text: input }],
-            },
-        ];
+    //Generates a message with optional previous messages.
+    async function generateMessage(input: string, messages: Message[] = []) {
+        const history = messages.map(m => ({
+            role: m.authorId === process.env.DISCORD_CLIENT_ID ? "model" : "user",
+            parts: [{ text: m.content }],
+        }));
 
-        const response = await ai.models.generateContentStream({ model, config, contents });
-
-        const chunks = [];
-        for await (const chunk of response) {
-            if (chunk.text) chunks.push(chunk.text);
-        }
-        return chunks.join("");
+        const chat = ai.chats.create({ model, history, config });
+        const response = await chat.sendMessage({ message: input });
+        return response.text ?? "";
     }
 
     return {

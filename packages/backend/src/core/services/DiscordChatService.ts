@@ -1,4 +1,5 @@
 import type { GeminiLlmService } from "@adapters/services/GeminiLlmService";
+import type { MessageArchiveService } from "@core/services/MessageArchiveService";
 import type { Message, TextChannel } from "discord.js";
 
 export type DiscordChatService = {
@@ -8,6 +9,7 @@ export type DiscordChatService = {
 
 export type DiscordChatServiceDeps = {
     readonly geminiLlmService: GeminiLlmService;
+    readonly messageArchiveService: MessageArchiveService;
 };
 
 function hasBeenPinged(latestMessage: Message): boolean {
@@ -25,7 +27,7 @@ function replaceMention(input: string, id: string, newText: string = ""): string
     return input.replace(regex, newText);
 }
 
-export const createDiscordChatService = ({ geminiLlmService }: DiscordChatServiceDeps): DiscordChatService => {
+export const createDiscordChatService = ({ geminiLlmService, messageArchiveService }: DiscordChatServiceDeps): DiscordChatService => {
     //Removes the bot's mention from the message content, and replace all user and role pings with their names.
     async function replaceUserAndRoleMentions(message: Message) {
         const channel = (await message.channel.fetch()) as TextChannel;
@@ -50,11 +52,15 @@ export const createDiscordChatService = ({ geminiLlmService }: DiscordChatServic
             return;
         }
 
+        const limit = 40;
         const channel = (await message.channel.fetch()) as TextChannel;
         await channel.sendTyping();
 
+        //Get previous messages, ensuring we don't include the message that pinged the bot.
+        const previousMessages = (await messageArchiveService.getNewestDBMessages(channel.id, limit)).filter(m => m.id !== message.id);
+
         const content = await replaceUserAndRoleMentions(message);
-        const response = await geminiLlmService.generateMessage(content);
+        const response = await geminiLlmService.generateMessage(content, previousMessages);
         await channel.send(response);
     }
 
