@@ -21,6 +21,8 @@ export type MessageArchiveService = {
     readonly messageEdited: (oldMessage: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, newMessage: OmitPartialGroupDMChannel<Message<boolean>>) => Promise<void>;
 
     readonly getAllDBMessages: (year?: number) => Promise<DBMessage[]>;
+
+    readonly getNewestDBMessages: (channelId: string, limit: number) => Promise<DBMessage[]>;
 };
 
 export type MessageArchiveServiceDeps = {
@@ -244,6 +246,16 @@ export const createMessageArchiveService = ({ messageRepository, reactionReposit
         return [];
     }
 
+    async function getNewestDBMessages(channelId: string, limit: number) {
+        try {
+            return await messageRepository.getNewestMessages(channelId, limit);
+        } catch (e: unknown) {
+            console.error("Error getting newest DB messages", e);
+        }
+
+        return [];
+    }
+
     return {
         fetchAllMessages,
         processAllChannels,
@@ -252,5 +264,6 @@ export const createMessageArchiveService = ({ messageRepository, reactionReposit
         messageDeleted,
         messageEdited,
         getAllDBMessages,
+        getNewestDBMessages,
     };
 };
