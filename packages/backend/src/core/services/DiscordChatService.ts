@@ -52,22 +52,29 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
             return;
         }
 
-        const limit = 10;
         const channel = (await message.channel.fetch()) as TextChannel;
-        await channel.sendTyping();
+        let typing = true;
+        const _ = (async () => {
+            while (typing) {
+                await channel.sendTyping();
+                await new Promise(res => setTimeout(res, 8000));
+            }
+        })();
 
-        //Get previous messages, ensuring we don't include the message that pinged the bot.
-        const previousMessages = (await messageArchiveService.getNewestDBMessages(channel.id, limit)).filter(m => m.id !== message.id);
-        await channel.sendTyping();
+        try {
+            //Get previous messages, ensuring we don't include the message that pinged the bot.
+            const previousMessages = (await messageArchiveService.getNewestDBMessages(channel.id, 10)).filter(m => m.id !== message.id);
 
-        const content = await replaceUserAndRoleMentions(message);
-        await channel.sendTyping();
-        const response = await geminiLlmService.generateMessage(content, previousMessages);
+            const content = await replaceUserAndRoleMentions(message);
+            const response = await geminiLlmService.generateMessage(content, previousMessages);
 
-        //Messages are capped at 2000 characters
-        const messages = splitMessage(response, 2000);
-        for (const m of messages) {
-            await channel.send(m);
+            //Messages are capped at 2000 characters
+            const messages = splitMessage(response, 2000);
+            for (const m of messages) {
+                await channel.send(m);
+            }
+        } finally {
+            typing = false;
         }
     }
 
