@@ -1,10 +1,9 @@
 import { OverlappingAudioPlayer } from "@adapters/audio/OverlappingAudioPlayer.js";
+import { createPlayingSound } from "@core/entities/PlayingSound.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { AudioPlayerStatus, type VoiceConnection, VoiceConnectionStatus, joinVoiceChannel } from "@discordjs/voice";
 import type { Client, VoiceChannel as DiscordVoiceChannel } from "discord.js";
-
-import { createPlayingSound } from "../../core/entities/PlayingSound.js";
 
 export type DiscordVoiceServiceDeps = {
     readonly client: Client;
@@ -74,7 +73,6 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
             connection.subscribe(player);
             console.log(`[DiscordVoiceService] Player subscribed to connection`);
 
-            // Monitor connection state
             connection.on("stateChange", (oldState, newState) => {
                 console.log(`[VOICE SERVICE] Voice connection state change in server ${serverId}: ${oldState.status} -> ${newState.status}`);
                 const state = voiceStates.get(serverId);
@@ -90,9 +88,9 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
             player.on("error", error => {
                 console.error(`[VOICE SERVICE] Audio player error in server ${serverId}:`, error);
                 console.error(`[VOICE SERVICE] Error details:`, {
-                    name: error instanceof Error ? error.name : "Unknown",
-                    message: error instanceof Error ? error.message : String(error),
-                    stack: error instanceof Error ? error.stack : undefined,
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
                 });
             });
 
@@ -243,8 +241,7 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
     const stopAudioById = async (serverId: string, audioId: string): Promise<boolean> => {
         const state = voiceStates.get(serverId);
         if (state) {
-            const success = state.player.stopAudio(audioId);
-            return success;
+            return state.player.stopAudio(audioId);
         }
         return false;
     };
@@ -273,8 +270,7 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
         const state = voiceStates.get(serverId);
         if (state) {
             // Volume should be 0-100 scale for compatibility with commands
-            const clampedVolume = Math.max(0, Math.min(100, volume));
-            state.volume = clampedVolume;
+            state.volume = Math.max(0, Math.min(100, volume));
         }
     };
 
