@@ -1,6 +1,7 @@
 import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
 import { registerDiscordChatEventHandlers } from "@application/eventHandlers/DiscordChat.js";
+import { registerVoiceServiceEventHandlers } from "@application/eventHandlers/DiscordVoiceService.js";
 import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive.js";
 import { registerReactionEvents } from "@application/eventHandlers/Reactions.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService";
@@ -78,6 +79,7 @@ export const createDiscordBot = ({ config, soundService, soundTagService, reacti
         registerReactionEvents(reactionService, registerEventHandler);
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
         registerDiscordChatEventHandlers(discordChatService, registerEventHandler);
+        registerVoiceServiceEventHandlers(voiceService, registerEventHandler);
     };
 
     const start = async (): Promise<void> => {
