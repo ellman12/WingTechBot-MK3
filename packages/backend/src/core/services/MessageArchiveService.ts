@@ -49,7 +49,15 @@ async function processMessage(discordMessage: Message, existingMessages: Map<str
         console.log(`Edited content of message from ${discordMessage.author.username} in #${(discordMessage.channel as TextChannel).name}`);
     } else if (!existingMsg) {
         const referencedMessageId = discordMessage.reference ? discordMessage.reference.messageId : undefined;
-        existingMsg = await messageRepository.create({ id: messageId, authorId, channelId, content, referencedMessageId, createdAt: discordMessage.createdAt, editedAt: discordMessage.editedAt });
+        existingMsg = await messageRepository.create({
+            id: messageId,
+            authorId,
+            channelId,
+            content,
+            referencedMessageId,
+            createdAt: discordMessage.createdAt,
+            editedAt: discordMessage.editedAt,
+        });
         console.log(`Added message "${discordMessage.content}" from ${discordMessage.author.username} in #${(discordMessage.channel as TextChannel).name}`);
         created = true;
     }
@@ -222,6 +230,8 @@ export const createMessageArchiveService = ({ messageRepository, reactionReposit
     }
 
     async function messageEdited(oldMessage: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, newMessage: OmitPartialGroupDMChannel<Message<boolean>>): Promise<void> {
+        if (newMessage.interactionMetadata !== null) return;
+
         await newMessage.fetch();
 
         if (!validMessage(newMessage)) {

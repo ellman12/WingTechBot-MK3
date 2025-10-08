@@ -47,6 +47,8 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
 
     //Responds to a new message when appropriate.
     async function handleMessageCreated(message: Message) {
+        if (message.interactionMetadata !== null) return;
+
         await message.fetch();
         if (!hasBeenPinged(message)) {
             return;
