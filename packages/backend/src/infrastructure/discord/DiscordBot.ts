@@ -1,7 +1,7 @@
 import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
-import { registerDiscordChatEventHandlers } from "@application/eventHandlers/DiscordChat";
-import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive";
+import { registerDiscordChatEventHandlers } from "@application/eventHandlers/DiscordChat.js";
+import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive.js";
 import { registerReactionEvents } from "@application/eventHandlers/Reactions.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";

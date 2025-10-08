@@ -5,10 +5,10 @@ import { createReactionRepository } from "@adapters/repositories/ReactionReposit
 import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
 import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
-import { createGeminiLlmService } from "@adapters/services/GeminiLlmService";
+import { createGeminiLlmService } from "@adapters/services/GeminiLlmService.js";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
-import { createDiscordChatService } from "@core/services/DiscordChatService";
+import { createDiscordChatService } from "@core/services/DiscordChatService.js";
 import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
 import { createReactionService } from "@core/services/ReactionService.js";
 import { createSoundService } from "@core/services/SoundService.js";
