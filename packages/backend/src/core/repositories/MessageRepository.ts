@@ -7,4 +7,5 @@ export type MessageRepository = {
     edit(data: EditMessageData): Promise<Message>;
     getAllMessages(year?: number): Promise<Message[]>;
     getAllMessagesAsMap(year?: number): Promise<Map<string, Message>>;
+    getNewestMessages(channelId: string, limit: number): Promise<Message[]>;
 };

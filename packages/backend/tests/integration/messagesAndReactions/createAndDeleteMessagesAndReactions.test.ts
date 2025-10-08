@@ -3,7 +3,7 @@ import { getApp } from "@/main";
 import { createMessagesAndReactions, getTestingChannel, recreateDatabase, setUpIntegrationTest, sleep, verifyTesterReactions } from "../../utils/testUtils";
 
 const timeout = 180 * 1000;
-const delay = 3000;
+const delay = 4000;
 
 //prettier-ignore
 describe("Messages and Reactions integration tests", async () => {

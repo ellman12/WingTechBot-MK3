@@ -104,6 +104,20 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         return new Map((await getAllMessages(year)).map(m => [m.id, m]));
     };
 
+    const getNewestMessages = async (channelId: string, limit: number): Promise<Message[]> => {
+        const query = db
+            .selectFrom("messages as m")
+            .where("m.channel_id", "=", channelId)
+            .leftJoin("reactions", "reactions.message_id", "m.id")
+            .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.giver_id IS NOT NULL), '[]')`.as("reactions")])
+            .groupBy("m.id")
+            .orderBy("m.created_at", "desc")
+            .limit(limit);
+
+        const result = await query.execute();
+        return result.map(m => transformMessage(m, m.reactions));
+    };
+
     return {
         findById: findMessageById,
         create: createMessage,
@@ -111,5 +125,6 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         edit: editMessage,
         getAllMessages,
         getAllMessagesAsMap,
+        getNewestMessages,
     };
 };
