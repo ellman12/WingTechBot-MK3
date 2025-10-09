@@ -6,6 +6,7 @@ import { registerMessageArchiveEvents } from "@application/eventHandlers/Message
 import { registerReactionEvents } from "@application/eventHandlers/Reactions.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
+import type { ReactionScoldService } from "@core/services/ReactionScoldService.js";
 import type { ReactionService } from "@core/services/ReactionService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
@@ -18,6 +19,7 @@ export type DiscordBotDeps = {
     readonly soundService: SoundService;
     readonly soundTagService: SoundTagService;
     readonly reactionService: ReactionService;
+    readonly reactionScoldService: ReactionScoldService;
     readonly messageArchiveService: MessageArchiveService;
     readonly discordChatService: DiscordChatService;
 };
@@ -30,7 +32,7 @@ export type DiscordBot = {
     readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
 };
 
-export const createDiscordBot = ({ config, soundService, soundTagService, reactionService, messageArchiveService, discordChatService }: DiscordBotDeps): DiscordBot => {
+export const createDiscordBot = ({ config, soundService, soundTagService, reactionService, reactionScoldService, messageArchiveService, discordChatService }: DiscordBotDeps): DiscordBot => {
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
@@ -76,7 +78,7 @@ export const createDiscordBot = ({ config, soundService, soundTagService, reacti
 
         registerCommands(soundService, soundTagService, voiceService, registerEventHandler);
 
-        registerReactionEvents(reactionService, registerEventHandler);
+        registerReactionEvents(reactionService, reactionScoldService, registerEventHandler);
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
         registerDiscordChatEventHandlers(discordChatService, registerEventHandler);
         registerVoiceServiceEventHandlers(voiceService, registerEventHandler);
