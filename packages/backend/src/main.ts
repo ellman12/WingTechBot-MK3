@@ -8,6 +8,7 @@ import { createSoundTagRepository } from "@adapters/repositories/SoundTagReposit
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
+import { createAutoReactionService } from "@core/services/AutoReactionService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
 import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
 import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
@@ -68,6 +69,7 @@ export const createApplication = async (): Promise<App> => {
         reactionRepository,
         emoteRepository,
     });
+    const autoReactionService = createAutoReactionService();
     const geminiLlmService = createGeminiLlmService();
     const discordChatService = createDiscordChatService({
         geminiLlmService,
@@ -83,6 +85,7 @@ export const createApplication = async (): Promise<App> => {
         reactionArchiveService,
         messageArchiveService,
         discordChatService,
+        autoReactionService,
     });
 
     let isReadyState = false;

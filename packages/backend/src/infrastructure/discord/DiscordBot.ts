@@ -1,10 +1,12 @@
 import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
+import { registerAutoReactionEvents } from "@application/eventHandlers/AutoReaction.js";
 import { registerDiscordChatEventHandlers } from "@application/eventHandlers/DiscordChat.js";
 import { registerVoiceServiceEventHandlers } from "@application/eventHandlers/DiscordVoiceService.js";
 import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive.js";
 import { registerReactionArchiveEvents } from "@application/eventHandlers/ReactionArchive.js";
-import type { DiscordChatService } from "@core/services/DiscordChatService";
+import type { AutoReactionService } from "@core/services/AutoReactionService.js";
+import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { ReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import type { SoundService } from "@core/services/SoundService.js";
@@ -20,6 +22,7 @@ export type DiscordBotDeps = {
     readonly reactionArchiveService: ReactionArchiveService;
     readonly messageArchiveService: MessageArchiveService;
     readonly discordChatService: DiscordChatService;
+    readonly autoReactionService: AutoReactionService;
 };
 
 export type DiscordBot = {
@@ -30,7 +33,7 @@ export type DiscordBot = {
     readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
 };
 
-export const createDiscordBot = ({ config, soundService, soundTagService, reactionArchiveService, messageArchiveService, discordChatService }: DiscordBotDeps): DiscordBot => {
+export const createDiscordBot = ({ config, soundService, soundTagService, reactionArchiveService, messageArchiveService, discordChatService, autoReactionService }: DiscordBotDeps): DiscordBot => {
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
@@ -80,6 +83,7 @@ export const createDiscordBot = ({ config, soundService, soundTagService, reacti
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
         registerDiscordChatEventHandlers(discordChatService, registerEventHandler);
         registerVoiceServiceEventHandlers(voiceService, registerEventHandler);
+        registerAutoReactionEvents(autoReactionService, registerEventHandler);
     };
 
     const start = async (): Promise<void> => {
