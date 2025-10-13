@@ -5,6 +5,7 @@ import type { Message, TextChannel } from "discord.js";
 export type DiscordChatService = {
     readonly replaceUserAndRoleMentions: (message: Message) => Promise<string>;
     readonly handleMessageCreated: (message: Message) => Promise<void>;
+    readonly sendTypingIndicator: (abortSignal: AbortSignal, channel: TextChannel) => Promise<void>;
 };
 
 export type DiscordChatServiceDeps = {
@@ -55,13 +56,8 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
         }
 
         const channel = (await message.channel.fetch()) as TextChannel;
-        let typing = true;
-        const _ = (async () => {
-            while (typing) {
-                await channel.sendTyping();
-                await new Promise(res => setTimeout(res, 8000));
-            }
-        })();
+        const controller = new AbortController();
+        sendTypingIndicator(controller.signal, channel);
 
         try {
             //Get previous messages, ensuring we don't include the message that pinged the bot.
@@ -76,7 +72,15 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
                 await channel.send(m);
             }
         } finally {
-            typing = false;
+            controller.abort();
+        }
+    }
+
+    //Repeatedly sends the indicator saying the bot is "typing" until told to stop.
+    async function sendTypingIndicator(abortSignal: AbortSignal, channel: TextChannel): Promise<void> {
+        while (!abortSignal.aborted) {
+            await channel.sendTyping();
+            await new Promise(res => setTimeout(res, 8000));
         }
     }
 
@@ -106,5 +110,6 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
     return {
         replaceUserAndRoleMentions,
         handleMessageCreated,
+        sendTypingIndicator,
     };
 };
