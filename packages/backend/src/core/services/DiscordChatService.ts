@@ -13,37 +13,24 @@ export type DiscordChatServiceDeps = {
     readonly messageArchiveService: MessageArchiveService;
 };
 
-function hasBeenPinged(latestMessage: Message): boolean {
-    const id = process.env.DISCORD_CLIENT_ID!;
-    const mentionedByUser = latestMessage.mentions.users.has(id);
-    const mentionedRoles = Array.from(latestMessage.mentions.roles.values());
-    const mentionedByRole = mentionedRoles.find(r => Array.from(r.members.values()).find(m => m.id === id)) !== undefined;
-
-    return !latestMessage.mentions.everyone && (mentionedByUser || mentionedByRole);
-}
-
-//Replaces a Discord user/role mention with new text.
-function replaceMention(input: string, id: string, newText: string = ""): string {
-    const regex = new RegExp(`<@&?${id}>`);
-    return input.replace(regex, newText);
-}
-
 export const createDiscordChatService = ({ geminiLlmService, messageArchiveService }: DiscordChatServiceDeps): DiscordChatService => {
+    const botId = process.env.DISCORD_CLIENT_ID!;
+    const botRoleId = process.env.DISCORD_BOT_ROLE_ID!;
+
     //Removes the bot's mention from the message content, and replace all user and role pings with their names.
     async function replaceUserAndRoleMentions(message: Message) {
         const channel = (await message.channel.fetch()) as TextChannel;
         const guild = await message.guild?.fetch();
-        const members = new Map(Array.from(channel?.members ?? []));
-        const roles = new Map(Array.from((await guild?.roles.fetch()) ?? []));
 
-        let result = message.content;
-        result = replaceMention(result, process.env.DISCORD_CLIENT_ID!);
-        result = replaceMention(result, process.env.DISCORD_BOT_ROLE_ID!);
+        const members = channel?.members ?? new Map();
+        const roles = (await guild?.roles.fetch()) ?? new Map();
 
-        //Replace user and role mentions with their actual names.
-        result = result.replace(/<@(\d+)>/, (_, id) => members.get(id)?.displayName ?? "");
-        result = result.replace(/<@&(\d+)>/, (_, id) => roles.get(id)?.name ?? "");
-        return result;
+        return message.content.replace(/<@&?(\d+)>/g, (_, id) => {
+            if (id === botId || id === botRoleId) return "";
+            if (roles.has(id)) return roles.get(id)!.name;
+            if (members.has(id)) return members.get(id)!.displayName;
+            return "";
+        });
     }
 
     //Responds to a new message when appropriate.
@@ -74,6 +61,14 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
         } finally {
             controller.abort();
         }
+    }
+
+    function hasBeenPinged(latestMessage: Message): boolean {
+        const mentionedByUser = latestMessage.mentions.users.has(botId);
+        const mentionedRoles = Array.from(latestMessage.mentions.roles.values());
+        const mentionedByRole = mentionedRoles.find(r => Array.from(r.members.values()).find(m => m.id === botId)) !== undefined;
+
+        return !latestMessage.mentions.everyone && (mentionedByUser || mentionedByRole);
     }
 
     //Repeatedly sends the indicator saying the bot is "typing" until told to stop.
