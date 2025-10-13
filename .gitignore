@@ -10,3 +10,5 @@ node_modules
 .vscode
 .cursor
 
+packages/backend/llmInstructions/*
+!packages/backend/llmInstructions/README

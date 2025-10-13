@@ -5,7 +5,7 @@ import { type GenerateContentConfig, GoogleGenAI } from "@google/genai";
 const model = "gemini-2.5-flash";
 
 export type GeminiLlmService = {
-    readonly generateMessage: (input: string, previousMessages?: Message[]) => Promise<string>;
+    readonly generateMessage: (input: string, previousMessages?: Message[], systemInstruction?: string) => Promise<string>;
 };
 
 export const createGeminiLlmService = (): GeminiLlmService => {
@@ -14,21 +14,16 @@ export const createGeminiLlmService = (): GeminiLlmService => {
         throw new Error("Missing LLM API key in createLlmChatService");
     }
 
-    const systemInstruction = process.env.LLM_SYSTEM_INSTRUCTION;
-    if (!systemInstruction) {
-        throw new Error("Missing LLM system instruction in createLlmChatService");
-    }
-
     const ai = new GoogleGenAI({ apiKey });
-    const config: GenerateContentConfig = { systemInstruction };
 
     //Generates a message with optional previous messages.
-    async function generateMessage(input: string, messages: Message[] = []) {
+    async function generateMessage(input: string, messages: Message[] = [], systemInstruction = "") {
         const history = messages.map(m => ({
             role: m.authorId === process.env.DISCORD_CLIENT_ID ? "model" : "user",
             parts: [{ text: m.content }],
         }));
 
+        const config: GenerateContentConfig = { systemInstruction };
         const chat = ai.chats.create({ model, history, config });
         const response = await chat.sendMessage({ message: input });
         return response.text ?? "";

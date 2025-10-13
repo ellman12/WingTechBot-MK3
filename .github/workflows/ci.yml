@@ -268,7 +268,6 @@ jobs:
                   TESTER_DISCORD_BOT_CHANNEL_ID: ${{ secrets.TESTER_DISCORD_BOT_CHANNEL_ID }}
 
                   LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-                  LLM_SYSTEM_INSTRUCTION: ${{ secrets.LLM_SYSTEM_INSTRUCTION }}
 
             - name: Upload test coverage
               uses: codecov/codecov-action@v5
