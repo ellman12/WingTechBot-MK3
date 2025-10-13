@@ -1,5 +1,5 @@
-import type { GeminiLlmService } from "@adapters/services/GeminiLlmService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
+import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import type { Message, TextChannel } from "discord.js";
 
 export type DiscordChatService = {

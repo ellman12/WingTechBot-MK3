@@ -5,7 +5,6 @@ import { createReactionRepository } from "@adapters/repositories/ReactionReposit
 import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
 import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
-import { createGeminiLlmService } from "@adapters/services/GeminiLlmService.js";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
@@ -21,6 +20,7 @@ import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/Disco
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { createFileManager } from "@infrastructure/filestore/FileManager.js";
 import { type ServerConfig, createExpressApp } from "@infrastructure/http/ExpressApp.js";
+import { createGeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 
 export type App = {
     readonly start: () => Promise<void>;
