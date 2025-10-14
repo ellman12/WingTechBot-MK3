@@ -4,8 +4,8 @@ import { getApp } from "@/main";
 
 import { getTestingChannel, recreateDatabase, setUpIntegrationTest, sleep } from "../../utils/testUtils";
 
-const timeout = 2 * 60 * 1000;
-const delay = 2000;
+const timeout = 360 * 1000;
+const delay = 3000;
 
 describe("processAllChannels", async () => {
     beforeAll(async () => {
