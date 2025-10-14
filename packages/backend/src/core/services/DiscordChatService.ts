@@ -1,4 +1,4 @@
-import type { FileManager } from "@core/services/FileManager.js";
+import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import type { Message, TextChannel } from "discord.js";
@@ -12,10 +12,10 @@ export type DiscordChatService = {
 export type DiscordChatServiceDeps = {
     readonly geminiLlmService: GeminiLlmService;
     readonly messageArchiveService: MessageArchiveService;
-    readonly fileManager: FileManager;
+    readonly llmInstructionRepo: LlmInstructionRepository;
 };
 
-export const createDiscordChatService = ({ geminiLlmService, messageArchiveService, fileManager }: DiscordChatServiceDeps): DiscordChatService => {
+export const createDiscordChatService = ({ geminiLlmService, messageArchiveService, llmInstructionRepo }: DiscordChatServiceDeps): DiscordChatService => {
     const botId = process.env.DISCORD_CLIENT_ID!;
     const botRoleId = process.env.DISCORD_BOT_ROLE_ID!;
 
@@ -46,14 +46,14 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
 
         const channel = (await message.channel.fetch()) as TextChannel;
         const controller = new AbortController();
-        sendTypingIndicator(controller.signal, channel);
+        void sendTypingIndicator(controller.signal, channel);
 
         try {
             //Get previous messages, ensuring we don't include the message that pinged the bot.
             const previousMessages = (await messageArchiveService.getNewestDBMessages(channel.id, 10)).filter(m => m.id !== message.id);
 
             const content = await replaceUserAndRoleMentions(message);
-            const systemInstruction = await fileManager.readFile("./llmInstructions/generalChat.txt");
+            const systemInstruction = await llmInstructionRepo.getInstruction("generalChat");
             const response = await geminiLlmService.generateMessage(content, previousMessages, systemInstruction);
 
             //Messages are capped at 2000 characters

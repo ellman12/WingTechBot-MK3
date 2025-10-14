@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
@@ -50,6 +51,7 @@ export const createApplication = async (): Promise<App> => {
     const messageRepository = createMessageRepository(db);
     const reactionRepository = createReactionRepository(db);
     const emoteRepository = createReactionEmoteRepository(db);
+    const llmInstructionRepo = createLlmInstructionRepository(fileManager);
 
     const audioProcessingService = createFfmpegAudioProcessingService({ ffmpeg });
     const audioFetchService = createAudioFetcherService({ fileManager, soundRepository, youtubeService: ytdl });
@@ -67,7 +69,11 @@ export const createApplication = async (): Promise<App> => {
         emoteRepository,
     });
     const geminiLlmService = createGeminiLlmService();
-    const discordChatService = createDiscordChatService({ geminiLlmService, messageArchiveService, fileManager });
+    const discordChatService = createDiscordChatService({
+        geminiLlmService,
+        messageArchiveService,
+        llmInstructionRepo,
+    });
 
     const expressApp = createExpressApp({ db, config: serverConfig });
     const discordBot = createDiscordBot({
