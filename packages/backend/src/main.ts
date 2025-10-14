@@ -168,7 +168,6 @@ const startApplication = async (): Promise<void> => {
         setupGracefulShutdown(app);
     } catch (error) {
         console.error("❌ Failed to start application:", error);
-        process.exit(1);
     }
 };
 
