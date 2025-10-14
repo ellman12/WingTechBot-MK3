@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
@@ -7,7 +8,8 @@ import { createSoundTagRepository } from "@adapters/repositories/SoundTagReposit
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
-import { createMessageService } from "@core/services/MessageService.js";
+import { createDiscordChatService } from "@core/services/DiscordChatService.js";
+import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
 import { createReactionService } from "@core/services/ReactionService.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { createSoundTagService } from "@core/services/SoundTagService.js";
@@ -19,6 +21,7 @@ import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/Disco
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { createFileManager } from "@infrastructure/filestore/FileManager.js";
 import { type ServerConfig, createExpressApp } from "@infrastructure/http/ExpressApp.js";
+import { createGeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 
 export type App = {
     readonly start: () => Promise<void>;
@@ -48,6 +51,7 @@ export const createApplication = async (): Promise<App> => {
     const messageRepository = createMessageRepository(db);
     const reactionRepository = createReactionRepository(db);
     const emoteRepository = createReactionEmoteRepository(db);
+    const llmInstructionRepo = createLlmInstructionRepository(fileManager);
 
     const audioProcessingService = createFfmpegAudioProcessingService({ ffmpeg });
     const audioFetchService = createAudioFetcherService({ fileManager, soundRepository, youtubeService: ytdl });
@@ -59,10 +63,27 @@ export const createApplication = async (): Promise<App> => {
     });
     const soundTagService = createSoundTagService({ soundRepository, soundTagRepository });
     const reactionService = createReactionService({ reactionRepository, emoteRepository });
-    const messageService = createMessageService({ messageRepository, reactionRepository, emoteRepository });
+    const messageArchiveService = createMessageArchiveService({
+        messageRepository,
+        reactionRepository,
+        emoteRepository,
+    });
+    const geminiLlmService = createGeminiLlmService();
+    const discordChatService = createDiscordChatService({
+        geminiLlmService,
+        messageArchiveService,
+        llmInstructionRepo,
+    });
 
     const expressApp = createExpressApp({ db, config: serverConfig });
-    const discordBot = createDiscordBot({ config, soundService, soundTagService, reactionService, messageService });
+    const discordBot = createDiscordBot({
+        config,
+        soundService,
+        soundTagService,
+        reactionService,
+        messageArchiveService,
+        discordChatService,
+    });
 
     let isReadyState = false;
 
@@ -147,7 +168,6 @@ const startApplication = async (): Promise<void> => {
         setupGracefulShutdown(app);
     } catch (error) {
         console.error("❌ Failed to start application:", error);
-        process.exit(1);
     }
 };
 

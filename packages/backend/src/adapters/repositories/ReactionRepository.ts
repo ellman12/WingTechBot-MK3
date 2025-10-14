@@ -38,7 +38,7 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
 
         const existing = await findReaction(data);
         if (existing) {
-            throw new Error("Reaction exists, ignoring");
+            console.error(`Reaction ${existing} exists, ignoring`);
         }
 
         const { giverId, receiverId, channelId, messageId, emoteId } = data;

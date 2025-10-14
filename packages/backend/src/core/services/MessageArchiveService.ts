@@ -5,7 +5,7 @@ import type { ReactionRepository } from "@core/repositories/ReactionRepository.j
 import { ChannelType, Collection, DiscordAPIError, type FetchMessagesOptions, type Guild, type Message, type OmitPartialGroupDMChannel, type PartialMessage, type TextChannel } from "discord.js";
 import equal from "fast-deep-equal/es6/index.js";
 
-export type MessageService = {
+export type MessageArchiveService = {
     readonly fetchAllMessages: (channel: TextChannel, endYear?: number) => Promise<Message[]>;
 
     //Walk backwards through each channel, and store/update each message until told to stop or hit the last message.
@@ -21,9 +21,11 @@ export type MessageService = {
     readonly messageEdited: (oldMessage: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, newMessage: OmitPartialGroupDMChannel<Message<boolean>>) => Promise<void>;
 
     readonly getAllDBMessages: (year?: number) => Promise<DBMessage[]>;
+
+    readonly getNewestDBMessages: (channelId: string, limit: number) => Promise<DBMessage[]>;
 };
 
-export type MessageServiceDeps = {
+export type MessageArchiveServiceDeps = {
     messageRepository: MessageRepository;
     reactionRepository: ReactionRepository;
     emoteRepository: ReactionEmoteRepository;
@@ -47,7 +49,15 @@ async function processMessage(discordMessage: Message, existingMessages: Map<str
         console.log(`Edited content of message from ${discordMessage.author.username} in #${(discordMessage.channel as TextChannel).name}`);
     } else if (!existingMsg) {
         const referencedMessageId = discordMessage.reference ? discordMessage.reference.messageId : undefined;
-        existingMsg = await messageRepository.create({ id: messageId, authorId, channelId, content, referencedMessageId, createdAt: discordMessage.createdAt, editedAt: discordMessage.editedAt });
+        existingMsg = await messageRepository.create({
+            id: messageId,
+            authorId,
+            channelId,
+            content,
+            referencedMessageId,
+            createdAt: discordMessage.createdAt,
+            editedAt: discordMessage.editedAt,
+        });
         console.log(`Added message "${discordMessage.content}" from ${discordMessage.author.username} in #${(discordMessage.channel as TextChannel).name}`);
         created = true;
     }
@@ -104,11 +114,11 @@ async function getMessage(guild: Guild, channelId: string, messageId: string): P
 }
 
 function validMessage(message: Message): boolean {
-    return message.interactionMetadata === null;
+    return message.interactionMetadata === null && message.channel.type !== ChannelType.DM;
 }
 
-export const createMessageService = ({ messageRepository, reactionRepository, emoteRepository }: MessageServiceDeps): MessageService => {
-    console.log("[MessageService] Creating message service");
+export const createMessageArchiveService = ({ messageRepository, reactionRepository, emoteRepository }: MessageArchiveServiceDeps): MessageArchiveService => {
+    console.log("[MessageArchiveService] Creating message archive service");
 
     async function fetchAllMessages(channel: TextChannel, endYear?: number) {
         const allMessages: Message[] = [];
@@ -220,6 +230,8 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
     }
 
     async function messageEdited(oldMessage: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, newMessage: OmitPartialGroupDMChannel<Message<boolean>>): Promise<void> {
+        if (newMessage.interactionMetadata !== null) return;
+
         await newMessage.fetch();
 
         if (!validMessage(newMessage)) {
@@ -244,6 +256,16 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
         return [];
     }
 
+    async function getNewestDBMessages(channelId: string, limit: number) {
+        try {
+            return await messageRepository.getNewestMessages(channelId, limit);
+        } catch (e: unknown) {
+            console.error("Error getting newest DB messages", e);
+        }
+
+        return [];
+    }
+
     return {
         fetchAllMessages,
         processAllChannels,
@@ -252,5 +274,6 @@ export const createMessageService = ({ messageRepository, reactionRepository, em
         messageDeleted,
         messageEdited,
         getAllDBMessages,
+        getNewestDBMessages,
     };
 };
