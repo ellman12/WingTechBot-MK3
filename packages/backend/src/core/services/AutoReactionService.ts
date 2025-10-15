@@ -29,7 +29,7 @@ const awardScolds = [
     "How you look giving yourself an award:\n[img](https://user-images.githubusercontent.com/14880945/104736592-80303380-5743-11eb-8224-2bae4fab6f15.png) \n", //Obama meme
 ];
 
-const reactionScoldMessages: Record<string, string[]> = {
+export const reactionScoldMessages: Record<string, string[]> = {
     upvote: upvoteScolds,
     downvote: downvoteScolds,
     silver: awardScolds,

@@ -82,11 +82,11 @@ export async function getTestingEmotes(bot: DiscordBot): Promise<TestReactionEmo
         ["🐈‍⬛", null],
     ];
 
-    const upvote = guild.emojis.cache.find(e => e.name === "upvote")!;
-    emotes.push([upvote.name!, upvote.id]);
-
-    const downvote = guild.emojis.cache.find(e => e.name === "downvote")!;
-    emotes.push([downvote.name!, downvote.id]);
+    const names = ["upvote", "downvote", "silver", "gold", "platinum"];
+    names.forEach(name => {
+        const emote = guild.emojis.cache.find(e => e.name === name)!;
+        emotes.push([emote.name!, emote.id]);
+    });
 
     return emotes;
 }
@@ -104,7 +104,14 @@ export async function createTestReactions(db: Kysely<DB>, messageCount: number, 
 
     for (let i = 0; i < messageCount; i++) {
         const messageId = baseMsgId + i.toString();
-        await messages.create({ id: messageId, authorId: "456", channelId: "789", content: "message content", createdAt: new Date(), editedAt: null });
+        await messages.create({
+            id: messageId,
+            authorId: "456",
+            channelId: "789",
+            content: "message content",
+            createdAt: new Date(),
+            editedAt: null,
+        });
 
         for (let j = 0; j < reactionsPerMessage; j++) {
             const [name, id] = validEmotes[j] ?? ["", null];
