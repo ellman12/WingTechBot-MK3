@@ -30,26 +30,6 @@
         "docker:restart": "docker compose -f docker-compose.dev.yaml restart",
         "docker:clean": "docker compose -f docker-compose.dev.yaml down -v --remove-orphans && docker system prune -f"
     },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/ellman12/WingTechBot-MK3.git"
-    },
-    "keywords": [
-        "expressjs",
-        "typescript",
-        "discord",
-        "bot",
-        "backend"
-    ],
-    "author": "",
-    "license": "ISC",
-    "bugs": {
-        "url": "https://github.com/ellman12/WingTechBot-MK3/issues"
-    },
-    "homepage": "https://github.com/ellman12/WingTechBot-MK3#readme",
-    "engines": {
-        "node": ">=18.0.0"
-    },
     "dependencies": {
         "@asteasolutions/zod-to-openapi": "8.0.0-beta.4",
         "@discordjs/opus": "^0.10.0",
