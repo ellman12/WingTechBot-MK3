@@ -1,7 +1,8 @@
-import type { MessageReaction, PartialMessageReaction, PartialUser, User } from "discord.js";
+import type { Message, MessageReaction, PartialMessageReaction, PartialUser, User } from "discord.js";
 
 export type AutoReactionService = {
     readonly reactionAdded: (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => Promise<void>;
+    readonly messageCreated: (message: Message) => Promise<void>;
 };
 
 const upvoteScolds = [
@@ -40,6 +41,25 @@ const reactionScoldMessages: Record<string, string[]> = {
 export const createAutoReactionService = (): AutoReactionService => {
     console.log("[AutoReactionService] Creating AutoReactionService");
 
+    async function checkForFunnySubstrings(message: Message): Promise<void> {
+        if (message.author.id === process.env.DISCORD_CLIENT_ID) return;
+
+        const substrings = ["69420", "69", "420"];
+
+        //Finds the first substring and the 3 words before and after it.
+        const regex = new RegExp(`\\b(?:\\w+\\b\\W+){0,3}\\w*(${substrings.join("|")})\\w*(?:\\W+\\b\\w+\\b){0,3}`, "gi");
+        const matches = message.content.match(regex);
+
+        if (matches) {
+            const match = matches[0];
+
+            const highlightRegex = new RegExp(`(${substrings.join("|")})`, "gi");
+            const highlighted = match.replace(highlightRegex, "**$1**");
+
+            await message.reply(`> ${highlighted}\nNice`);
+        }
+    }
+
     return {
         reactionAdded: async (reaction, user): Promise<void> => {
             try {
@@ -56,6 +76,10 @@ export const createAutoReactionService = (): AutoReactionService => {
             } catch (e: unknown) {
                 console.error("Error checking if added reaction needs to be scolded", e);
             }
+        },
+
+        messageCreated: async (message): Promise<void> => {
+            await checkForFunnySubstrings(message);
         },
     };
 };

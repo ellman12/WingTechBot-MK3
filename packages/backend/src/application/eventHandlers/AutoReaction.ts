@@ -4,4 +4,5 @@ import { Events } from "discord.js";
 
 export const registerAutoReactionEvents = (autoReactionService: AutoReactionService, registerEventHandler: DiscordBot["registerEventHandler"]): void => {
     registerEventHandler(Events.MessageReactionAdd, autoReactionService.reactionAdded);
+    registerEventHandler(Events.MessageCreate, autoReactionService.messageCreated);
 };
