@@ -4,7 +4,7 @@ import { getApp } from "@/main";
 
 import { getTestingChannel, setUpIntegrationTest, sleep } from "../../utils/testUtils";
 
-const timeout = 60 * 1000;
+const timeout = 120 * 1000;
 
 //prettier-ignore
 describe("Messages and Reactions integration tests", async () => {
@@ -52,6 +52,19 @@ describe("Messages and Reactions integration tests", async () => {
         for (const fetched of fetchedMessages.values()) {
             await fetched.delete();
         }
+    }, timeout);
+
+    it("should say 'I hardly know her!' to sentences with the last word ending in 'er'", async () => {
+        const { testerChannel } = await setUpIntegrationTest();
+        const message = await testerChannel.send("This message is from WingTech Bot Tester");
+
+        await sleep(3000);
+
+        const fetchedMessage = (await testerChannel.messages.fetch({ limit: 1 }))!.first()!;
+        expect(fetchedMessage.content).toEqual("\"Tester\"? I hardly know her!");
+
+        await fetchedMessage.delete();
+        await message.delete();
     }, timeout);
 
 }, timeout);

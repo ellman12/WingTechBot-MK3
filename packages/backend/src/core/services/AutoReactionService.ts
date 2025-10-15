@@ -60,6 +60,32 @@ export const createAutoReactionService = (): AutoReactionService => {
         }
     }
 
+    function findLastWordEndingWithEr(sentence: string) {
+        const words = sentence.trim().split(/\s+/);
+        let lastWord = words[words.length - 1];
+
+        if (!lastWord) return;
+
+        //Remove trailing punctuation
+        lastWord = lastWord.replace(/[.,!?;:]+$/, "");
+
+        //Check if it ends with "er" (case-insensitive)
+        if (/er$/i.test(lastWord)) {
+            return lastWord;
+        }
+
+        return undefined;
+    }
+
+    async function tryToSayErJoke(message: Message) {
+        if (message.author.id === process.env.DISCORD_CLIENT_ID) return;
+
+        const erWord = findLastWordEndingWithEr(message.content);
+        if (erWord) {
+            await message.reply(`"${erWord}"? I hardly know her!`);
+        }
+    }
+
     return {
         reactionAdded: async (reaction, user): Promise<void> => {
             try {
@@ -80,6 +106,7 @@ export const createAutoReactionService = (): AutoReactionService => {
 
         messageCreated: async (message): Promise<void> => {
             await checkForFunnySubstrings(message);
+            await tryToSayErJoke(message);
         },
     };
 };
