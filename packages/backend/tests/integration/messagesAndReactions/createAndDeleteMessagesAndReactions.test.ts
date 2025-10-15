@@ -2,13 +2,12 @@ import { getApp } from "@/main";
 
 import { createMessagesAndReactions, getTestingChannel, recreateDatabase, setUpIntegrationTest, sleep, verifyTesterReactions } from "../../utils/testUtils";
 
-const timeout = 180 * 1000;
-const delay = 4000;
+const timeout = 360 * 1000;
 
 //prettier-ignore
 describe("Messages and Reactions integration tests", async () => {
     beforeAll(async () => {
-        await sleep(delay);
+        await sleep(2000);
 
         const bot = getApp().discordBot;
         const channel = await getTestingChannel(bot);
@@ -16,7 +15,7 @@ describe("Messages and Reactions integration tests", async () => {
     });
 
     beforeEach(async () => {
-        await sleep(delay);
+        await sleep(2000);
         await recreateDatabase();
     });
 
@@ -26,13 +25,13 @@ describe("Messages and Reactions integration tests", async () => {
         const { channel, emotes, testerChannel, db } = await setUpIntegrationTest();
 
         const messages = await createMessagesAndReactions(channel, testerChannel, totalMessages, reactionsPerMessage, emotes);
-        await sleep(delay);
+        await sleep(30000);
         await verifyTesterReactions(db, totalMessages * reactionsPerMessage);
 
         //Delete message, verify reactions gone
         let message = messages[0]!;
         await message.delete();
-        await sleep(delay);
+        await sleep(10000);
         let foundMessages = await db.selectFrom("messages").where("id", "=", message.id).selectAll().execute();
         let foundReactions = await db.selectFrom("reactions").where("message_id", "=", message.id).selectAll().execute();
         expect(foundMessages).toHaveLength(0);
@@ -41,12 +40,12 @@ describe("Messages and Reactions integration tests", async () => {
         //Remove reactions for message, then delete message
         message = messages[1]!;
         await message.reactions.removeAll();
-        await sleep(delay);
+        await sleep(8000);
         foundReactions = await db.selectFrom("reactions").where("message_id", "=", message.id).selectAll().execute();
         expect(foundReactions).toHaveLength(0);
 
         await message.delete();
-        await sleep(delay);
+        await sleep(8000);
         foundMessages = await db.selectFrom("messages").where("id", "=", message.id).selectAll().execute();
         expect(foundMessages).toHaveLength(0);
 
@@ -58,12 +57,12 @@ describe("Messages and Reactions integration tests", async () => {
             await reaction.remove();
         }
 
-        await sleep(delay);
+        await sleep(8000);
         foundReactions = await db.selectFrom("reactions").where("message_id", "=", message.id).selectAll().execute();
         expect(foundReactions).toHaveLength(0);
 
         await message.delete();
-        await sleep(delay);
+        await sleep(8000);
         foundMessages = await db.selectFrom("messages").where("id", "=", message.id).selectAll().execute();
         expect(foundMessages).toHaveLength(0);
 

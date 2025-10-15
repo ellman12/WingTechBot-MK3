@@ -8,9 +8,10 @@ import { createSoundTagRepository } from "@adapters/repositories/SoundTagReposit
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
+import { createAutoReactionService } from "@core/services/AutoReactionService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
 import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
-import { createReactionService } from "@core/services/ReactionService.js";
+import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { createSoundTagService } from "@core/services/SoundTagService.js";
 import { runMigrations } from "@db/migrations.js";
@@ -62,12 +63,13 @@ export const createApplication = async (): Promise<App> => {
         soundRepository,
     });
     const soundTagService = createSoundTagService({ soundRepository, soundTagRepository });
-    const reactionService = createReactionService({ reactionRepository, emoteRepository });
+    const reactionArchiveService = createReactionArchiveService({ reactionRepository, emoteRepository });
     const messageArchiveService = createMessageArchiveService({
         messageRepository,
         reactionRepository,
         emoteRepository,
     });
+    const autoReactionService = createAutoReactionService();
     const geminiLlmService = createGeminiLlmService();
     const discordChatService = createDiscordChatService({
         geminiLlmService,
@@ -80,9 +82,10 @@ export const createApplication = async (): Promise<App> => {
         config,
         soundService,
         soundTagService,
-        reactionService,
+        reactionArchiveService,
         messageArchiveService,
         discordChatService,
+        autoReactionService,
     });
 
     let isReadyState = false;
