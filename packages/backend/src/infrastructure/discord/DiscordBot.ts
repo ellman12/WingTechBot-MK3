@@ -3,11 +3,11 @@ import { deployCommands, registerCommands } from "@application/commands/Commands
 import { registerDiscordChatEventHandlers } from "@application/eventHandlers/DiscordChat.js";
 import { registerVoiceServiceEventHandlers } from "@application/eventHandlers/DiscordVoiceService.js";
 import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive.js";
-import { registerReactionEvents } from "@application/eventHandlers/Reactions.js";
+import { registerReactionArchiveEvents } from "@application/eventHandlers/ReactionArchive.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
+import type { ReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import type { ReactionScoldService } from "@core/services/ReactionScoldService.js";
-import type { ReactionService } from "@core/services/ReactionService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
 import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, RESTEvents } from "discord.js";
@@ -18,7 +18,7 @@ export type DiscordBotDeps = {
     readonly config: Config;
     readonly soundService: SoundService;
     readonly soundTagService: SoundTagService;
-    readonly reactionService: ReactionService;
+    readonly reactionArchiveService: ReactionArchiveService;
     readonly reactionScoldService: ReactionScoldService;
     readonly messageArchiveService: MessageArchiveService;
     readonly discordChatService: DiscordChatService;
@@ -32,7 +32,7 @@ export type DiscordBot = {
     readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
 };
 
-export const createDiscordBot = ({ config, soundService, soundTagService, reactionService, reactionScoldService, messageArchiveService, discordChatService }: DiscordBotDeps): DiscordBot => {
+export const createDiscordBot = ({ config, soundService, soundTagService, reactionArchiveService, reactionScoldService, messageArchiveService, discordChatService }: DiscordBotDeps): DiscordBot => {
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
@@ -78,7 +78,7 @@ export const createDiscordBot = ({ config, soundService, soundTagService, reacti
 
         registerCommands(soundService, soundTagService, voiceService, registerEventHandler);
 
-        registerReactionEvents(reactionService, reactionScoldService, registerEventHandler);
+        registerReactionArchiveEvents(reactionArchiveService, reactionScoldService, registerEventHandler);
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
         registerDiscordChatEventHandlers(discordChatService, registerEventHandler);
         registerVoiceServiceEventHandlers(voiceService, registerEventHandler);

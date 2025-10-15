@@ -10,8 +10,8 @@ import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioSer
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
 import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
+import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import { createReactionScoldService } from "@core/services/ReactionScoldService.js";
-import { createReactionService } from "@core/services/ReactionService.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { createSoundTagService } from "@core/services/SoundTagService.js";
 import { runMigrations } from "@db/migrations.js";
@@ -63,7 +63,7 @@ export const createApplication = async (): Promise<App> => {
         soundRepository,
     });
     const soundTagService = createSoundTagService({ soundRepository, soundTagRepository });
-    const reactionService = createReactionService({ reactionRepository, emoteRepository });
+    const reactionArchiveService = createReactionArchiveService({ reactionRepository, emoteRepository });
     const reactionScoldService = createReactionScoldService();
     const messageArchiveService = createMessageArchiveService({
         messageRepository,
@@ -82,7 +82,7 @@ export const createApplication = async (): Promise<App> => {
         config,
         soundService,
         soundTagService,
-        reactionService,
+        reactionArchiveService,
         reactionScoldService,
         messageArchiveService,
         discordChatService,
