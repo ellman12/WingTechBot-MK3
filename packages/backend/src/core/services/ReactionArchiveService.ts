@@ -2,20 +2,21 @@ import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRe
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { Message, MessageReaction, OmitPartialGroupDMChannel, PartialMessage, PartialMessageReaction, PartialUser, User } from "discord.js";
 
-export type ReactionService = {
+export type ReactionArchiveService = {
     readonly addReaction: (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => Promise<void>;
     readonly removeReaction: (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => Promise<void>;
     readonly removeReactionsForMessage: (message: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>) => Promise<void>;
     readonly removeReactionsForEmote: (reaction: MessageReaction | PartialMessageReaction) => Promise<void>;
 };
 
-export type ReactionServiceDeps = {
+export type ReactionArchiveServiceDeps = {
     reactionRepository: ReactionRepository;
     emoteRepository: ReactionEmoteRepository;
 };
 
-export const createReactionService = ({ reactionRepository, emoteRepository }: ReactionServiceDeps): ReactionService => {
-    console.log("[ReactionService] Creating reaction service");
+//Archives all reactions added to all messages.
+export const createReactionArchiveService = ({ reactionRepository, emoteRepository }: ReactionArchiveServiceDeps): ReactionArchiveService => {
+    console.log("[ReactionArchiveService] Creating reaction archive service");
 
     return {
         addReaction: async (reaction, user): Promise<void> => {
