@@ -20,6 +20,6 @@ export default defineConfig({
     base: process.env.NODE_ENV === "production" ? "/WingTechBot-MK3/" : "/",
     assetsInclude: ["**/*.md"],
     optimizeDeps: {
-        include: ["react-markdown", "remark-gfm", "react-syntax-highlighter"],
+        include: ["react-markdown", "remark-gfm"],
     },
 });

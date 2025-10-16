@@ -11,4 +11,4 @@ node_modules
 .cursor
 
 packages/backend/llmInstructions/*
-!packages/backend/llmInstructions/README
+!packages/backend/llmInstructions/README.md

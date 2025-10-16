@@ -16,7 +16,7 @@ deps_changed() {
 
 # Function to check if database files changed
 db_changed() {
-  echo "$CHANGED_FILES" | grep -E "(prisma/|\.sql$|migrations/|seeds/)" > /dev/null
+  echo "$CHANGED_FILES" | grep -E "(\.sql$|migrations/|seeds/)" > /dev/null
 }
 
 # Function to check if build artifacts should be cleaned
@@ -38,7 +38,6 @@ fi
 if db_changed; then
   echo "🗄️  Database files changed, running migrations..."
   pnpm db:generate || echo "No db:generate script found, skipping..."
-  pnpm db:push || echo "No db:push script found, skipping..."
 fi
 
 # Clean build artifacts if configuration files changed
