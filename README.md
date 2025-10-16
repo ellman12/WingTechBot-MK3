@@ -74,17 +74,12 @@ pnpm dev
 
 # Frontend only (React app)
 pnpm dev:frontend
-
-
 ```
 
 #### Database Operations:
 
 ```bash
 pnpm db:generate
-
-# Push schema changes to database
-pnpm db:push
 
 # Run database migrations
 pnpm db:migrate
@@ -100,7 +95,6 @@ pnpm build
 pnpm build:backend
 pnpm build:frontend
 pnpm build:types
-
 ```
 
 #### Code Quality:
@@ -136,14 +130,6 @@ pnpm test:frontend
 
 The backend serves as both a Discord bot and a REST API. It follows hexagonal architecture principles with clear separation of concerns.
 
-**Key Features:**
-
-- Discord bot functionality
-- RESTful API endpoints
-- Type-safe database queries with Kysely
-- Comprehensive error handling
-- Docker support
-
 **Structure:**
 
 ```
@@ -158,41 +144,15 @@ packages/backend/src/
 
 A modern React application with state-of-the-art tooling for building user interfaces.
 
-**Key Features:**
-
-- Modern React with hooks
-- TypeScript for type safety
-- Tailwind CSS for styling
-- Zustand for state management
-- TanStack Query for server state
-
-- Responsive design
-
 **Structure:**
 
 ```
 packages/frontend/src/
-├── components/        # Reusable UI components
+├── components/       # Reusable UI components
 ├── hooks/            # Custom React hooks
 ├── stores/           # Zustand state stores
 └── App.tsx           # Main application component
 ```
-
-## 🔧 Workspace Scripts
-
-The root `package.json` provides convenient scripts to manage the entire monorepo:
-
-| Script              | Description                       |
-| ------------------- | --------------------------------- |
-| `pnpm dev`          | Start backend development server  |
-| `pnpm dev:frontend` | Start frontend development server |
-| `pnpm dev:all`      | Start both backend and frontend   |
-| `pnpm build`        | Build all packages                |
-| `pnpm test`         | Run tests for all packages        |
-| `pnpm lint`         | Lint all packages                 |
-| `pnpm format`       | Format all packages               |
-
-| `pnpm db:*` | Database operations (generate, push, migrate, studio) |
 
 ## 🐳 Docker Support
 
@@ -205,32 +165,6 @@ pnpm docker:build
 
 # Run Docker container
 pnpm docker:run
-```
-
-## 📚 Documentation
-
-We've consolidated all documentation into a modern, searchable documentation site.
-
-**📖 [View Full Documentation](http://localhost:5173)** (run `pnpm docs:dev` first)
-
-### Quick Links
-
-- **[Getting Started](/guide/)** - Complete setup and development workflow
-- **[API Reference](/api/)** - REST API endpoints and usage
-- **[Architecture](/architecture/)** - System design and patterns
-- **[Discord Bot](/guide/discord-bot)** - Bot setup and features
-- **[Database](/guide/database)** - Schema and operations
-- **[Frontend](/guide/frontend)** - React development guide
-- **[Deployment](/guide/deployment)** - Production deployment
-
-### Development
-
-```bash
-# Start documentation site
-pnpm docs:dev
-
-# Build documentation
-pnpm docs:build
 ```
 
 ## 🤝 Contributing
