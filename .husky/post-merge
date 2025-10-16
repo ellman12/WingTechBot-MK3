@@ -38,7 +38,6 @@ fi
 if db_changed; then
   echo "🗄️  Database files changed, running migrations..."
   pnpm db:generate || echo "No db:generate script found, skipping..."
-  pnpm db:push || echo "No db:push script found, skipping..."
 fi
 
 # Clean build artifacts if configuration files changed
