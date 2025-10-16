@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository";
+import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
