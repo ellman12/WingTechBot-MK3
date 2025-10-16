@@ -10,13 +10,11 @@ export default tseslint.config([
     globalIgnores(["dist", "dist/**/*", "**/dist/**/*", "node_modules", "node_modules/**/*", "build", "build/**/*", "coverage", "coverage/**/*", ".next", ".next/**/*", "out", "out/**/*", "*.d.ts", "*.js.map", "*.css.map", ".eslintcache"]),
     {
         files: ["**/*.{ts,tsx}"],
-        extends: [
-            js.configs.recommended,
-            tseslint.configs.recommended,
-            reactHooks.configs["recommended-latest"],
-            reactRefresh.configs.vite,
-            prettier, // disables formatting rules conflicting with Prettier
-        ],
+        plugins: {
+            "react-hooks": reactHooks,
+            "react-refresh": reactRefresh,
+        },
+        extends: [js.configs.recommended, ...tseslint.configs.recommended, prettier],
         languageOptions: { ecmaVersion: 2020, globals: globals.browser },
         rules: {
             "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
