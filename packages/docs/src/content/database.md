@@ -2,7 +2,7 @@
 
 ## Overview
 
-WingTechBot MK3 uses PostgreSQL as its primary database with Prisma as the ORM and Kysely for type-safe SQL queries.
+WingTechBot MK3 uses PostgreSQL as its primary database with Kysely for type-safe SQL queries.
 
 ## Database Schema
 
@@ -26,30 +26,6 @@ owner_id VARCHAR(255) NOT NULL,
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-\`\`\`
-
-## Database Operations
-
-### Using Prisma
-
-\`\`\`typescript
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
-
-// Create a user
-const user = await prisma.user.create({
-data: {
-id: 'user123',
-username: 'example_user',
-discordId: 'discord123'
-}
-})
-
-// Find user by Discord ID
-const user = await prisma.user.findUnique({
-where: { discordId: 'discord123' }
-})
 \`\`\`
 
 ### Using Kysely

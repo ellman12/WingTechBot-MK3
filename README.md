@@ -81,7 +81,6 @@ pnpm dev:frontend
 #### Database Operations:
 
 ```bash
-# Generate Prisma client
 pnpm db:generate
 
 # Push schema changes to database
@@ -89,9 +88,6 @@ pnpm db:push
 
 # Run database migrations
 pnpm db:migrate
-
-# Open Prisma Studio
-pnpm db:studio
 ```
 
 #### Building for Production:
@@ -144,7 +140,6 @@ The backend serves as both a Discord bot and a REST API. It follows hexagonal ar
 
 - Discord bot functionality
 - RESTful API endpoints
-- Database integration with Prisma
 - Type-safe database queries with Kysely
 - Comprehensive error handling
 - Docker support
@@ -157,7 +152,6 @@ packages/backend/src/
 ├── application/        # Use cases and application logic
 ├── core/              # Domain models and business logic
 ├── infrastructure/    # Framework and external concerns
-└── generated/         # Generated Prisma client
 ```
 
 ### Frontend Package

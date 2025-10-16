@@ -387,7 +387,7 @@ jobs:
               run: |
                   echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/test_db" >> $GITHUB_ENV
 
-            - name: Generate Prisma client
+            - name: Generate database types
               run: pnpm --filter backend db:generate
 
             - name: Check database migrations

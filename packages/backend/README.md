@@ -22,7 +22,7 @@ src/
 │   ├── database/      # Database connection and setup
 │   ├── discord/       # Discord bot implementation
 │   └── http/          # Express.js server setup
-└── generated/         # Auto-generated code (Prisma, Kysely)
+└── generated/         # Auto-generated code (Kysely)
 ```
 
 ## 🛠️ Technology Stack
@@ -30,7 +30,6 @@ src/
 - **Express.js 5** - Web framework
 - **TypeScript 5** - Type safety and modern JavaScript features
 - **Discord.js 14** - Discord bot functionality
-- **Prisma** - Database ORM and migrations
 - **Kysely** - Type-safe SQL query builder
 - **PostgreSQL** - Production-ready database
 - **Zod** - Runtime type validation
@@ -79,14 +78,7 @@ src/
 3. **Database Setup**
 
     ```bash
-    # Generate Prisma client and database types
     pnpm db:generate
-
-    # Apply database schema
-    pnpm db:push
-
-    # Open Prisma Studio (optional)
-    pnpm db:studio
     ```
 
 ### Development
@@ -240,9 +232,6 @@ pnpm db:migrate
 
 # Reset database (development only)
 pnpm db:push --force-reset
-
-# View database in Prisma Studio
-pnpm db:studio
 ```
 
 ## 🧪 Testing
@@ -351,21 +340,10 @@ Production deployment requires:
 - `NODE_ENV`: Set to `production`
 - `CORS_ORIGIN`: Frontend domain for CORS
 
-### Database Migration
-
-```bash
-# Run migrations in production
-npx prisma migrate deploy
-
-# Generate client
-npx prisma generate
-```
-
 ## 📚 Additional Resources
 
 - [Express.js Documentation](https://expressjs.com/)
 - [Discord.js Guide](https://discordjs.guide/)
-- [Prisma Documentation](https://www.prisma.io/docs/)
 - [Kysely Documentation](https://kysely.dev/)
 - [Hexagonal Architecture](https://alistair.cockburn.us/hexagonal-architecture/)
 
