@@ -137,7 +137,6 @@ GRANT ALL PRIVILEGES ON DATABASE wingtechbot TO wingtechbot;
 #### Database Schema Setup
 
 ```bash
-# Generate Prisma client
 pnpm db:generate
 
 # Push schema to database

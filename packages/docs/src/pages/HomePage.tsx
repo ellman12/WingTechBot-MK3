@@ -187,9 +187,6 @@ export default function HomePage() {
                                 <strong>Discord.js</strong> - Discord bot functionality
                             </li>
                             <li>
-                                <strong>Prisma</strong> - Database ORM
-                            </li>
-                            <li>
                                 <strong>Kysely</strong> - Type-safe SQL queries
                             </li>
                             <li>

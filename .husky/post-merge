@@ -16,7 +16,7 @@ deps_changed() {
 
 # Function to check if database files changed
 db_changed() {
-  echo "$CHANGED_FILES" | grep -E "(prisma/|\.sql$|migrations/|seeds/)" > /dev/null
+  echo "$CHANGED_FILES" | grep -E "(\.sql$|migrations/|seeds/)" > /dev/null
 }
 
 # Function to check if build artifacts should be cleaned
