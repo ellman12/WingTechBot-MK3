@@ -1,8 +1,18 @@
-import type { Message, MessageReaction, PartialMessageReaction, PartialUser, User } from "discord.js";
+import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
+import type { DiscordChatService } from "@core/services/DiscordChatService.js";
+import { oneIn } from "@core/utils/probabilityUtils.js";
+import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
+import type { Message, MessageReaction, PartialMessageReaction, PartialUser, TextChannel, User } from "discord.js";
 
 export type AutoReactionService = {
     readonly reactionAdded: (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => Promise<void>;
     readonly messageCreated: (message: Message) => Promise<void>;
+};
+
+export type AutoReactionServiceDeps = {
+    discordChatService: DiscordChatService;
+    geminiLlmService: GeminiLlmService;
+    readonly llmInstructionRepo: LlmInstructionRepository;
 };
 
 const upvoteScolds = [
@@ -38,7 +48,7 @@ export const reactionScoldMessages: Record<string, string[]> = {
 };
 
 //Listens for various events the bot can react and respond to.
-export const createAutoReactionService = (): AutoReactionService => {
+export const createAutoReactionService = ({ discordChatService, geminiLlmService, llmInstructionRepo }: AutoReactionServiceDeps): AutoReactionService => {
     console.log("[AutoReactionService] Creating AutoReactionService");
 
     async function checkForFunnySubstrings(message: Message): Promise<void> {
@@ -86,6 +96,27 @@ export const createAutoReactionService = (): AutoReactionService => {
         }
     }
 
+    //Very small chance for the LLM to respond with the message but nekoized.
+    async function tryToNekoizeMessage(message: Message) {
+        //Disable in tests
+        if (process.env.TESTER_DISCORD_CLIENT_ID) return;
+
+        if (!oneIn(1000) || message.author.id === process.env.DISCORD_CLIENT_ID) return;
+
+        const channel = (await message.channel.fetch()) as TextChannel;
+        const controller = new AbortController();
+        void discordChatService.sendTypingIndicator(controller.signal, channel);
+
+        try {
+            const content = await discordChatService.replaceUserAndRoleMentions(message);
+            const systemInstruction = await llmInstructionRepo.getInstruction("nekoize");
+            const response = await geminiLlmService.generateMessage(content, [], systemInstruction);
+            await message.reply(response);
+        } finally {
+            controller.abort();
+        }
+    }
+
     return {
         reactionAdded: async (reaction, user): Promise<void> => {
             try {
@@ -107,6 +138,7 @@ export const createAutoReactionService = (): AutoReactionService => {
         messageCreated: async (message): Promise<void> => {
             await checkForFunnySubstrings(message);
             await tryToSayErJoke(message);
+            await tryToNekoizeMessage(message);
         },
     };
 };
