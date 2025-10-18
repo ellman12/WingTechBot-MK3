@@ -38,7 +38,8 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
     };
 
     const findOrCreate = async (name: string, discordId: string | null): Promise<ReactionEmote> => {
-        return (await findByNameAndDiscordId(name, discordId)) ?? (await createReactionEmote({ name, discordId, karmaValue: 0 }));
+        const existing = await findByNameAndDiscordId(name, discordId);
+        return existing ?? (await createReactionEmote({ name, discordId, karmaValue: 0 }));
     };
 
     const createReactionEmote = async (data: CreateReactionEmoteData): Promise<ReactionEmote> => {
@@ -49,16 +50,17 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
             throw new Error("Invalid data");
         }
 
-        const existing = await findByNameAndDiscordId(parsedName, discordId);
-        if (existing !== null) {
-            console.warn("Reaction emote exists");
-            return existing;
-        }
-
-        const [emote] = await db.insertInto("reaction_emotes").values({ name: parsedName, discord_id: discordId, karma_value: karmaValue }).returningAll().execute();
+        const [emote] = await db
+            .insertInto("reaction_emotes")
+            .values({ name: parsedName, discord_id: discordId, karma_value: karmaValue })
+            .onConflict(oc => oc.columns(["name", "discord_id"]).doNothing())
+            .returningAll()
+            .execute();
 
         if (!emote) {
-            throw new Error("Failed to create reaction emote");
+            const existing = await findByNameAndDiscordId(parsedName, discordId);
+            if (existing) return existing;
+            throw new Error("Failed to insert or find existing emote");
         }
 
         return transformReactionEmote(emote);
@@ -75,5 +77,11 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         return emote ? transformReactionEmote(emote) : null;
     };
 
-    return { findById: findEmoteById, findByNameAndDiscordId, findOrCreate, create: createReactionEmote, update: updateReactionEmote };
+    return {
+        findById: findEmoteById,
+        findByNameAndDiscordId,
+        findOrCreate,
+        create: createReactionEmote,
+        update: updateReactionEmote,
+    };
 };
