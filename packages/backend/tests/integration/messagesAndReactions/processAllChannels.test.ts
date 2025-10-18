@@ -27,14 +27,18 @@ describe("processAllChannels", async () => {
 
         //Go offline and send messages for bot to process later.
         await bot.stop();
+        await sleep(6000);
 
-        const messages: Message[] = [];
+        const newMessages: Message[] = [];
         for (let i = 1; i <= 3; i++) {
-            messages.push(await testerChannel.send(`Message to process later #${i}`));
+            const message = await testerChannel.send(`Message to process later #${i}`);
+            newMessages.push(message);
+            await message.react("👍");
+            await message.react("👎");
         }
 
         let existingMessages = await db.selectFrom("messages").selectAll().execute();
-        for (const message of messages) {
+        for (const message of newMessages) {
             expect(existingMessages.find(m => m.id === message.id)).toBeUndefined();
         }
 
@@ -42,12 +46,30 @@ describe("processAllChannels", async () => {
         await sleep(delay * 4);
 
         existingMessages = await db.selectFrom("messages").selectAll().execute();
-        for (const message of messages) {
+        for (const message of newMessages) {
             expect(existingMessages.find(m => m.id === message.id)).not.toBeUndefined();
+
+            const reactions = await db.selectFrom("reactions").where("message_id", "=", message.id).selectAll().execute();
+            expect(reactions).toHaveLength(2);
         }
 
-        for (const message of messages) {
+        //Delete these new messages and make sure bot handles them properly on reload.
+        await bot.stop();
+        await sleep(6000);
+
+        for (const message of newMessages) {
             await message.delete();
+        }
+
+        await bot.start();
+        await sleep(delay * 4);
+
+        existingMessages = await db.selectFrom("messages").selectAll().execute();
+        for (const message of newMessages) {
+            expect(existingMessages.find(m => m.id === message.id)).toBeUndefined();
+
+            const reactions = await db.selectFrom("reactions").where("message_id", "=", message.id).selectAll().execute();
+            expect(reactions).toHaveLength(0);
         }
     }, timeout);
 });
