@@ -98,11 +98,6 @@ export const createAutoReactionService = ({ discordChatService, geminiLlmService
 
     //Very small chance for the LLM to respond with the message but nekoized.
     async function tryToNekoizeMessage(message: Message) {
-        //Disable in tests
-        if (process.env.TESTER_DISCORD_CLIENT_ID) return;
-
-        if (!oneIn(1000) || message.author.id === process.env.DISCORD_CLIENT_ID) return;
-
         const channel = (await message.channel.fetch()) as TextChannel;
         const controller = new AbortController();
         void discordChatService.sendTypingIndicator(controller.signal, channel);
@@ -138,7 +133,10 @@ export const createAutoReactionService = ({ discordChatService, geminiLlmService
         messageCreated: async (message): Promise<void> => {
             await checkForFunnySubstrings(message);
             await tryToSayErJoke(message);
-            await tryToNekoizeMessage(message);
+
+            if (oneIn(1000) && message.author.id !== process.env.DISCORD_CLIENT_ID && (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "development")) {
+                await tryToNekoizeMessage(message);
+            }
         },
     };
 };
