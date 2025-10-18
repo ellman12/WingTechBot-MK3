@@ -130,7 +130,7 @@ export const createMessageArchiveService = ({ messageRepository, reactionReposit
             messages = await channel.messages.fetch(options);
             lastId = messages.last()?.id ?? null;
             for (const message of messages.values()) {
-                if (endYear !== undefined && message.createdAt.getUTCFullYear() >= endYear) break;
+                if (endYear !== undefined && message.createdAt.getUTCFullYear() !== endYear) break;
 
                 allMessages.push(message);
             }
