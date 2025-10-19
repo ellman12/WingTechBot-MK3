@@ -69,9 +69,8 @@ async function processMessage(discordMessage: Message, existingMessages: Map<str
     const discordReactions: typeof existingReactions = [];
 
     for (const reaction of discordMessage.reactions.cache.values()) {
-        const discordId = reaction.emoji.id;
         const name = reaction.emoji.name!;
-        const emote = await emoteRepository.findOrCreate(name, discordId);
+        const emote = await emoteRepository.findOrCreate(name, reaction.emoji.id ?? "");
 
         await reaction.users.fetch();
         for (const user of reaction.users.cache.values()) {

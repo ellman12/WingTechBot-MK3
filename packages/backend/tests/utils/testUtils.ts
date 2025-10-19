@@ -78,8 +78,8 @@ export async function getTestingChannel(bot: DiscordBot): Promise<TextChannel> {
 export async function getTestingEmotes(bot: DiscordBot): Promise<TestReactionEmote[]> {
     const guild = await getTestingGuild(bot);
     const emotes: TestReactionEmote[] = [
-        ["👀", null],
-        ["🐈‍⬛", null],
+        ["👀", ""],
+        ["🐈‍⬛", ""],
     ];
 
     const names = ["upvote", "downvote", "silver", "gold", "platinum"];
@@ -114,7 +114,7 @@ export async function createTestReactions(db: Kysely<DB>, messageCount: number, 
         });
 
         for (let j = 0; j < reactionsPerMessage; j++) {
-            const [name, id] = validEmotes[j] ?? ["", null];
+            const [name, id] = validEmotes[j] ?? ["", ""];
             const emote = await emotes.findOrCreate(name, id);
 
             const foundEmote = await emotes.findById(emote.id);
@@ -163,7 +163,7 @@ export async function createMessagesAndReactions(botChannel: TextChannel, tester
 
             await testerBotChannel.messages.fetch();
             const foundMessage = testerBotChannel.messages.cache.get(message.id)!;
-            await foundMessage.react(discordId ?? name);
+            await foundMessage.react(discordId || name);
         }
     }
 

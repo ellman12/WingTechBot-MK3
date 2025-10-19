@@ -23,21 +23,15 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         return emote ? transformReactionEmote(emote) : null;
     };
 
-    const findByNameAndDiscordId = async (name: string, discordId: string | null): Promise<ReactionEmote | null> => {
+    const findByNameAndDiscordId = async (name: string, discordId: string): Promise<ReactionEmote | null> => {
         const parsedName = removeColons(name);
-        let query = emotes.where("name", "=", parsedName);
-
-        if (discordId === null) {
-            query = query.where("discord_id", "is", null);
-        } else {
-            query = query.where("discord_id", "=", discordId);
-        }
+        const query = emotes.where("name", "=", parsedName).where("discord_id", "=", discordId);
 
         const emote = await query.executeTakeFirst();
         return emote ? transformReactionEmote(emote) : null;
     };
 
-    const findOrCreate = async (name: string, discordId: string | null): Promise<ReactionEmote> => {
+    const findOrCreate = async (name: string, discordId: string): Promise<ReactionEmote> => {
         const existing = await findByNameAndDiscordId(name, discordId);
         return existing ?? (await createReactionEmote({ name, discordId, karmaValue: 0 }));
     };
@@ -46,7 +40,7 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         const { name, discordId, karmaValue } = data;
         const parsedName = removeColons(name);
 
-        if (parsedName === "" || discordId === "" || discordId === "0") {
+        if (parsedName === "" || discordId === "0") {
             throw new Error("Invalid data");
         }
 

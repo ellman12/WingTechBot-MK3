@@ -33,7 +33,7 @@ describe("processAllChannels", async () => {
 
         async function startBot() {
             await bot.start();
-            await sleep(22000); //Makes sure bot has enough time to update data.
+            await sleep(24000); //Makes sure bot has enough time to update data.
         }
 
         async function getAllMessages() {

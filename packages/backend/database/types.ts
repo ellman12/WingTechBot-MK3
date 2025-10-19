@@ -20,7 +20,7 @@ export interface Messages {
 
 export interface ReactionEmotes {
     created_at: Generated<Timestamp>;
-    discord_id: string | null;
+    discord_id: Generated<string>;
     id: Generated<number>;
     karma_value: Generated<number>;
     name: string;

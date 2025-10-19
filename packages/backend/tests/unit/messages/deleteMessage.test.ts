@@ -26,7 +26,7 @@ describe("deleteMessage", () => {
 
         await db.insertInto("messages").values({ id: "m1", author_id: "a1", channel_id: "c1", content: "bye" }).execute();
 
-        const emote1 = await emotes.findOrCreate("👀", null);
+        const emote1 = await emotes.findOrCreate("👀", "");
         const emote2 = await emotes.findOrCreate("upvote", "123456");
         await reactions.create({ giverId: "123", receiverId: "a1", channelId: "c1", messageId: "m1", emoteId: emote1.id });
         await reactions.create({ giverId: "123", receiverId: "a1", channelId: "c1", messageId: "m1", emoteId: emote2.id });
