@@ -5,6 +5,7 @@ import { registerDiscordChatEventHandlers } from "@application/eventHandlers/Dis
 import { registerVoiceServiceEventHandlers } from "@application/eventHandlers/DiscordVoiceService.js";
 import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive.js";
 import { registerReactionArchiveEvents } from "@application/eventHandlers/ReactionArchive.js";
+import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { AutoReactionService } from "@core/services/AutoReactionService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
@@ -19,6 +20,7 @@ export type DiscordBotDeps = {
     readonly config: Config;
     readonly soundService: SoundService;
     readonly soundTagService: SoundTagService;
+    readonly emoteRepository: ReactionEmoteRepository;
     readonly reactionArchiveService: ReactionArchiveService;
     readonly messageArchiveService: MessageArchiveService;
     readonly discordChatService: DiscordChatService;
@@ -33,7 +35,7 @@ export type DiscordBot = {
     readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
 };
 
-export const createDiscordBot = ({ config, soundService, soundTagService, reactionArchiveService, messageArchiveService, discordChatService, autoReactionService }: DiscordBotDeps): DiscordBot => {
+export const createDiscordBot = async ({ config, soundService, soundTagService, emoteRepository, reactionArchiveService, messageArchiveService, discordChatService, autoReactionService }: DiscordBotDeps): Promise<DiscordBot> => {
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
@@ -92,8 +94,11 @@ export const createDiscordBot = ({ config, soundService, soundTagService, reacti
 
             await client.login(config.discord.token);
 
+            const guild = await client.guilds.fetch(config.discord.serverId!);
+            await guild.fetch();
+            await emoteRepository.createKarmaEmotes(guild);
+
             //If first boot, pull in all messages from all time. Otherwise, just get this year's.
-            const guild = client.guilds.cache.get(config.discord.serverId!)!;
             const year = (await messageArchiveService.getAllDBMessages()).length === 0 ? undefined : new Date().getUTCFullYear();
             await messageArchiveService.processAllChannels(guild, year);
 

@@ -1,7 +1,8 @@
 import type { CreateReactionEmoteData, ReactionEmote, UpdateReactionEmoteData } from "@core/entities/ReactionEmote.js";
-import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
+import { type ReactionEmoteRepository, karmaEmoteNames } from "@core/repositories/ReactionEmoteRepository.js";
 import type { DB } from "@db/types.js";
 import type { ReactionEmotes } from "@db/types.js";
+import type { Guild } from "discord.js";
 import type { Kysely, Selectable, Updateable } from "kysely";
 
 //Transform database reaction emote to domain reaction emote
@@ -31,9 +32,9 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         return emote ? transformReactionEmote(emote) : null;
     };
 
-    const findOrCreate = async (name: string, discordId: string): Promise<ReactionEmote> => {
+    const findOrCreate = async (name: string, discordId: string, karmaValue: number = 0): Promise<ReactionEmote> => {
         const existing = await findByNameAndDiscordId(name, discordId);
-        return existing ?? (await createReactionEmote({ name, discordId, karmaValue: 0 }));
+        return existing ?? (await createReactionEmote({ name, discordId, karmaValue }));
     };
 
     const createReactionEmote = async (data: CreateReactionEmoteData): Promise<ReactionEmote> => {
@@ -71,11 +72,27 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         return emote ? transformReactionEmote(emote) : null;
     };
 
+    const createKarmaEmotes = async (guild: Guild): Promise<void> => {
+        await guild.emojis.fetch();
+
+        for (const name of karmaEmoteNames) {
+            const found = guild.emojis.cache.find(e => e.name === name);
+            if (!found) throw new Error(`Server emoji ${name} not found`);
+
+            let karmaValue = 0;
+            if (name === "upvote") karmaValue = 1;
+            else if (name === "downvote") karmaValue = -1;
+
+            await findOrCreate(name, found.id, karmaValue);
+        }
+    };
+
     return {
         findById: findEmoteById,
         findByNameAndDiscordId,
         findOrCreate,
         create: createReactionEmote,
         update: updateReactionEmote,
+        createKarmaEmotes,
     };
 };
