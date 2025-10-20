@@ -13,4 +13,6 @@ export type ReactionEmoteRepository = {
 
     //Adds the emotes from karmaEmoteNames if they don't already exist.
     createKarmaEmotes(guild: Guild): Promise<void>;
+
+    getKarmaEmotes(): Promise<ReactionEmote[]>;
 };

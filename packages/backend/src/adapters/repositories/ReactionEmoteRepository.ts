@@ -87,6 +87,10 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         }
     };
 
+    const getKarmaEmotes = async (): Promise<ReactionEmote[]> => {
+        return (await db.selectFrom("reaction_emotes").where("reaction_emotes.name", "in", karmaEmoteNames).selectAll().execute()).map(transformReactionEmote);
+    };
+
     return {
         findById: findEmoteById,
         findByNameAndDiscordId,
@@ -94,5 +98,6 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         create: createReactionEmote,
         update: updateReactionEmote,
         createKarmaEmotes,
+        getKarmaEmotes,
     };
 };

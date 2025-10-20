@@ -1,8 +1,8 @@
 import type { CreateReactionData, DeleteReactionData, FindReactionData, Reaction } from "@core/entities/Reaction.js";
-import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
-import type { DB } from "@db/types.js";
-import type { Reactions } from "@db/types.js";
-import type { Kysely, Selectable } from "kysely";
+import { karmaEmoteNames } from "@core/repositories/ReactionEmoteRepository.js";
+import type { EmoteTotals, ReactionRepository } from "@core/repositories/ReactionRepository.js";
+import type { DB, Reactions } from "@db/types.js";
+import { type Kysely, type Selectable, sql } from "kysely";
 
 //Transform database reaction emote to domain reaction emote
 export const transformReaction = (dbReaction: Selectable<Reactions> | Reactions): Reaction => {
@@ -83,5 +83,44 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         }
     };
 
-    return { find: findReaction, findForMessage: findReactionsForMessage, create: createReaction, delete: deleteReaction, deleteReactionsForMessage, deleteReactionsForEmote };
+    const getKarmaAndAwards = async (userId: string, year?: number): Promise<EmoteTotals> => {
+        const emotes = (
+            await db
+                .selectFrom("messages as m")
+                .innerJoin("reactions as r", "r.message_id", "m.id")
+                .innerJoin("reaction_emotes as re", "r.emote_id", "re.id")
+                .select(["re.name"])
+                .select(eb => [eb.fn.countAll().as("count"), eb.fn.sum("re.karma_value").as("totalKarma")])
+                .where("r.giver_id", "!=", userId)
+                .where("r.receiver_id", "=", userId)
+                .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year))
+                .where("re.name", "in", karmaEmoteNames)
+                .groupBy(["re.name"])
+                .execute()
+        ).map(r => ({ ...r, count: Number(r.count), totalKarma: Number(r.totalKarma) }));
+
+        const karmaAndAwards = karmaEmoteNames.map(name => ({
+            name,
+            count: emotes.find(r => r.name === name)?.count ?? 0,
+            totalKarma: emotes.find(r => r.name === name)?.totalKarma ?? 0,
+        }));
+
+        return new Map(karmaAndAwards.map(r => [r.name, r]));
+    };
+
+    // const getReactionsReceived = async (receiverId: string, year?: number, giverIds?: string[]): Promise<EmoteTotals> => { }
+    // const getReactionsGiven = async (giverId: string, year?: number, receiverIds?: string[]): Promise<EmoteTotals> => { }
+    // const getKarmaLeaderboard = async (year?: number): Promise<KarmaLeaderboardEntry> => { }
+    // const getEmoteLeaderboard = async (year?: number): Promise<EmoteTotals> => { }
+    // const getTopMessages = async (authorId: string, emoteName: string, limit?: number): Promise<TopMessage[]> => { }
+
+    return {
+        find: findReaction,
+        findForMessage: findReactionsForMessage,
+        create: createReaction,
+        delete: deleteReaction,
+        deleteReactionsForMessage,
+        deleteReactionsForEmote,
+        getKarmaAndAwards,
+    };
 };
