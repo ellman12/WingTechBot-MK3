@@ -21,12 +21,8 @@
         "format:check": "pnpm --recursive format:check",
         "clean": "pnpm -r clean",
         "db:generate": "pnpm --filter backend db:generate",
-        "db:push": "pnpm --filter backend db:push",
-        "db:studio": "pnpm --filter backend db:studio",
         "db:migrate": "pnpm --filter backend db:migrate",
-        "discord:deploy-commands": "pnpm --filter backend discord:deploy-commands",
         "docker:build": "docker build -t wingtechbot-mk3 -f packages/backend/Dockerfile .",
-        "docker:run": "docker run --name wingtechbot-mk3 --rm -p 3000:3000 --add-host=host.docker.internal:host-gateway --env-file packages/backend/.env -e DATABASE_URL=postgresql://wingtechbot:wingtechbot_password@host.docker.internal:5433/wingtechbot wingtechbot-mk3",
         "docker:up": "pnpm --filter backend predev && pnpm --filter backend docker:up",
         "docker:up:detached": "pnpm --filter backend docker:up:detached",
         "docker:down": "pnpm --filter backend docker:down",
@@ -34,62 +30,32 @@
         "docker:logs": "pnpm --filter backend docker:logs",
         "docker:restart": "pnpm --filter backend docker:restart",
         "docker:clean": "pnpm --filter backend docker:clean",
-        "docker:db": "pnpm --filter backend docker:up postgres database-init && echo '🗄️ Database is ready at postgresql://wingtechbot:wingtechbot_password@localhost:5432/wingtechbot'",
-        "docker:full-reset": "pnpm --filter backend docker:clean && pnpm docker:up",
-        "dev:docker": "pnpm docker:up:detached && pnpm dev",
-        "dev:with-db": "pnpm docker:db && pnpm dev",
         "docs:dev": "pnpm --filter docs dev",
         "docs:build": "pnpm --filter docs build",
         "docs:preview": "pnpm --filter docs preview",
         "prepare": "husky"
     },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/ellman12/WingTechBot-MK3.git"
-    },
-    "keywords": [
-        "monorepo",
-        "expressjs",
-        "react",
-        "typescript",
-        "discord",
-        "bot",
-        "vite",
-        "tailwind"
-    ],
-    "author": "",
-    "license": "ISC",
-    "bugs": {
-        "url": "https://github.com/ellman12/WingTechBot-MK3/issues"
-    },
-    "homepage": "https://github.com/ellman12/WingTechBot-MK3#readme",
-    "engines": {
-        "node": ">=18.0.0"
-    },
-    "pnpm": {
-        "overrides": {
-            "prismjs": ">=1.30.0"
-        },
-        "neverBuiltDependencies": []
-    },
     "devDependencies": {
-        "@eslint/js": "^9.30.1",
+        "@eslint/js": "^9.37.0",
+        "@tailwindcss/postcss": "^4.1.14",
         "@trivago/prettier-plugin-sort-imports": "^5.2.2",
-        "@typescript-eslint/eslint-plugin": "^8.36.0",
-        "@typescript-eslint/parser": "^8.36.0",
-        "eslint": "^9.30.1",
-        "eslint-config-prettier": "^10.1.5",
-        "eslint-plugin-react-hooks": "^5.2.0",
-        "eslint-plugin-react-refresh": "^0.4.20",
-        "globals": "^16.3.0",
+        "@typescript-eslint/eslint-plugin": "^8.46.1",
+        "@typescript-eslint/parser": "^8.46.1",
+        "@vitejs/plugin-react": "^5.0.4",
+        "autoprefixer": "^10.4.21",
+        "eslint": "^9.37.0",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-react-hooks": "^7.0.0",
+        "eslint-plugin-react-refresh": "^0.4.24",
+        "globals": "^16.4.0",
         "husky": "^9.1.7",
-        "lint-staged": "^16.1.2",
+        "lint-staged": "^16.2.4",
+        "postcss": "^8.5.6",
         "prettier": "^3.6.2",
-        "prettier-plugin-tailwindcss": "^0.6.14",
-        "typescript-eslint": "^8.36.0"
-    },
-    "dependencies": {
-        "fast-deep-equal": "^3.1.3",
-        "pg-mem": "^3.0.5"
+        "prettier-plugin-tailwindcss": "^0.7.0",
+        "rimraf": "^6.0.1",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.46.1",
+        "vite": "^7.1.10"
     }
 }
