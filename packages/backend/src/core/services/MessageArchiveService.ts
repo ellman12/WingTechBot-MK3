@@ -69,9 +69,8 @@ async function processMessage(discordMessage: Message, existingMessages: Map<str
     const discordReactions: typeof existingReactions = [];
 
     for (const reaction of discordMessage.reactions.cache.values()) {
-        const discordId = reaction.emoji.id;
         const name = reaction.emoji.name!;
-        const emote = await emoteRepository.findOrCreate(name, discordId);
+        const emote = await emoteRepository.findOrCreate(name, reaction.emoji.id ?? "");
 
         await reaction.users.fetch();
         for (const user of reaction.users.cache.values()) {
@@ -130,7 +129,7 @@ export const createMessageArchiveService = ({ messageRepository, reactionReposit
             messages = await channel.messages.fetch(options);
             lastId = messages.last()?.id ?? null;
             for (const message of messages.values()) {
-                if (endYear !== undefined && message.createdAt.getUTCFullYear() >= endYear) break;
+                if (endYear !== undefined && message.createdAt.getUTCFullYear() !== endYear) break;
 
                 allMessages.push(message);
             }

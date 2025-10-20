@@ -31,13 +31,12 @@ export const createReactionArchiveService = ({ reactionRepository, emoteReposito
 
             try {
                 const emoteName = reaction.emoji.name;
-                const emoteDiscordId = reaction.emoji.id;
 
                 if (!emoteName) {
                     throw new Error("Missing reaction emoji name");
                 }
 
-                const reactionEmote = await emoteRepository.findOrCreate(emoteName, emoteDiscordId);
+                const reactionEmote = await emoteRepository.findOrCreate(emoteName, reaction.emoji.id ?? "");
 
                 const data = { giverId: user.id, receiverId: message.author.id, channelId: channel.id, messageId: message.id, emoteId: reactionEmote.id };
                 await reactionRepository.create(data);
@@ -58,13 +57,12 @@ export const createReactionArchiveService = ({ reactionRepository, emoteReposito
 
             try {
                 const emoteName = reaction.emoji.name;
-                const emoteDiscordId = reaction.emoji.id;
 
                 if (!emoteName) {
                     throw new Error("Missing reaction emoji name");
                 }
 
-                const reactionEmote = await emoteRepository.findByNameAndDiscordId(emoteName, emoteDiscordId);
+                const reactionEmote = await emoteRepository.findByNameAndDiscordId(emoteName, reaction.emoji.id ?? "");
 
                 if (!reactionEmote) {
                     console.warn("Skipping removal of reaction because reaction emote not found");
@@ -109,7 +107,7 @@ export const createReactionArchiveService = ({ reactionRepository, emoteReposito
                     throw new Error("Missing emoji name in removeReactionsForEmote");
                 }
 
-                const emote = await emoteRepository.findByNameAndDiscordId(name, reaction.emoji.id);
+                const emote = await emoteRepository.findByNameAndDiscordId(name, reaction.emoji.id ?? "");
 
                 if (!emote) {
                     throw new Error("Emote not found in removeReactionsForEmote");

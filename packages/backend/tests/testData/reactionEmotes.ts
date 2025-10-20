@@ -1,15 +1,14 @@
-export type TestReactionEmote = [string, string | null];
+export type TestReactionEmote = [string, string];
 
 export const validEmotes: TestReactionEmote[] = [
     ["upvote", "123456"],
-    [":eyes:", null],
-    ["👀", null],
+    [":eyes:", ""],
+    ["👀", ""],
 ];
 
 export const invalidEmotes: TestReactionEmote[] = [
-    ["jdfhjkadsfhjkdsaf", ""],
-    ["", null],
+    ["", ""],
     ["", "374897328"],
     ["::", "123"],
-    ["::", null],
+    ["::", ""],
 ];

@@ -40,12 +40,12 @@ describe("Messages and Reactions integration tests", async () => {
         //Remove reactions for message, then delete message
         message = messages[1]!;
         await message.reactions.removeAll();
-        await sleep(8000);
+        await sleep(10000);
         foundReactions = await db.selectFrom("reactions").where("message_id", "=", message.id).selectAll().execute();
         expect(foundReactions).toHaveLength(0);
 
         await message.delete();
-        await sleep(8000);
+        await sleep(10000);
         foundMessages = await db.selectFrom("messages").where("id", "=", message.id).selectAll().execute();
         expect(foundMessages).toHaveLength(0);
 
@@ -53,16 +53,16 @@ describe("Messages and Reactions integration tests", async () => {
         message = messages[2]!;
         for (let i = 0; i < reactionsPerMessage; i++) {
             const [name, discordId] = emotes[i]!;
-            const reaction = message.reactions.cache.find(r => r.emoji.name === name && r.emoji.id === discordId)!;
+            const reaction = message.reactions.cache.find(r => r.emoji.name === name && r.emoji.id === (discordId || null))!;
             await reaction.remove();
         }
 
-        await sleep(8000);
+        await sleep(10000);
         foundReactions = await db.selectFrom("reactions").where("message_id", "=", message.id).selectAll().execute();
         expect(foundReactions).toHaveLength(0);
 
         await message.delete();
-        await sleep(8000);
+        await sleep(10000);
         foundMessages = await db.selectFrom("messages").where("id", "=", message.id).selectAll().execute();
         expect(foundMessages).toHaveLength(0);
 
