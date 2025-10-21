@@ -31,12 +31,10 @@ export type ReactionRepository = {
     deleteReactionsForMessage(messageId: string): Promise<void>;
     deleteReactionsForEmote(messageId: string, emoteId: number): Promise<void>;
 
-    //Calculates a user's karma and awards, optionally for a year.
     getKarmaAndAwards(userId: string, year?: number): Promise<EmoteTotals>;
 
-    //Get all the reactions this user has received, optionally filtering by year and/or specific givers. Ignores self-reactions (unless it's the only giverId specified).
-    // getReactionsReceived(receiverId: string, year?: number, giverIds?: string[]): Promise<EmoteTotals>;
-    //
+    getReactionsReceived(receiverId: string, year?: number, giverIds?: string[]): Promise<EmoteTotals>;
+
     // //Gets all the reactions this user has given, optionally filtering by year and/or specific receivers. Ignores self-reactions (unless it's the only receiverId specified).
     // getReactionsGiven(giverId: string, year?: number, receiverIds?: string[]): Promise<EmoteTotals>;
     //

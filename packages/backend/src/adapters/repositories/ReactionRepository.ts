@@ -4,6 +4,8 @@ import type { EmoteTotals, ReactionRepository } from "@core/repositories/Reactio
 import type { DB, Reactions } from "@db/types.js";
 import { type Kysely, type Selectable, sql } from "kysely";
 
+type UnformattedReactionQueryResult = { name: string; count: string | number | bigint; totalKarma: string | number | bigint };
+
 //Transform database reaction emote to domain reaction emote
 export const transformReaction = (dbReaction: Selectable<Reactions> | Reactions): Reaction => {
     return {
@@ -83,22 +85,26 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         }
     };
 
-    const getKarmaAndAwards = async (userId: string, year?: number): Promise<EmoteTotals> => {
-        const emotes = (
-            await db
-                .selectFrom("messages as m")
-                .innerJoin("reactions as r", "r.message_id", "m.id")
-                .innerJoin("reaction_emotes as re", "r.emote_id", "re.id")
-                .select(["re.name"])
-                .select(eb => [eb.fn.countAll().as("count"), eb.fn.sum("re.karma_value").as("totalKarma")])
-                .where("r.giver_id", "!=", userId)
-                .where("r.receiver_id", "=", userId)
-                .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year))
-                .where("re.name", "in", karmaEmoteNames)
-                .groupBy(["re.name"])
-                .execute()
-        ).map(r => ({ ...r, count: Number(r.count), totalKarma: Number(r.totalKarma) }));
+    const getBaseReactionsQuery = (userId: string, year?: number) =>
+        db
+            .selectFrom("messages as m")
+            .innerJoin("reactions as r", "r.message_id", "m.id")
+            .innerJoin("reaction_emotes as re", "r.emote_id", "re.id")
+            .select(["re.name"])
+            .select(eb => [eb.fn.countAll().as("count"), eb.fn.sum("re.karma_value").as("totalKarma")])
+            .where("r.receiver_id", "=", userId)
+            .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year))
+            .groupBy(["re.name"]);
 
+    //Ensures the count results are numbers and not strings or bigints.
+    const formatQueryResult = (emote: UnformattedReactionQueryResult) => ({ ...emote, count: Number(emote.count), totalKarma: Number(emote.totalKarma) });
+
+    //Calculates a user's karma and awards, optionally for a year.
+    const getKarmaAndAwards = async (userId: string, year?: number): Promise<EmoteTotals> => {
+        const query = getBaseReactionsQuery(userId, year).where("r.giver_id", "!=", userId).where("re.name", "in", karmaEmoteNames);
+        const emotes = (await query.execute()).map(formatQueryResult);
+
+        //Fills in missing karma emotes with 0 values if not already present.
         const karmaAndAwards = karmaEmoteNames.map(name => ({
             name,
             count: emotes.find(r => r.name === name)?.count ?? 0,
@@ -108,7 +114,16 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         return new Map(karmaAndAwards.map(r => [r.name, r]));
     };
 
-    // const getReactionsReceived = async (receiverId: string, year?: number, giverIds?: string[]): Promise<EmoteTotals> => { }
+    //Get all the reactions this user has received, optionally filtering by year and/or specific givers. Ignores self-reactions (unless it's in giverIds).
+    const getReactionsReceived = async (receiverId: string, year?: number, giverIds?: string[]): Promise<EmoteTotals> => {
+        const query = getBaseReactionsQuery(receiverId, year)
+            .$if(giverIds !== undefined && giverIds.length > 0, qb => qb.where("r.giver_id", "in", giverIds!)) //Filter by giverIds if present. This can include receiverId.
+            .$if(giverIds === undefined || giverIds?.length === 0, qb => qb.where("r.giver_id", "!=", receiverId)); //Get reactions from all users except receiverId.
+
+        const emotes = (await query.execute()).map(formatQueryResult);
+        return new Map(emotes.map(r => [r.name, r]));
+    };
+
     // const getReactionsGiven = async (giverId: string, year?: number, receiverIds?: string[]): Promise<EmoteTotals> => { }
     // const getKarmaLeaderboard = async (year?: number): Promise<KarmaLeaderboardEntry> => { }
     // const getEmoteLeaderboard = async (year?: number): Promise<EmoteTotals> => { }
@@ -122,5 +137,6 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         deleteReactionsForMessage,
         deleteReactionsForEmote,
         getKarmaAndAwards,
+        getReactionsReceived,
     };
 };

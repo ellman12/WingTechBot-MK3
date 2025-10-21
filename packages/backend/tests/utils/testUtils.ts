@@ -175,7 +175,7 @@ export async function createFakeMessagesAndReactions(db: Kysely<DB>, totalMessag
         }
     }
 
-    expect(await db.selectFrom("reactions").selectAll().execute()).toHaveLength(totalMessages * reactionsPerMessage * 2); //Include the self-reactions
+    expect(await db.selectFrom("reactions").selectAll().execute()).toHaveLength(totalMessages * reactionsPerMessage * 2);
 }
 
 export async function createMessagesAndReactions(botChannel: TextChannel, testerBotChannel: TextChannel, totalMessages: number, reactionsPerMessage: number, emotes: TestReactionEmote[]) {
