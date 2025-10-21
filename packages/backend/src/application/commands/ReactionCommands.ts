@@ -23,7 +23,7 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository }: 
 
             await interaction.deferReply();
 
-            const result = await reactionRepository.getKarmaAndAwards(user.id, year);
+            const result = new Map((await reactionRepository.getKarmaAndAwards(user.id, year)).map(r => [r.name, r]));
             const karma = [...result.values()].reduce((sum, item) => sum + item.totalKarma, 0);
 
             const formattedEmotes = karmaEmotes.map(e => `${result.get(e.name)!.count} ${formatEmoji(e.discordId ?? e.name)}`);

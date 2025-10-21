@@ -11,7 +11,7 @@ describe("getKarmaAndAwards", () => {
         await createFakeMessagesAndReactions(db, 5, 6, validEmotes);
 
         const emotes = await reactions.getKarmaAndAwards("101");
-        expect(emotes.size).toEqual(5);
+        expect(emotes).toHaveLength(5);
 
         //This should ignore self-reactions
         emotes.forEach(e => {
@@ -30,7 +30,7 @@ describe("getKarmaAndAwards", () => {
         await createFakeMessagesAndReactions(db, 5, 6, validEmotes);
 
         const emotes = await reactions.getKarmaAndAwards("111111111111");
-        expect(emotes.size).toEqual(5);
+        expect(emotes).toHaveLength(5);
         emotes.forEach(e => expect(e.count).toEqual(0));
     });
 });

@@ -105,13 +105,11 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         const emotes = (await query.execute()).map(formatQueryResult);
 
         //Fills in missing karma emotes with 0 values if not already present.
-        const karmaAndAwards = karmaEmoteNames.map(name => ({
+        return karmaEmoteNames.map(name => ({
             name,
             count: emotes.find(r => r.name === name)?.count ?? 0,
             totalKarma: emotes.find(r => r.name === name)?.totalKarma ?? 0,
         }));
-
-        return new Map(karmaAndAwards.map(r => [r.name, r]));
     };
 
     //Get all the reactions this user has received, optionally filtering by year and/or specific givers. Ignores self-reactions (unless it's in giverIds).
@@ -120,8 +118,7 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
             .$if(giverIds !== undefined && giverIds.length > 0, qb => qb.where("r.giver_id", "in", giverIds!)) //Filter by giverIds if present. This can include receiverId.
             .$if(giverIds === undefined || giverIds?.length === 0, qb => qb.where("r.giver_id", "!=", receiverId)); //Get reactions from all users except receiverId.
 
-        const emotes = (await query.execute()).map(formatQueryResult);
-        return new Map(emotes.map(r => [r.name, r]));
+        return (await query.execute()).map(formatQueryResult);
     };
 
     // const getReactionsGiven = async (giverId: string, year?: number, receiverIds?: string[]): Promise<EmoteTotals> => { }

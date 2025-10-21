@@ -8,7 +8,7 @@ export type EmoteTotal = {
     readonly count: number;
     readonly totalKarma: number;
 };
-export type EmoteTotals = Map<string, EmoteTotal>;
+export type EmoteTotals = EmoteTotal[];
 
 //Used for getKarmaLeaderboard().
 export type KarmaLeaderboardEntry = {

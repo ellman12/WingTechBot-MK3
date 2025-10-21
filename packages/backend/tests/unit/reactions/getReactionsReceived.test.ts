@@ -16,7 +16,7 @@ describe("getReactionsReceived", () => {
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
 
         const emotes = await reactions.getReactionsReceived("101");
-        expect(emotes.size).toEqual(reactionsPerMessage);
+        expect(emotes).toHaveLength(reactionsPerMessage);
         emotes.forEach(e => expect(e.count).toEqual(1));
     });
 
@@ -27,7 +27,7 @@ describe("getReactionsReceived", () => {
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
 
         const emotes = await reactions.getReactionsReceived("101", year, ["301", "302"]);
-        expect(emotes.size).toEqual(2);
+        expect(emotes).toHaveLength(2);
         emotes.forEach(e => {
             expect(e.count).toEqual(1);
             expect(e.name === "👀" || e.name === "downvote").toBeTruthy();
@@ -41,7 +41,7 @@ describe("getReactionsReceived", () => {
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
 
         const emotes = await reactions.getReactionsReceived("101", year, ["101"]);
-        expect(emotes.size).toEqual(reactionsPerMessage);
+        expect(emotes).toHaveLength(reactionsPerMessage);
         emotes.forEach(e => expect(e.count).toEqual(1));
     });
 
