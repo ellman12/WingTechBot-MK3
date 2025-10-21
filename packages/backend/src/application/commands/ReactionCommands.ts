@@ -1,6 +1,7 @@
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
-import { type ChatInputCommandInteraction, SlashCommandBuilder, formatEmoji, userMention } from "discord.js";
+import { formatEmoji } from "@core/utils/emojiUtils";
+import { type ChatInputCommandInteraction, SlashCommandBuilder, userMention } from "discord.js";
 
 import type { Command } from "./Commands.js";
 
@@ -26,7 +27,7 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository }: 
             const result = new Map((await reactionRepository.getKarmaAndAwards(user.id, year)).map(r => [r.name, r]));
             const karma = [...result.values()].reduce((sum, item) => sum + item.totalKarma, 0);
 
-            const formattedEmotes = karmaEmotes.map(e => `${result.get(e.name)!.count} ${formatEmoji(e.discordId ?? e.name)}`);
+            const formattedEmotes = karmaEmotes.map(e => `${result.get(e.name)!.count} ${formatEmoji(e.name, e.discordId)}`);
             const response = `${userMention(user.id)} has ${karma} karma (${formattedEmotes.join(" ")}) for ${year}`;
             await interaction.followUp(response);
         },
