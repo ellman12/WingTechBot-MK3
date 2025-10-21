@@ -1,6 +1,7 @@
 import { createMessageRepository } from "@adapters/repositories/MessageRepository";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
+import type { CreateMessageData } from "@core/entities/Message.js";
 import { getKyselyForMigrations, runMigrations } from "@db/migrations";
 import type { DB } from "@db/types";
 import { getKysely } from "@infrastructure/database/DatabaseConnection";
@@ -149,6 +150,32 @@ export async function setUpIntegrationTest() {
     const testerBotId = testerBot.client.user!.id;
 
     return { bot, channel, emotes, testerBot, testerChannel, db, testerBotId };
+}
+
+//Creates fake message and reaction data in the DB.
+export async function createFakeMessagesAndReactions(db: Kysely<DB>, totalMessages: number, reactionsPerMessage: number, emotes: TestReactionEmote[]) {
+    const messages = createMessageRepository(db);
+    const reactions = createReactionRepository(db);
+    const emotesRepo = createReactionEmoteRepository(db);
+
+    for (let i = 1; i <= totalMessages; i++) {
+        const messageId = i.toString();
+        const channelId = "200";
+        const authorId = (i + 100).toString();
+
+        const message: CreateMessageData = { id: messageId, authorId, channelId, content: `Message ${i.toString()}`, createdAt: new Date(), editedAt: null };
+        await messages.create(message);
+
+        for (let j = 0; j < reactionsPerMessage; j++) {
+            const [name, discordId] = emotes[j]!;
+
+            const emote = await emotesRepo.findOrCreate(name, discordId);
+            await reactions.create({ giverId: authorId, receiverId: authorId, channelId, messageId, emoteId: emote.id });
+            await reactions.create({ giverId: (300 + j).toString(), receiverId: authorId, channelId, messageId, emoteId: emote.id });
+        }
+    }
+
+    expect(await db.selectFrom("reactions").selectAll().execute()).toHaveLength(totalMessages * reactionsPerMessage * 2); //Include the self-reactions
 }
 
 export async function createMessagesAndReactions(botChannel: TextChannel, testerBotChannel: TextChannel, totalMessages: number, reactionsPerMessage: number, emotes: TestReactionEmote[]) {
