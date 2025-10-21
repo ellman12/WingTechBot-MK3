@@ -4,7 +4,7 @@ import type { EmoteTotals, ReactionRepository } from "@core/repositories/Reactio
 import type { DB, Reactions } from "@db/types.js";
 import { type Kysely, type Selectable, sql } from "kysely";
 
-type UnformattedReactionQueryResult = { name: string; count: string | number | bigint; totalKarma: string | number | bigint };
+type UnformattedReactionQueryResult = { name: string; discordId: string; count: string | number | bigint; totalKarma: string | number | bigint };
 
 //Transform database reaction emote to domain reaction emote
 export const transformReaction = (dbReaction: Selectable<Reactions> | Reactions): Reaction => {
@@ -90,11 +90,12 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
             .selectFrom("messages as m")
             .innerJoin("reactions as r", "r.message_id", "m.id")
             .innerJoin("reaction_emotes as re", "r.emote_id", "re.id")
-            .select(["re.name"])
+            .select(["re.name", "re.discord_id as discordId"])
             .select(eb => [eb.fn.countAll().as("count"), eb.fn.sum("re.karma_value").as("totalKarma")])
             .where("r.receiver_id", "=", userId)
             .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year))
-            .groupBy(["re.name"]);
+            .groupBy(["re.name", "discordId"])
+            .orderBy("count", "desc");
 
     //Ensures the count results are numbers and not strings or bigints.
     const formatQueryResult = (emote: UnformattedReactionQueryResult) => ({ ...emote, count: Number(emote.count), totalKarma: Number(emote.totalKarma) });
@@ -107,6 +108,7 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         //Fills in missing karma emotes with 0 values if not already present.
         return karmaEmoteNames.map(name => ({
             name,
+            discordId: emotes.find(r => r.name === name)?.discordId ?? "",
             count: emotes.find(r => r.name === name)?.count ?? 0,
             totalKarma: emotes.find(r => r.name === name)?.totalKarma ?? 0,
         }));

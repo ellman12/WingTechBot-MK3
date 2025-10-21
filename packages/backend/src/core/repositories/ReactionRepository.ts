@@ -5,6 +5,7 @@ import type { ReactionEmote } from "@core/entities/ReactionEmote.js";
 //Each emote and how many received, given, etc.
 export type EmoteTotal = {
     readonly name: string;
+    readonly discordId: string;
     readonly count: number;
     readonly totalKarma: number;
 };
