@@ -123,6 +123,7 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         return (await query.execute()).map(formatQueryResult);
     };
 
+    //Gets all the reactions this user has given, optionally filtering by year and/or specific receivers. Ignores self-reactions (unless it's the only receiverId specified).
     const getReactionsGiven = async (giverId: string, year?: number, receiverIds?: string[]): Promise<EmoteTotals> => {
         const query = getBaseReactionsQuery(year)
             .where("r.giver_id", "=", giverId)
@@ -132,8 +133,16 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         return (await query.execute()).map(formatQueryResult);
     };
 
+    //Calculates which emotes have been used the most in reactions.
+    const getEmoteLeaderboard = async (year?: number, includeSelfReactions?: boolean, limit = 15): Promise<EmoteTotals> => {
+        const query = getBaseReactionsQuery(year)
+            .$if(!includeSelfReactions, qb => qb.whereRef("r.giver_id", "!=", "r.receiver_id"))
+            .$if(limit !== undefined, qb => qb.limit(limit));
+
+        return (await query.execute()).map(formatQueryResult);
+    };
+
     // const getKarmaLeaderboard = async (year?: number): Promise<KarmaLeaderboardEntry> => { }
-    // const getEmoteLeaderboard = async (year?: number): Promise<EmoteTotals> => { }
     // const getTopMessages = async (authorId: string, emoteName: string, limit?: number): Promise<TopMessage[]> => { }
 
     return {
@@ -146,5 +155,6 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         getKarmaAndAwards,
         getReactionsReceived,
         getReactionsGiven,
+        getEmoteLeaderboard,
     };
 };

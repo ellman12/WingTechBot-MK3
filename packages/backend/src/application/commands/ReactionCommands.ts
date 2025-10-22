@@ -95,9 +95,45 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository }: 
         execute: interaction => handleReactions(interaction, "given"),
     };
 
+    const topEmotes: Command = {
+        data: new SlashCommandBuilder()
+            .setName("top-emotes")
+            .setDescription("Totals up how many reactions of each emote have been sent (optionally for a year)")
+            .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by").setRequired(false))
+            .addBooleanOption(option => option.setName("include-self-reactions").setDescription("If self-reactions should be included (defaults to false)").setRequired(false))
+            .addNumberOption(option => option.setName("limit").setDescription("Limit the size of the result").setRequired(false).setMinValue(1)),
+        execute: async (interaction: ChatInputCommandInteraction) => {
+            const year = interaction.options.getNumber("year") ?? undefined;
+            const includeSelfReactions = interaction.options.getBoolean("include-self-reactions") ?? false;
+            const limit = interaction.options.getNumber("limit") ?? 15;
+
+            const leaderboard = await reactionRepository.getEmoteLeaderboard(year, includeSelfReactions, limit);
+
+            if (leaderboard.length === 0) {
+                await interaction.reply(`No reactions ${year ? `for ${year}` : ""}`);
+                return;
+            }
+
+            const { result } = leaderboard.reduce(
+                (acc, current) => {
+                    const { lastCount, rank, index, result } = acc;
+                    const newRank = current.count === lastCount ? rank : index + 1;
+
+                    result.push(`${String(newRank + ".").padEnd(8)}${String(current.count).padEnd(8)}${current.name}`);
+                    return { lastCount: current.count, rank: newRank, index: index + 1, result };
+                },
+                { lastCount: 0, rank: 0, index: 0, result: [] as string[] }
+            );
+
+            const response = `\`\`\`${year ? `${year} ` : ""}Emote Leaderboard (Top ${limit})\n-------------------------------\nRank    Count   Emote\n${result.join(`\n`)}\`\`\``;
+            await interaction.reply(response);
+        },
+    };
+
     return {
         record,
         "reactions-received": reactionsReceived,
         "reactions-given": reactionsGiven,
+        "top-emotes": topEmotes,
     };
 };
