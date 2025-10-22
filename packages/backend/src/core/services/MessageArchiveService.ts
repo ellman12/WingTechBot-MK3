@@ -2,7 +2,7 @@ import type { CreateMessageData, Message as DBMessage } from "@core/entities/Mes
 import type { MessageRepository } from "@core/repositories/MessageRepository.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
-import { ChannelType, Collection, DiscordAPIError, type FetchMessagesOptions, type Guild, type Message, type OmitPartialGroupDMChannel, type PartialMessage, type TextChannel } from "discord.js";
+import { ChannelType, Collection, DiscordAPIError, type FetchMessagesOptions, type Guild, type Message, MessageFlags, type OmitPartialGroupDMChannel, type PartialMessage, type TextChannel } from "discord.js";
 import equal from "fast-deep-equal/es6/index.js";
 
 export type MessageArchiveService = {
@@ -113,7 +113,7 @@ async function getMessage(guild: Guild, channelId: string, messageId: string): P
 }
 
 function validMessage(message: Message): boolean {
-    return message.interactionMetadata === null && message.channel.type !== ChannelType.DM;
+    return message.channel.type !== ChannelType.DM && !message.flags.has(MessageFlags.Ephemeral);
 }
 
 export const createMessageArchiveService = ({ messageRepository, reactionRepository, emoteRepository }: MessageArchiveServiceDeps): MessageArchiveService => {
@@ -187,12 +187,12 @@ export const createMessageArchiveService = ({ messageRepository, reactionReposit
     }
 
     async function messageCreated(message: Message): Promise<void> {
-        if (message.partial) {
-            await message.fetch();
-        }
-
         if (!validMessage(message)) {
             return;
+        }
+
+        if (message.partial) {
+            await message.fetch();
         }
 
         try {
@@ -213,12 +213,12 @@ export const createMessageArchiveService = ({ messageRepository, reactionReposit
     }
 
     async function messageDeleted(message: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>): Promise<void> {
-        if (message.partial) {
-            await message.fetch();
-        }
-
         if (!validMessage(message as Message)) {
             return;
+        }
+
+        if (message.partial) {
+            await message.fetch();
         }
 
         try {
@@ -229,12 +229,12 @@ export const createMessageArchiveService = ({ messageRepository, reactionReposit
     }
 
     async function messageEdited(oldMessage: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, newMessage: OmitPartialGroupDMChannel<Message<boolean>>): Promise<void> {
-        if (newMessage.interactionMetadata !== null) return;
-
-        await newMessage.fetch();
-
         if (!validMessage(newMessage)) {
             return;
+        }
+
+        if (newMessage.partial) {
+            await newMessage.fetch();
         }
 
         try {
