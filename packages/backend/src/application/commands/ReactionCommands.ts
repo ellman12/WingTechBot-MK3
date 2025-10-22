@@ -10,6 +10,8 @@ export type ReactionCommandDeps = {
     emoteRepository: ReactionEmoteRepository;
 };
 
+type ReactionDirection = "given" | "received";
+
 export const createReactionCommands = ({ reactionRepository, emoteRepository }: ReactionCommandDeps): Record<string, Command> => {
     const record: Command = {
         data: new SlashCommandBuilder()
@@ -33,48 +35,69 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository }: 
         },
     };
 
+    async function handleReactions(interaction: ChatInputCommandInteraction, direction: ReactionDirection) {
+        const primary = direction === "received" ? "receiver" : "giver";
+        const secondary = direction === "received" ? "giver" : "receiver";
+
+        const primaryUser = interaction.options.getUser(primary) ?? interaction.user;
+        const year = interaction.options.getNumber("year") ?? undefined;
+        const secondaryMentionable = interaction.options.getMentionable(secondary);
+
+        const userFilter = secondaryMentionable instanceof GuildMember ? secondaryMentionable : undefined;
+        const roleFilter = secondaryMentionable instanceof Role ? secondaryMentionable : undefined;
+
+        let filterIds: string[] | undefined;
+        let name: string | undefined;
+
+        if (userFilter) {
+            filterIds = [userFilter.id];
+            name = userFilter.user.username;
+        } else if (roleFilter) {
+            filterIds = roleFilter.name === "@everyone" ? undefined : roleFilter.members.map(m => m.id);
+            name = roleFilter.name;
+        }
+
+        if (secondaryMentionable !== null && !userFilter && !roleFilter) {
+            await interaction.reply({ content: "Invalid mentionable", flags: MessageFlags.Ephemeral });
+            return;
+        }
+
+        const repoFn = direction === "received" ? reactionRepository.getReactionsReceived : reactionRepository.getReactionsGiven;
+        const result = await repoFn(primaryUser.id, year, filterIds);
+
+        if (result.length === 0) {
+            await interaction.reply(`No reactions ${direction}${name ? (direction === "received" ? ` from ${name}` : ` to ${name}`) : ""}${year ? ` for ${year}` : ""}`);
+            return;
+        }
+
+        const messageHeader = direction === "received" ? `${primaryUser.username} received\n` : `${primaryUser.username} gave\n`;
+        const messageBody = result.reduce((previous, current) => previous + `* ${current.count} ${formatEmoji(current.name, current.discordId)}\n`, messageHeader);
+        await interaction.reply(`${messageBody}${name ? (direction === "received" ? `from ${name}` : `to ${name}`) : ""}${year ? ` for ${year}` : ""}`);
+    }
+
     const reactionsReceived: Command = {
         data: new SlashCommandBuilder()
             .setName("reactions-received")
             .setDescription("Shows reactions you or a user has received")
-            .addUserOption(option => option.setName("receiver").setDescription("The user to get reactions received for, defaulting to you").setRequired(false))
-            .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by").setRequired(false))
-            .addMentionableOption(option => option.setName("giver").setDescription("The user or role that gave the reactions").setRequired(false)),
-        execute: async (interaction: ChatInputCommandInteraction) => {
-            const receiver = interaction.options.getUser("receiver") ?? interaction.user;
-            const year = interaction.options.getNumber("year") ?? undefined;
-            const giver = interaction.options.getMentionable("giver");
+            .addUserOption(option => option.setName("receiver").setDescription("The user to get reactions received for, defaulting to you"))
+            .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by"))
+            .addMentionableOption(option => option.setName("giver").setDescription("The user or role that gave the reactions")),
+        execute: interaction => handleReactions(interaction, "received"),
+    };
 
-            const userFilter = giver instanceof GuildMember ? (giver as GuildMember) : undefined;
-            const roleFilter = giver instanceof Role ? (giver as Role) : undefined;
-
-            let filterIds, name;
-            if (userFilter) {
-                filterIds = [userFilter.id];
-                name = userFilter.user.username;
-            } else if (roleFilter) {
-                filterIds = roleFilter.name === "@everyone" ? undefined : roleFilter.members.map(m => m.id);
-                name = roleFilter.name;
-            }
-
-            if (giver !== null && !userFilter && !roleFilter) {
-                await interaction.reply({ content: "Invalid mentionable", flags: MessageFlags.Ephemeral });
-                return;
-            }
-
-            const result = await reactionRepository.getReactionsReceived(receiver.id, year, filterIds);
-            if (result.length === 0) {
-                await interaction.reply(`No reactions received${name ? ` from ${name}` : ""}${year ? ` for ${year}` : ""}`);
-                return;
-            }
-
-            const message = result.reduce((previous, current) => previous + `* ${current.count} ${formatEmoji(current.name, current.discordId)}\n`, `${receiver.username} received\n`);
-            await interaction.reply(`${message}${name ? `from ${name}` : ""}${year ? `for ${year}` : ""}`);
-        },
+    const reactionsGiven: Command = {
+        data: new SlashCommandBuilder()
+            .setName("reactions-given")
+            .setDescription("Shows reactions you or a user has given")
+            .addUserOption(option => option.setName("giver").setDescription("The user to get reactions given for, defaulting to you"))
+            .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by"))
+            .addMentionableOption(option => option.setName("receiver").setDescription("The user or role that received the reactions")),
+        execute: interaction => handleReactions(interaction, "given"),
     };
 
     return {
         record,
         "reactions-received": reactionsReceived,
+        "reactions-given": reactionsGiven,
     };
 };

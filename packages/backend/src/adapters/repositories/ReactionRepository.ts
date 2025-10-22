@@ -118,12 +118,20 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         const query = getBaseReactionsQuery(year)
             .where("r.receiver_id", "=", receiverId)
             .$if(giverIds !== undefined && giverIds.length > 0, qb => qb.where("r.giver_id", "in", giverIds!)) //Filter by giverIds if present. This can include receiverId.
-            .$if(giverIds === undefined || giverIds?.length === 0, qb => qb.where("r.giver_id", "!=", receiverId)); //Get reactions from all users except receiverId.
+            .$if(giverIds === undefined || giverIds.length === 0, qb => qb.where("r.giver_id", "!=", receiverId)); //Get reactions from all users except receiverId.
 
         return (await query.execute()).map(formatQueryResult);
     };
 
-    // const getReactionsGiven = async (giverId: string, year?: number, receiverIds?: string[]): Promise<EmoteTotals> => { }
+    const getReactionsGiven = async (giverId: string, year?: number, receiverIds?: string[]): Promise<EmoteTotals> => {
+        const query = getBaseReactionsQuery(year)
+            .where("r.giver_id", "=", giverId)
+            .$if(receiverIds !== undefined && receiverIds.length > 0, qb => qb.where("r.receiver_id", "in", receiverIds!)) //Filter by receiverIds if present. This can include giverId.
+            .$if(receiverIds === undefined || receiverIds.length === 0, qb => qb.where("r.receiver_id", "!=", giverId)); //Get reactions from all users except receiverId.
+
+        return (await query.execute()).map(formatQueryResult);
+    };
+
     // const getKarmaLeaderboard = async (year?: number): Promise<KarmaLeaderboardEntry> => { }
     // const getEmoteLeaderboard = async (year?: number): Promise<EmoteTotals> => { }
     // const getTopMessages = async (authorId: string, emoteName: string, limit?: number): Promise<TopMessage[]> => { }
@@ -137,5 +145,6 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         deleteReactionsForEmote,
         getKarmaAndAwards,
         getReactionsReceived,
+        getReactionsGiven,
     };
 };

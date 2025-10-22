@@ -36,9 +36,9 @@ export type ReactionRepository = {
 
     getReactionsReceived(receiverId: string, year?: number, giverIds?: string[]): Promise<EmoteTotals>;
 
-    // //Gets all the reactions this user has given, optionally filtering by year and/or specific receivers. Ignores self-reactions (unless it's the only receiverId specified).
-    // getReactionsGiven(giverId: string, year?: number, receiverIds?: string[]): Promise<EmoteTotals>;
-    //
+    //Gets all the reactions this user has given, optionally filtering by year and/or specific receivers. Ignores self-reactions (unless it's the only receiverId specified).
+    getReactionsGiven(giverId: string, year?: number, receiverIds?: string[]): Promise<EmoteTotals>;
+
     // //Gets the leaderboard for karma, optionally for a year.
     // getKarmaLeaderboard(year?: number): Promise<KarmaLeaderboardEntry>;
     //
