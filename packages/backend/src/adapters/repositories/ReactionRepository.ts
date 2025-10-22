@@ -85,14 +85,13 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         }
     };
 
-    const getBaseReactionsQuery = (userId: string, year?: number) =>
+    const getBaseReactionsQuery = (year?: number) =>
         db
             .selectFrom("messages as m")
             .innerJoin("reactions as r", "r.message_id", "m.id")
             .innerJoin("reaction_emotes as re", "r.emote_id", "re.id")
             .select(["re.name", "re.discord_id as discordId"])
             .select(eb => [eb.fn.countAll().as("count"), eb.fn.sum("re.karma_value").as("totalKarma")])
-            .where("r.receiver_id", "=", userId)
             .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year))
             .groupBy(["re.name", "discordId"])
             .orderBy("count", "desc");
@@ -100,9 +99,9 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
     //Ensures the count results are numbers and not strings or bigints.
     const formatQueryResult = (emote: UnformattedReactionQueryResult) => ({ ...emote, count: Number(emote.count), totalKarma: Number(emote.totalKarma) });
 
-    //Calculates a user's karma and awards, optionally for a year.
-    const getKarmaAndAwards = async (userId: string, year?: number): Promise<EmoteTotals> => {
-        const query = getBaseReactionsQuery(userId, year).where("r.giver_id", "!=", userId).where("re.name", "in", karmaEmoteNames);
+    //Calculates a user's karma and awards, optionally for a year. Ignores self-reactions.
+    const getKarmaAndAwards = async (receiverId: string, year?: number): Promise<EmoteTotals> => {
+        const query = getBaseReactionsQuery(year).where("r.receiver_id", "=", receiverId).where("r.giver_id", "!=", receiverId).where("re.name", "in", karmaEmoteNames);
         const emotes = (await query.execute()).map(formatQueryResult);
 
         //Fills in missing karma emotes with 0 values if not already present.
@@ -116,7 +115,8 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
 
     //Get all the reactions this user has received, optionally filtering by year and/or specific givers. Ignores self-reactions (unless it's in giverIds).
     const getReactionsReceived = async (receiverId: string, year?: number, giverIds?: string[]): Promise<EmoteTotals> => {
-        const query = getBaseReactionsQuery(receiverId, year)
+        const query = getBaseReactionsQuery(year)
+            .where("r.receiver_id", "=", receiverId)
             .$if(giverIds !== undefined && giverIds.length > 0, qb => qb.where("r.giver_id", "in", giverIds!)) //Filter by giverIds if present. This can include receiverId.
             .$if(giverIds === undefined || giverIds?.length === 0, qb => qb.where("r.giver_id", "!=", receiverId)); //Get reactions from all users except receiverId.
 
