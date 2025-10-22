@@ -22,7 +22,7 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository }: 
         execute: async (interaction: ChatInputCommandInteraction) => {
             const karmaEmotes = await emoteRepository.getKarmaEmotes();
             const user = interaction.options.getUser("user") ?? interaction.user;
-            const year = interaction.options.getNumber("year") ?? new Date().getUTCFullYear();
+            const year = interaction.options.getNumber("year") ?? undefined;
 
             await interaction.deferReply();
 
@@ -30,7 +30,7 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository }: 
             const karma = [...result.values()].reduce((sum, item) => sum + item.totalKarma, 0);
 
             const formattedEmotes = karmaEmotes.map(e => `${result.get(e.name)!.count} ${formatEmoji(e.name, e.discordId)}`);
-            const response = `${userMention(user.id)} has ${karma} karma (${formattedEmotes.join(" ")}) for ${year}`;
+            const response = `${userMention(user.id)} has ${karma} karma (${formattedEmotes.join(" ")})${year ? ` for ${year}` : ""}`;
             await interaction.followUp(response);
         },
     };
