@@ -169,7 +169,11 @@ export async function createFakeMessagesAndReactions(db: Kysely<DB>, totalMessag
         for (let j = 0; j < reactionsPerMessage; j++) {
             const [name, discordId] = emotes[j]!;
 
-            const emote = await emotesRepo.findOrCreate(name, discordId);
+            let karmaValue = 0;
+            if (name === "upvote") karmaValue = 1;
+            else if (name === "downvote") karmaValue = -1;
+
+            const emote = await emotesRepo.create({ name, discordId, karmaValue });
             await reactions.create({ giverId: authorId, receiverId: authorId, channelId, messageId, emoteId: emote.id });
             await reactions.create({ giverId: (300 + j).toString(), receiverId: authorId, channelId, messageId, emoteId: emote.id });
         }

@@ -14,7 +14,7 @@ export type EmoteTotals = EmoteTotal[];
 //Used for getKarmaLeaderboard().
 export type KarmaLeaderboardEntry = {
     readonly userId: string;
-    readonly karma: number;
+    readonly totalKarma: number;
 };
 
 //Used for getTopMessages().
@@ -40,8 +40,7 @@ export type ReactionRepository = {
 
     getEmoteLeaderboard(year?: number, includeSelfReactions?: boolean, limit?: number): Promise<EmoteTotals>;
 
-    // //Gets the leaderboard for karma, optionally for a year.
-    // getKarmaLeaderboard(year?: number): Promise<KarmaLeaderboardEntry>;
+    getKarmaLeaderboard(year?: number, includeSelfReactions?: boolean): Promise<KarmaLeaderboardEntry[]>;
 
     // //Returns a selection of messages that got the most reactions with this emote, excluding self-reactions.
     // getTopMessages(authorId: string, emoteName: string, limit?: number): Promise<TopMessage[]>;

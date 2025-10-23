@@ -1,6 +1,6 @@
 import type { CreateReactionData, DeleteReactionData, FindReactionData, Reaction } from "@core/entities/Reaction.js";
 import { karmaEmoteNames } from "@core/repositories/ReactionEmoteRepository.js";
-import type { EmoteTotals, ReactionRepository } from "@core/repositories/ReactionRepository.js";
+import type { EmoteTotals, KarmaLeaderboardEntry, ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { DB, Reactions } from "@db/types.js";
 import { type Kysely, type Selectable, sql } from "kysely";
 
@@ -85,24 +85,23 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         }
     };
 
-    const getBaseReactionsQuery = (year?: number) =>
+    const getBaseQuery = (year?: number) =>
         db
             .selectFrom("messages as m")
             .innerJoin("reactions as r", "r.message_id", "m.id")
             .innerJoin("reaction_emotes as re", "r.emote_id", "re.id")
-            .select(["re.name", "re.discord_id as discordId"])
             .select(eb => [eb.fn.countAll().as("count"), eb.fn.sum("re.karma_value").as("totalKarma")])
-            .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year))
-            .groupBy(["re.name", "discordId"])
-            .orderBy("count", "desc");
+            .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year));
+
+    const getBaseReactionsQuery = (year?: number) => getBaseQuery(year).select(["re.name", "re.discord_id as discordId"]).groupBy(["re.name", "discordId"]).orderBy("count", "desc");
 
     //Ensures the count results are numbers and not strings or bigints.
-    const formatQueryResult = (emote: UnformattedReactionQueryResult) => ({ ...emote, count: Number(emote.count), totalKarma: Number(emote.totalKarma) });
+    const formatReactionQueryResult = (emote: UnformattedReactionQueryResult) => ({ ...emote, count: Number(emote.count), totalKarma: Number(emote.totalKarma) });
 
     //Calculates a user's karma and awards, optionally for a year. Ignores self-reactions.
     const getKarmaAndAwards = async (receiverId: string, year?: number): Promise<EmoteTotals> => {
         const query = getBaseReactionsQuery(year).where("r.receiver_id", "=", receiverId).where("r.giver_id", "!=", receiverId).where("re.name", "in", karmaEmoteNames);
-        const emotes = (await query.execute()).map(formatQueryResult);
+        const emotes = (await query.execute()).map(formatReactionQueryResult);
 
         //Fills in missing karma emotes with 0 values if not already present.
         return karmaEmoteNames.map(name => ({
@@ -120,7 +119,7 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
             .$if(giverIds !== undefined && giverIds.length > 0, qb => qb.where("r.giver_id", "in", giverIds!)) //Filter by giverIds if present. This can include receiverId.
             .$if(giverIds === undefined || giverIds.length === 0, qb => qb.where("r.giver_id", "!=", receiverId)); //Get reactions from all users except receiverId.
 
-        return (await query.execute()).map(formatQueryResult);
+        return (await query.execute()).map(formatReactionQueryResult);
     };
 
     //Gets all the reactions this user has given, optionally filtering by year and/or specific receivers. Ignores self-reactions (unless it's the only receiverId specified).
@@ -130,7 +129,7 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
             .$if(receiverIds !== undefined && receiverIds.length > 0, qb => qb.where("r.receiver_id", "in", receiverIds!)) //Filter by receiverIds if present. This can include giverId.
             .$if(receiverIds === undefined || receiverIds.length === 0, qb => qb.where("r.receiver_id", "!=", giverId)); //Get reactions from all users except receiverId.
 
-        return (await query.execute()).map(formatQueryResult);
+        return (await query.execute()).map(formatReactionQueryResult);
     };
 
     //Calculates which emotes have been used the most in reactions.
@@ -139,10 +138,20 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
             .$if(!includeSelfReactions, qb => qb.whereRef("r.giver_id", "!=", "r.receiver_id"))
             .$if(limit !== undefined, qb => qb.limit(limit));
 
-        return (await query.execute()).map(formatQueryResult);
+        return (await query.execute()).map(formatReactionQueryResult);
     };
 
-    // const getKarmaLeaderboard = async (year?: number): Promise<KarmaLeaderboardEntry> => { }
+    //Gets the leaderboard for karma, optionally for a year.
+    const getKarmaLeaderboard = async (year?: number, includeSelfReactions?: boolean): Promise<KarmaLeaderboardEntry[]> => {
+        const query = getBaseQuery(year)
+            .select(["r.receiver_id as userId"])
+            .$if(!includeSelfReactions, qb => qb.whereRef("r.giver_id", "!=", "r.receiver_id"))
+            .groupBy("r.receiver_id")
+            .orderBy("totalKarma", "desc");
+
+        return (await query.execute()).map(k => ({ ...k, count: Number(k.count), totalKarma: Number(k.totalKarma) }));
+    };
+
     // const getTopMessages = async (authorId: string, emoteName: string, limit?: number): Promise<TopMessage[]> => { }
 
     return {
@@ -156,5 +165,6 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         getReactionsReceived,
         getReactionsGiven,
         getEmoteLeaderboard,
+        getKarmaLeaderboard,
     };
 };

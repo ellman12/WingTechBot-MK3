@@ -130,10 +130,45 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository }: 
         },
     };
 
+    const karmaLeaderboard: Command = {
+        data: new SlashCommandBuilder()
+            .setName("karma-leaderboard")
+            .setDescription("Shows the leaderboard for karma")
+            .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by").setRequired(false))
+            .addBooleanOption(option => option.setName("include-self-reactions").setDescription("If self-reactions should be included (defaults to false)").setRequired(false)),
+        execute: async (interaction: ChatInputCommandInteraction) => {
+            const year = interaction.options.getNumber("year") ?? undefined;
+            const includeSelfReactions = interaction.options.getBoolean("include-self-reactions") ?? false;
+            const leaderboard = await reactionRepository.getKarmaLeaderboard(year, includeSelfReactions);
+
+            if (leaderboard.length === 0) {
+                await interaction.reply(`No reactions ${year ? `for ${year}` : ""}`);
+                return;
+            }
+
+            const members = await interaction.guild!.members.fetch();
+
+            const { result } = leaderboard.reduce(
+                (acc, current) => {
+                    const { lastCount, rank, index, result } = acc;
+                    const newRank = current.totalKarma === lastCount ? rank : index + 1;
+
+                    result.push(`${String(newRank + ".").padEnd(8)}${String(current.totalKarma).padEnd(8)}${members.get(current.userId)?.displayName ?? "Unknown"}`);
+                    return { lastCount: current.totalKarma, rank: newRank, index: index + 1, result };
+                },
+                { lastCount: 0, rank: 1, index: 0, result: [] as string[] }
+            );
+
+            const response = `\`\`\`${year ? `${year} ` : ""}Karma Leaderboard\n------------------------\nRank    Karma   User\n${result.join(`\n`)}\`\`\``;
+            await interaction.reply(response);
+        },
+    };
+
     return {
         record,
         "reactions-received": reactionsReceived,
         "reactions-given": reactionsGiven,
         "top-emotes": topEmotes,
+        "karma-leaderboard": karmaLeaderboard,
     };
 };
