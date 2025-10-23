@@ -1,6 +1,4 @@
-import type { Message } from "@core/entities/Message.js";
 import type { CreateReactionData, DeleteReactionData, FindReactionData, Reaction } from "@core/entities/Reaction.js";
-import type { ReactionEmote } from "@core/entities/ReactionEmote.js";
 
 //Each emote and how many received, given, etc.
 export type EmoteTotal = {
@@ -19,8 +17,10 @@ export type KarmaLeaderboardEntry = {
 
 //Used for getTopMessages().
 export type TopMessage = {
-    readonly message: Message;
-    readonly emote: ReactionEmote;
+    readonly messageId: string;
+    readonly channelId: string;
+    readonly emoteId: number;
+    readonly emoteName: string;
     readonly count: number;
 };
 
@@ -42,6 +42,5 @@ export type ReactionRepository = {
 
     getKarmaLeaderboard(year?: number, includeSelfReactions?: boolean): Promise<KarmaLeaderboardEntry[]>;
 
-    // //Returns a selection of messages that got the most reactions with this emote, excluding self-reactions.
-    // getTopMessages(authorId: string, emoteName: string, limit?: number): Promise<TopMessage[]>;
+    getTopMessages(authorId: string, emoteName: string, year?: number, limit?: number): Promise<TopMessage[]>;
 };

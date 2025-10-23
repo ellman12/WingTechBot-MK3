@@ -1,6 +1,7 @@
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import { formatEmoji } from "@core/utils/emojiUtils";
+import { getJumpUrl } from "@core/utils/messageUtils.js";
 import { type ChatInputCommandInteraction, GuildMember, MessageFlags, Role, SlashCommandBuilder, userMention } from "discord.js";
 
 import type { Command } from "./Commands.js";
@@ -72,7 +73,7 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository }: 
 
         const messageHeader = direction === "received" ? `${primaryUser.username} received\n` : `${primaryUser.username} gave\n`;
         const messageBody = result.reduce((previous, current) => previous + `* ${current.count} ${formatEmoji(current.name, current.discordId)}\n`, messageHeader);
-        await interaction.reply(`${messageBody}${name ? (direction === "received" ? `from ${name}` : `to ${name}`) : ""}${year ? ` for ${year}` : ""}`);
+        await interaction.reply(`${messageBody}${name ? (direction === "received" ? `from ${name} ` : `to ${name} `) : ""}${year ? `for ${year}` : ""}`);
     }
 
     const reactionsReceived: Command = {
@@ -164,11 +165,40 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository }: 
         },
     };
 
+    const topMessages: Command = {
+        data: new SlashCommandBuilder()
+            .setName("top-messages")
+            .setDescription("Returns a selection of messages that got the most reactions with this emote")
+            .addStringOption(option => option.setName("emote-name").setDescription("The name of the emote").setRequired(true))
+            .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by").setRequired(false))
+            .addUserOption(option => option.setName("receiver").setDescription("The user that received the reactions").setRequired(false))
+            .addNumberOption(option => option.setName("limit").setDescription("How many messages").setMinValue(1).setMaxValue(20).setRequired(false)),
+        execute: async (interaction: ChatInputCommandInteraction) => {
+            const year = interaction.options.getNumber("year") ?? undefined;
+            const emoteName = interaction.options.getString("emote-name")!;
+            const receiver = interaction.options.getUser("receiver") ?? interaction.user;
+            const limit = interaction.options.getNumber("limit") ?? 10;
+
+            const topMessages = await reactionRepository.getTopMessages(receiver.id, emoteName, year, limit);
+
+            if (topMessages.length === 0) {
+                await interaction.reply(`No messages with ${emoteName} ${year ? `for ${year}` : ""}`);
+                return;
+            }
+
+            const entries = topMessages.map(entry => `${entry.count} ${getJumpUrl(interaction.guildId!, interaction.channelId, entry.messageId)}`);
+
+            const messageHeader = `Top ${limit} messages for ${emoteName} for ${receiver.displayName} ${year ? `for ${year}` : ""}\n`;
+            await interaction.reply(`${messageHeader}${entries.join("\n")}`);
+        },
+    };
+
     return {
         record,
         "reactions-received": reactionsReceived,
         "reactions-given": reactionsGiven,
         "top-emotes": topEmotes,
         "karma-leaderboard": karmaLeaderboard,
+        "top-messages": topMessages,
     };
 };

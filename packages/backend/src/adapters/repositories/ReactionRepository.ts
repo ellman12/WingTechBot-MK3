@@ -1,6 +1,6 @@
 import type { CreateReactionData, DeleteReactionData, FindReactionData, Reaction } from "@core/entities/Reaction.js";
 import { karmaEmoteNames } from "@core/repositories/ReactionEmoteRepository.js";
-import type { EmoteTotals, KarmaLeaderboardEntry, ReactionRepository } from "@core/repositories/ReactionRepository.js";
+import type { EmoteTotals, KarmaLeaderboardEntry, ReactionRepository, TopMessage } from "@core/repositories/ReactionRepository.js";
 import type { DB, Reactions } from "@db/types.js";
 import { type Kysely, type Selectable, sql } from "kysely";
 
@@ -152,7 +152,19 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         return (await query.execute()).map(k => ({ ...k, count: Number(k.count), totalKarma: Number(k.totalKarma) }));
     };
 
-    // const getTopMessages = async (authorId: string, emoteName: string, limit?: number): Promise<TopMessage[]> => { }
+    //Returns a selection of messages that got the most reactions with this emote, excluding self-reactions.
+    const getTopMessages = async (authorId: string, emoteName: string, year?: number, limit?: number): Promise<TopMessage[]> => {
+        const query = getBaseQuery(year)
+            .select(["m.id as messageId", "m.channel_id as channelId", "re.name as emoteName", "re.id as emoteId"])
+            .where("m.author_id", "=", authorId)
+            .whereRef("r.giver_id", "!=", "r.receiver_id")
+            .where("re.name", "=", emoteName)
+            .groupBy(["messageId", "re.name", "re.id"])
+            .orderBy("count", "desc")
+            .$if(limit !== undefined, qb => qb.limit(limit!));
+
+        return (await query.execute()).map(m => ({ ...m, count: Number(m.count) }));
+    };
 
     return {
         find: findReaction,
@@ -166,5 +178,6 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         getReactionsGiven,
         getEmoteLeaderboard,
         getKarmaLeaderboard,
+        getTopMessages,
     };
 };
