@@ -57,4 +57,17 @@ describe("getReactionsGiven", () => {
         emotes = await reactions.getReactionsGiven("111111111111", year, ["123", "456"]);
         expect(emotes).toHaveLength(0);
     });
+
+    it("returns empty array for year with no data", async () => {
+        const db = await createTestDb();
+        const reactions = createReactionRepository(db);
+
+        await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
+
+        let emotes = await reactions.getReactionsGiven("301", 1969);
+        expect(emotes).toHaveLength(0);
+
+        emotes = await reactions.getReactionsGiven("301", 1969, ["123", "456"]);
+        expect(emotes).toHaveLength(0);
+    });
 });
