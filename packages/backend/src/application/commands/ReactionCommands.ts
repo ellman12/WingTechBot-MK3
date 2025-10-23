@@ -79,9 +79,9 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository }: 
         data: new SlashCommandBuilder()
             .setName("reactions-received")
             .setDescription("Shows reactions you or a user has received")
-            .addUserOption(option => option.setName("receiver").setDescription("The user to get reactions received for, defaulting to you"))
-            .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by"))
-            .addMentionableOption(option => option.setName("giver").setDescription("The user or role that gave the reactions")),
+            .addUserOption(option => option.setName("receiver").setDescription("The user to get reactions received for, defaulting to you").setRequired(false))
+            .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by").setRequired(false))
+            .addMentionableOption(option => option.setName("giver").setDescription("The user or role that gave the reactions").setRequired(false)),
         execute: interaction => handleReactions(interaction, "received"),
     };
 
@@ -89,9 +89,9 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository }: 
         data: new SlashCommandBuilder()
             .setName("reactions-given")
             .setDescription("Shows reactions you or a user has given")
-            .addUserOption(option => option.setName("giver").setDescription("The user to get reactions given for, defaulting to you"))
-            .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by"))
-            .addMentionableOption(option => option.setName("receiver").setDescription("The user or role that received the reactions")),
+            .addUserOption(option => option.setName("giver").setDescription("The user to get reactions given for, defaulting to you").setRequired(false))
+            .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by").setRequired(false))
+            .addMentionableOption(option => option.setName("receiver").setDescription("The user or role that received the reactions").setRequired(false)),
         execute: interaction => handleReactions(interaction, "given"),
     };
 
