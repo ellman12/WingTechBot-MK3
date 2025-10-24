@@ -15,6 +15,11 @@ const removeColons = (name: string) => {
     return name.replace(/^:(.*):$/, "$1");
 };
 
+const defaultKarmaValues: Record<string, number> = {
+    upvote: 1,
+    downvote: -1,
+};
+
 //Factory function to create ReactionEmoteRepository instance
 export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepository => {
     const emotes = db.selectFrom("reaction_emotes").selectAll();
@@ -73,22 +78,20 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
     };
 
     const createKarmaEmotes = async (guild: Guild): Promise<void> => {
-        await guild.emojis.fetch();
+        const cache = new Map((await guild.emojis.fetch()).map(e => [e.name, e]));
 
         for (const name of karmaEmoteNames) {
-            const found = guild.emojis.cache.find(e => e.name === name);
+            const found = cache.get(name);
             if (!found) throw new Error(`Server emoji ${name} not found`);
 
-            let karmaValue = 0;
-            if (name === "upvote") karmaValue = 1;
-            else if (name === "downvote") karmaValue = -1;
-
+            const karmaValue = defaultKarmaValues[name] ?? 0;
             await findOrCreate(name, found.id, karmaValue);
         }
     };
 
     const getKarmaEmotes = async (): Promise<ReactionEmote[]> => {
-        return (await db.selectFrom("reaction_emotes").where("reaction_emotes.name", "in", karmaEmoteNames).selectAll().execute()).map(transformReactionEmote);
+        const emotes = await db.selectFrom("reaction_emotes").where("reaction_emotes.name", "in", karmaEmoteNames).selectAll().execute();
+        return emotes.map(transformReactionEmote);
     };
 
     return {

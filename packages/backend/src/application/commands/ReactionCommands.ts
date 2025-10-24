@@ -27,10 +27,10 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository }: 
 
             await interaction.deferReply();
 
-            const result = new Map((await reactionRepository.getKarmaAndAwards(user.id, year)).map(r => [r.name, r]));
-            const karma = [...result.values()].reduce((sum, item) => sum + item.totalKarma, 0);
+            const result = await reactionRepository.getKarmaAndAwards(user.id, year);
+            const karma = result.reduce((sum, item) => sum + item.totalKarma, 0);
 
-            const formattedEmotes = karmaEmotes.map(e => `${result.get(e.name)!.count} ${formatEmoji(e.name, e.discordId)}`);
+            const formattedEmotes = karmaEmotes.map(e => `${result.find(r => r.name === e.name)!.count} ${formatEmoji(e.name, e.discordId)}`);
             const response = `${userMention(user.id)} has ${karma} karma (${formattedEmotes.join(" ")})${year ? ` for ${year}` : ""}`;
             await interaction.followUp(response);
         },
