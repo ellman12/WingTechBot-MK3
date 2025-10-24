@@ -9,7 +9,7 @@ describe("Create ReactionEmote, valid data", () => {
         const db = await createTestDb();
         const emotes = createReactionEmoteRepository(db);
 
-        await emotes.create({ name, discordId, karmaValue: 0 });
+        await emotes.create(name, discordId);
         const found = await emotes.findByNameAndDiscordId(name, discordId);
         expect(found).not.toBeNull();
     });
@@ -20,9 +20,7 @@ describe("Create ReactionEmote, returns input when emote exists", () => {
         const db = await createTestDb();
         const emotes = createReactionEmoteRepository(db);
 
-        const data = { name, discordId, karmaValue: 0 };
-
-        const created = await emotes.create(data);
+        const created = await emotes.create(name, discordId);
         const found = await emotes.findByNameAndDiscordId(name, discordId);
         expect(found).not.toBeNull();
         expect(found).toEqual(created);
@@ -34,6 +32,6 @@ describe("Create ReactionEmote, throws for invalid emotes", () => {
         const db = await createTestDb();
         const emotes = createReactionEmoteRepository(db);
 
-        await expect(emotes.create({ name, discordId, karmaValue: 0 })).rejects.toThrow();
+        await expect(emotes.create(name, discordId)).rejects.toThrow();
     });
 });

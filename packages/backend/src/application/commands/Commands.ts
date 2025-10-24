@@ -1,3 +1,6 @@
+import { createReactionCommands } from "@application/commands/ReactionCommands.js";
+import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
+import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
@@ -14,8 +17,8 @@ export type Command = {
     readonly execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 };
 
-export const createCommands = (soundService: SoundService, soundTagService: SoundTagService, voiceService: VoiceService): Record<string, Command> => {
-    const commandRecords = [createAudioCommands({ soundService }), createSoundTagCommands({ soundTagService }), createVoiceCommands({ voiceService, soundService })];
+export const createCommands = (soundService: SoundService, soundTagService: SoundTagService, voiceService: VoiceService, reactionRepository: ReactionRepository, emoteRepository: ReactionEmoteRepository): Record<string, Command> => {
+    const commandRecords = [createAudioCommands({ soundService }), createReactionCommands({ reactionRepository, emoteRepository }), createSoundTagCommands({ soundTagService }), createVoiceCommands({ voiceService, soundService })];
 
     // Assert that there are no duplicate command name in a way where we can have an arbitrary number of commands
     const commandNames = new Set<string>();
@@ -38,11 +41,20 @@ export const createCommands = (soundService: SoundService, soundTagService: Soun
     return commandMap;
 };
 
-export const deployCommands = async (soundService: SoundService, soundTagService: SoundTagService, voiceService: VoiceService, token: string, clientId: string, guildId?: string): Promise<void> => {
+export const deployCommands = async (
+    soundService: SoundService,
+    soundTagService: SoundTagService,
+    voiceService: VoiceService,
+    reactionRepository: ReactionRepository,
+    emoteRepository: ReactionEmoteRepository,
+    token: string,
+    clientId: string,
+    guildId?: string
+): Promise<void> => {
     try {
         console.log("🚀 Deploying Discord commands...");
 
-        const commandMap = createCommands(soundService, soundTagService, voiceService);
+        const commandMap = createCommands(soundService, soundTagService, voiceService, reactionRepository, emoteRepository);
         const commands = Object.values(commandMap).map(command => command.data.toJSON());
 
         console.log(`📋 Deploying ${commands.length} commands:`);
@@ -68,10 +80,17 @@ export const deployCommands = async (soundService: SoundService, soundTagService
     }
 };
 
-export const registerCommands = (soundService: SoundService, soundTagService: SoundTagService, voiceService: VoiceService, registerEventHandler: DiscordBot["registerEventHandler"]): void => {
+export const registerCommands = (
+    soundService: SoundService,
+    soundTagService: SoundTagService,
+    voiceService: VoiceService,
+    reactionRepository: ReactionRepository,
+    emoteRepository: ReactionEmoteRepository,
+    registerEventHandler: DiscordBot["registerEventHandler"]
+): void => {
     console.log("🔄 Registering commands...");
 
-    const commands = createCommands(soundService, soundTagService, voiceService);
+    const commands = createCommands(soundService, soundTagService, voiceService, reactionRepository, emoteRepository);
     console.log(`✅ Registered ${Object.keys(commands).length} Commands:`);
     Object.keys(commands).forEach(command => {
         console.log(`- ${command}`);

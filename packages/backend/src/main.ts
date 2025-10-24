@@ -78,10 +78,12 @@ export const createApplication = async (): Promise<App> => {
     const autoReactionService = createAutoReactionService({ discordChatService, geminiLlmService, llmInstructionRepo });
 
     const expressApp = createExpressApp({ db, config: serverConfig });
-    const discordBot = createDiscordBot({
+    const discordBot = await createDiscordBot({
         config,
         soundService,
         soundTagService,
+        reactionRepository,
+        emoteRepository,
         reactionArchiveService,
         messageArchiveService,
         discordChatService,

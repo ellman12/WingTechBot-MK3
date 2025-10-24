@@ -1,7 +1,7 @@
 import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
-import type { Message, TextChannel } from "discord.js";
+import { ChannelType, type Message, MessageFlags, type TextChannel } from "discord.js";
 
 export type DiscordChatService = {
     readonly replaceUserAndRoleMentions: (message: Message) => Promise<string>;
@@ -14,6 +14,10 @@ export type DiscordChatServiceDeps = {
     readonly messageArchiveService: MessageArchiveService;
     readonly llmInstructionRepo: LlmInstructionRepository;
 };
+
+function validMessage(message: Message): boolean {
+    return message.channel.type !== ChannelType.DM && !message.flags.has(MessageFlags.Ephemeral);
+}
 
 export const createDiscordChatService = ({ geminiLlmService, messageArchiveService, llmInstructionRepo }: DiscordChatServiceDeps): DiscordChatService => {
     const botId = process.env.DISCORD_CLIENT_ID!;
@@ -37,11 +41,12 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
 
     //Responds to a new message when appropriate.
     async function handleMessageCreated(message: Message) {
-        if (message.interactionMetadata !== null) return;
-
-        await message.fetch();
-        if (!hasBeenPinged(message)) {
+        if (!validMessage(message) || !hasBeenPinged(message)) {
             return;
+        }
+
+        if (message.partial) {
+            await message.fetch();
         }
 
         const channel = (await message.channel.fetch()) as TextChannel;

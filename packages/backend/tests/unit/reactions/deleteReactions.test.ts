@@ -14,7 +14,7 @@ describe("Delete Reaction, reaction exists", () => {
         const reactions = createReactionRepository(db);
         const emotes = createReactionEmoteRepository(db);
 
-        const emote = await emotes.create({ name: emoteName, discordId: emoteId, karmaValue: 0 });
+        const emote = await emotes.create(emoteName, emoteId);
         expect(emote).not.toBeNull();
 
         const foundEmote = await emotes.findById(emote.id);

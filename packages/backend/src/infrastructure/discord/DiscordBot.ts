@@ -5,6 +5,8 @@ import { registerDiscordChatEventHandlers } from "@application/eventHandlers/Dis
 import { registerVoiceServiceEventHandlers } from "@application/eventHandlers/DiscordVoiceService.js";
 import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive.js";
 import { registerReactionArchiveEvents } from "@application/eventHandlers/ReactionArchive.js";
+import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
+import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { AutoReactionService } from "@core/services/AutoReactionService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
@@ -19,6 +21,8 @@ export type DiscordBotDeps = {
     readonly config: Config;
     readonly soundService: SoundService;
     readonly soundTagService: SoundTagService;
+    readonly reactionRepository: ReactionRepository;
+    readonly emoteRepository: ReactionEmoteRepository;
     readonly reactionArchiveService: ReactionArchiveService;
     readonly messageArchiveService: MessageArchiveService;
     readonly discordChatService: DiscordChatService;
@@ -33,7 +37,7 @@ export type DiscordBot = {
     readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
 };
 
-export const createDiscordBot = ({ config, soundService, soundTagService, reactionArchiveService, messageArchiveService, discordChatService, autoReactionService }: DiscordBotDeps): DiscordBot => {
+export const createDiscordBot = async ({ config, soundService, soundTagService, reactionRepository, emoteRepository, reactionArchiveService, messageArchiveService, discordChatService, autoReactionService }: DiscordBotDeps): Promise<DiscordBot> => {
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
@@ -58,7 +62,7 @@ export const createDiscordBot = ({ config, soundService, soundTagService, reacti
             isReadyState = true;
 
             try {
-                await deployCommands(soundService, soundTagService, voiceService, config.discord.token, config.discord.clientId, config.discord.serverId);
+                await deployCommands(soundService, soundTagService, voiceService, reactionRepository, emoteRepository, config.discord.token, config.discord.clientId, config.discord.serverId);
             } catch (error) {
                 console.warn("⚠️ Failed to deploy commands automatically:", error);
                 console.log("💡 You can deploy commands manually with: pnpm discord:deploy-commands");
@@ -77,7 +81,7 @@ export const createDiscordBot = ({ config, soundService, soundTagService, reacti
             console.log(`Global: ${rateLimitData.global}`);
         });
 
-        registerCommands(soundService, soundTagService, voiceService, registerEventHandler);
+        registerCommands(soundService, soundTagService, voiceService, reactionRepository, emoteRepository, registerEventHandler);
 
         registerReactionArchiveEvents(reactionArchiveService, registerEventHandler);
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
@@ -92,8 +96,11 @@ export const createDiscordBot = ({ config, soundService, soundTagService, reacti
 
             await client.login(config.discord.token);
 
+            const guild = await client.guilds.fetch(config.discord.serverId!);
+            await guild.fetch();
+            await emoteRepository.createKarmaEmotes(guild);
+
             //If first boot, pull in all messages from all time. Otherwise, just get this year's.
-            const guild = client.guilds.cache.get(config.discord.serverId!)!;
             const year = (await messageArchiveService.getAllDBMessages()).length === 0 ? undefined : new Date().getUTCFullYear();
             await messageArchiveService.processAllChannels(guild, year);
 

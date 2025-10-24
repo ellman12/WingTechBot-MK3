@@ -36,7 +36,7 @@ export const createReactionArchiveService = ({ reactionRepository, emoteReposito
                     throw new Error("Missing reaction emoji name");
                 }
 
-                const reactionEmote = await emoteRepository.findOrCreate(emoteName, reaction.emoji.id ?? "");
+                const reactionEmote = await emoteRepository.create(emoteName, reaction.emoji.id ?? "");
 
                 const data = { giverId: user.id, receiverId: message.author.id, channelId: channel.id, messageId: message.id, emoteId: reactionEmote.id };
                 await reactionRepository.create(data);

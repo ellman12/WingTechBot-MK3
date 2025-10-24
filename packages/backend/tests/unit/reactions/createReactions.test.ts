@@ -16,7 +16,7 @@ describe("Create Reaction, valid data", () => {
         let emote = await emotes.findByNameAndDiscordId(emoteName, emoteId);
         expect(emote).toBeNull();
 
-        await emotes.create({ name: emoteName, discordId: emoteId, karmaValue: 0 });
+        await emotes.create(emoteName, emoteId);
         emote = await emotes.findByNameAndDiscordId(emoteName, emoteId);
         expect(emote).not.toBeNull();
 
@@ -36,7 +36,7 @@ describe("Create Reaction, throws for invalid reactions", () => {
         const reactions = createReactionRepository(db);
         const emotes = createReactionEmoteRepository(db);
 
-        const emote = await emotes.create({ name: emoteName, discordId: emoteId, karmaValue: 0 });
+        const emote = await emotes.create(emoteName, emoteId);
         await expect(reactions.create({ giverId, receiverId, channelId, messageId, emoteId: emote.id })).rejects.toThrow();
     });
 });
