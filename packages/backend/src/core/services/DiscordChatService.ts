@@ -3,10 +3,13 @@ import type { MessageArchiveService } from "@core/services/MessageArchiveService
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import { ChannelType, type Message, MessageFlags, type TextChannel } from "discord.js";
 
+export type SendMode = "split" | "file";
+
 export type DiscordChatService = {
     readonly replaceUserAndRoleMentions: (message: Message) => Promise<string>;
     readonly handleMessageCreated: (message: Message) => Promise<void>;
     readonly sendTypingIndicator: (abortSignal: AbortSignal, channel: TextChannel) => Promise<void>;
+    readonly sendMessage: (content: string, channel: TextChannel, sendMode?: SendMode) => Promise<void>;
 };
 
 export type DiscordChatServiceDeps = {
@@ -76,14 +79,28 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
             const content = await replaceUserAndRoleMentions(message);
             const systemInstruction = await llmInstructionRepo.getInstruction("generalChat");
             const response = await geminiLlmService.generateMessage(content, previousMessages, systemInstruction);
+            await sendMessage(response, channel);
+        } finally {
+            controller.abort();
+        }
+    }
 
-            //Messages are capped at 2000 characters
-            const messages = splitMessage(response, 2000);
+    //Sends a message to a channel with the ability to split it or send as a file.
+    async function sendMessage(content: string, channel: TextChannel, sendMode: SendMode = "split"): Promise<void> {
+        if (sendMode === "file") {
+            const attachment = Buffer.from(content, "utf-8");
+            const files = [{ attachment, name: "response.txt" }];
+            await channel.send({ files });
+            return;
+        }
+
+        if (sendMode === "split") {
+            const messages = splitMessage(content, 2000);
             for (const m of messages) {
                 await channel.send(m);
             }
-        } finally {
-            controller.abort();
+
+            return;
         }
     }
 
@@ -114,5 +131,6 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
         replaceUserAndRoleMentions,
         handleMessageCreated,
         sendTypingIndicator,
+        sendMessage,
     };
 };
