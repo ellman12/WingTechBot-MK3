@@ -39,16 +39,32 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
         });
     }
 
-    //Responds to a new message when appropriate.
     async function handleMessageCreated(message: Message) {
         if (!validMessage(message) || !hasBeenPinged(message)) {
             return;
         }
 
-        if (message.partial) {
-            await message.fetch();
-        }
+        await respondToPing(message);
+    }
 
+    function hasBeenPinged(latestMessage: Message): boolean {
+        const mentionedByUser = latestMessage.mentions.users.has(botId);
+        const mentionedRoles = Array.from(latestMessage.mentions.roles.values());
+        const mentionedByRole = mentionedRoles.find(r => Array.from(r.members.values()).find(m => m.id === botId)) !== undefined;
+
+        return !latestMessage.mentions.everyone && (mentionedByUser || mentionedByRole);
+    }
+
+    //Repeatedly sends the indicator saying the bot is "typing" until told to stop.
+    async function sendTypingIndicator(abortSignal: AbortSignal, channel: TextChannel): Promise<void> {
+        while (!abortSignal.aborted) {
+            await channel.sendTyping();
+            await new Promise(res => setTimeout(res, 8000));
+        }
+    }
+
+    //Responds to a new message when appropriate.
+    async function respondToPing(message: Message) {
         const channel = (await message.channel.fetch()) as TextChannel;
         const controller = new AbortController();
         void sendTypingIndicator(controller.signal, channel);
@@ -68,22 +84,6 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
             }
         } finally {
             controller.abort();
-        }
-    }
-
-    function hasBeenPinged(latestMessage: Message): boolean {
-        const mentionedByUser = latestMessage.mentions.users.has(botId);
-        const mentionedRoles = Array.from(latestMessage.mentions.roles.values());
-        const mentionedByRole = mentionedRoles.find(r => Array.from(r.members.values()).find(m => m.id === botId)) !== undefined;
-
-        return !latestMessage.mentions.everyone && (mentionedByUser || mentionedByRole);
-    }
-
-    //Repeatedly sends the indicator saying the bot is "typing" until told to stop.
-    async function sendTypingIndicator(abortSignal: AbortSignal, channel: TextChannel): Promise<void> {
-        while (!abortSignal.aborted) {
-            await channel.sendTyping();
-            await new Promise(res => setTimeout(res, 8000));
         }
     }
 
