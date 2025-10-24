@@ -1,5 +1,5 @@
 import { createMessageRepository } from "@adapters/repositories/MessageRepository";
-import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository";
+import { createReactionEmoteRepository, defaultKarmaValues } from "@adapters/repositories/ReactionEmoteRepository";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
 import type { CreateMessageData } from "@core/entities/Message.js";
 import { getKyselyForMigrations, runMigrations } from "@db/migrations";
@@ -115,8 +115,8 @@ export async function createTestReactions(db: Kysely<DB>, messageCount: number, 
         });
 
         for (let j = 0; j < reactionsPerMessage; j++) {
-            const [name, id] = validEmotes[j] ?? ["", ""];
-            const emote = await emotes.findOrCreate(name, id);
+            const [name, discordId] = validEmotes[j] ?? ["", ""];
+            const emote = await emotes.create(name, discordId);
 
             const foundEmote = await emotes.findById(emote.id);
             expect(foundEmote).not.toBeNull();
@@ -169,11 +169,8 @@ export async function createFakeMessagesAndReactions(db: Kysely<DB>, totalMessag
         for (let j = 0; j < reactionsPerMessage; j++) {
             const [name, discordId] = emotes[j]!;
 
-            let karmaValue = 0;
-            if (name === "upvote") karmaValue = 1;
-            else if (name === "downvote") karmaValue = -1;
-
-            const emote = await emotesRepo.create({ name, discordId, karmaValue });
+            const karmaValue = defaultKarmaValues[name] ?? 0;
+            const emote = await emotesRepo.create(name, discordId, karmaValue);
             await reactions.create({ giverId: authorId, receiverId: authorId, channelId, messageId, emoteId: emote.id });
             await reactions.create({ giverId: (300 + j).toString(), receiverId: authorId, channelId, messageId, emoteId: emote.id });
         }

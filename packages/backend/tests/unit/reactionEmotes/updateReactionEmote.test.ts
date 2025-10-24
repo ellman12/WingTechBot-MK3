@@ -8,7 +8,7 @@ describe("Update ReactionEmote", () => {
         const db = await createTestDb();
         const emotes = createReactionEmoteRepository(db);
 
-        const original = await emotes.create({ name: "upvote", discordId: "123456", karmaValue: 0 });
+        const original = await emotes.create("upvote", "123456");
         expect(original).not.toBeNull();
         expect(original.karmaValue).toEqual(0);
 

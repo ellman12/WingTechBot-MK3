@@ -1,4 +1,4 @@
-import type { CreateReactionEmoteData, ReactionEmote, UpdateReactionEmoteData } from "@core/entities/ReactionEmote.js";
+import type { ReactionEmote, UpdateReactionEmoteData } from "@core/entities/ReactionEmote.js";
 import { type ReactionEmoteRepository, karmaEmoteNames } from "@core/repositories/ReactionEmoteRepository.js";
 import type { DB } from "@db/types.js";
 import type { ReactionEmotes } from "@db/types.js";
@@ -15,7 +15,7 @@ const removeColons = (name: string) => {
     return name.replace(/^:(.*):$/, "$1");
 };
 
-const defaultKarmaValues: Record<string, number> = {
+export const defaultKarmaValues: Record<string, number> = {
     upvote: 1,
     downvote: -1,
 };
@@ -37,13 +37,7 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         return emote ? transformReactionEmote(emote) : null;
     };
 
-    const findOrCreate = async (name: string, discordId: string, karmaValue: number = 0): Promise<ReactionEmote> => {
-        const existing = await findByNameAndDiscordId(name, discordId);
-        return existing ?? (await createReactionEmote({ name, discordId, karmaValue }));
-    };
-
-    const createReactionEmote = async (data: CreateReactionEmoteData): Promise<ReactionEmote> => {
-        const { name, discordId, karmaValue } = data;
+    const createReactionEmote = async (name: string, discordId: string, karmaValue = 0): Promise<ReactionEmote> => {
         const parsedName = removeColons(name);
 
         if (parsedName === "" || discordId === "0") {
@@ -77,6 +71,7 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         return emote ? transformReactionEmote(emote) : null;
     };
 
+    //Adds the emotes from karmaEmoteNames if they don't already exist.
     const createKarmaEmotes = async (guild: Guild): Promise<void> => {
         const cache = new Map((await guild.emojis.fetch()).map(e => [e.name, e]));
 
@@ -85,7 +80,7 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
             if (!found) throw new Error(`Server emoji ${name} not found`);
 
             const karmaValue = defaultKarmaValues[name] ?? 0;
-            await findOrCreate(name, found.id, karmaValue);
+            await createReactionEmote(name, found.id, karmaValue);
         }
     };
 
@@ -97,7 +92,6 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
     return {
         findById: findEmoteById,
         findByNameAndDiscordId,
-        findOrCreate,
         create: createReactionEmote,
         update: updateReactionEmote,
         createKarmaEmotes,
