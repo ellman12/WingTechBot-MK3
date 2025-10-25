@@ -1,6 +1,6 @@
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
-import type { DiscordChatService } from "@core/services/DiscordChatService.js";
+import { type DiscordChatService, MESSAGE_LENGTH_LIMIT } from "@core/services/DiscordChatService.js";
 import { formatEmoji } from "@core/utils/emojiUtils";
 import { getJumpUrl } from "@core/utils/messageUtils.js";
 import { type ChatInputCommandInteraction, GuildMember, MessageFlags, Role, SlashCommandBuilder, userMention } from "discord.js";
@@ -74,7 +74,7 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository, di
         const messageHeader = direction === "received" ? `${primaryUser.username} received\n` : `${primaryUser.username} gave\n`;
         const messageBody = result.reduce((previous, current) => previous + `* ${current.count} ${formatEmoji(current.name, current.discordId)}\n`, messageHeader);
         const response = `${messageBody}${name ? (direction === "received" ? `from ${name} ` : `to ${name} `) : ""}${year ? `for ${year}` : ""}`;
-        const enclosingChars = response.length > 2000 ? "" : "```";
+        const enclosingChars = response.length > MESSAGE_LENGTH_LIMIT ? "" : "```";
         await discordChatService.replyToInteraction(interaction, `${enclosingChars}${response}${enclosingChars}`);
     }
 
@@ -129,7 +129,7 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository, di
             );
 
             const response = `${year ? `${year} ` : ""}Emote Leaderboard (Top ${limit})\n-------------------------------\nRank    Count   Emote\n${result.join(`\n`)}`;
-            const enclosingChars = response.length > 2000 ? "" : "```";
+            const enclosingChars = response.length > MESSAGE_LENGTH_LIMIT ? "" : "```";
             await discordChatService.replyToInteraction(interaction, `${enclosingChars}${response}${enclosingChars}`);
         },
     };
@@ -164,7 +164,7 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository, di
             );
 
             const response = `${year ? `${year} ` : ""}Karma Leaderboard\n------------------------\nRank    Karma   User\n${result.join(`\n`)}`;
-            const enclosingChars = response.length > 2000 ? "" : "```";
+            const enclosingChars = response.length > MESSAGE_LENGTH_LIMIT ? "" : "```";
             await discordChatService.replyToInteraction(interaction, `${enclosingChars}${response}${enclosingChars}`);
         },
     };

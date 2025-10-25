@@ -3,7 +3,7 @@ import type { MessageArchiveService } from "@core/services/MessageArchiveService
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import { ChannelType, type ChatInputCommandInteraction, type InteractionReplyOptions, type Message, type MessageCreateOptions, MessageFlags, type TextChannel } from "discord.js";
 
-const messageLimit = 2000;
+export const MESSAGE_LENGTH_LIMIT = 2000;
 
 export type SendMode = "split" | "file";
 
@@ -58,7 +58,7 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
     function hasBeenPinged(latestMessage: Message): boolean {
         const mentionedByUser = latestMessage.mentions.users.has(botId);
         const mentionedRoles = Array.from(latestMessage.mentions.roles.values());
-        const mentionedByRole = mentionedRoles.find(r => Array.from(r.members.values()).find(m => m.id === botId)) !== undefined;
+        const mentionedByRole = mentionedRoles.find(r => r.members.get(botId)) !== undefined;
 
         return !latestMessage.mentions.everyone && (mentionedByUser || mentionedByRole);
     }
@@ -98,7 +98,7 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
             return [{ files }];
         }
 
-        return splitMessage(content, messageLimit).map(m => ({ content: m }));
+        return splitMessage(content, MESSAGE_LENGTH_LIMIT).map(m => ({ content: m }));
     }
 
     //Sends a message to a channel with the ability to split it or send as a file.
@@ -112,7 +112,7 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
 
     //Calls reply on the interaction, sending the result back as a file if content is too long.
     async function replyToInteraction(interaction: ChatInputCommandInteraction, content: string, ephemeral = false) {
-        const mode = content.length > messageLimit ? "file" : "split";
+        const mode = content.length > MESSAGE_LENGTH_LIMIT ? "file" : "split";
         const result = formatMessageContent(content, mode)[0]!;
         const formatted: InteractionReplyOptions = { ...result, flags: ephemeral ? MessageFlags.Ephemeral : undefined };
 
@@ -121,7 +121,7 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
 
     //Calls followUp on the interaction, sending the result back as a file if content is too long.
     async function followUpToInteraction(interaction: ChatInputCommandInteraction, content: string, ephemeral = false) {
-        const mode = content.length > messageLimit ? "file" : "split";
+        const mode = content.length > MESSAGE_LENGTH_LIMIT ? "file" : "split";
         const result = formatMessageContent(content, mode)[0]!;
         const formatted: InteractionReplyOptions = { ...result, flags: ephemeral ? MessageFlags.Ephemeral : undefined };
 
