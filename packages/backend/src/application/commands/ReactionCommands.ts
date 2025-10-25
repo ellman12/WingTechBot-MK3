@@ -74,7 +74,8 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository, di
         const messageHeader = direction === "received" ? `${primaryUser.username} received\n` : `${primaryUser.username} gave\n`;
         const messageBody = result.reduce((previous, current) => previous + `* ${current.count} ${formatEmoji(current.name, current.discordId)}\n`, messageHeader);
         const response = `${messageBody}${name ? (direction === "received" ? `from ${name} ` : `to ${name} `) : ""}${year ? `for ${year}` : ""}`;
-        await discordChatService.replyToInteraction(interaction, response);
+        const enclosingChars = response.length > 2000 ? "" : "```";
+        await discordChatService.replyToInteraction(interaction, `${enclosingChars}${response}${enclosingChars}`);
     }
 
     const reactionsReceived: Command = {
@@ -127,8 +128,9 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository, di
                 { lastCount: 0, rank: 0, index: 0, result: [] as string[] }
             );
 
-            const response = `\`\`\`${year ? `${year} ` : ""}Emote Leaderboard (Top ${limit})\n-------------------------------\nRank    Count   Emote\n${result.join(`\n`)}\`\`\``;
-            await discordChatService.replyToInteraction(interaction, response);
+            const response = `${year ? `${year} ` : ""}Emote Leaderboard (Top ${limit})\n-------------------------------\nRank    Count   Emote\n${result.join(`\n`)}`;
+            const enclosingChars = response.length > 2000 ? "" : "```";
+            await discordChatService.replyToInteraction(interaction, `${enclosingChars}${response}${enclosingChars}`);
         },
     };
 
@@ -161,8 +163,9 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository, di
                 { lastCount: 0, rank: 1, index: 0, result: [] as string[] }
             );
 
-            const response = `\`\`\`${year ? `${year} ` : ""}Karma Leaderboard\n------------------------\nRank    Karma   User\n${result.join(`\n`)}\`\`\``;
-            await discordChatService.replyToInteraction(interaction, response);
+            const response = `${year ? `${year} ` : ""}Karma Leaderboard\n------------------------\nRank    Karma   User\n${result.join(`\n`)}`;
+            const enclosingChars = response.length > 2000 ? "" : "```";
+            await discordChatService.replyToInteraction(interaction, `${enclosingChars}${response}${enclosingChars}`);
         },
     };
 
