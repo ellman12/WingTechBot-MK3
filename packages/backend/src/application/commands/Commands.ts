@@ -26,7 +26,12 @@ export const createCommands = (
     emoteRepository: ReactionEmoteRepository,
     discordChatService: DiscordChatService
 ): Record<string, Command> => {
-    const commandRecords = [createAudioCommands({ soundService }), createReactionCommands({ reactionRepository, emoteRepository, discordChatService }), createSoundTagCommands({ soundTagService }), createVoiceCommands({ voiceService, soundService })];
+    const commandRecords = [
+        createAudioCommands({ soundService, discordChatService }),
+        createReactionCommands({ reactionRepository, emoteRepository, discordChatService }),
+        createSoundTagCommands({ soundTagService, discordChatService }),
+        createVoiceCommands({ voiceService, soundService }),
+    ];
 
     // Assert that there are no duplicate command name in a way where we can have an arbitrary number of commands
     const commandNames = new Set<string>();
