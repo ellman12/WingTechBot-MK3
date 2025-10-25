@@ -1,7 +1,9 @@
 import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
-import { ChannelType, type Message, type MessageCreateOptions, MessageFlags, type TextChannel } from "discord.js";
+import { ChannelType, type ChatInputCommandInteraction, type InteractionReplyOptions, type Message, type MessageCreateOptions, MessageFlags, type TextChannel } from "discord.js";
+
+const messageLimit = 2000;
 
 export type SendMode = "split" | "file";
 
@@ -11,6 +13,7 @@ export type DiscordChatService = {
     readonly sendTypingIndicator: (abortSignal: AbortSignal, channel: TextChannel) => Promise<void>;
     readonly formatMessageContent: (content: string, sendMode?: SendMode) => MessageCreateOptions[];
     readonly sendMessage: (content: string, channel: TextChannel, sendMode?: SendMode) => Promise<void>;
+    readonly replyToInteraction: (interaction: ChatInputCommandInteraction, content: string, method?: "reply" | "followUp") => Promise<void>;
 };
 
 export type DiscordChatServiceDeps = {
@@ -94,7 +97,7 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
             return [{ files }];
         }
 
-        return splitMessage(content, 2000).map(m => ({ content: m }));
+        return splitMessage(content, messageLimit).map(m => ({ content: m }));
     }
 
     //Sends a message to a channel with the ability to split it or send as a file.
@@ -103,6 +106,18 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
 
         for (const r of result) {
             await channel.send(r);
+        }
+    }
+
+    //Calls reply or followUp on the interaction, sending the result back as a file if content is too long.
+    async function replyToInteraction(interaction: ChatInputCommandInteraction, content: string, method: "reply" | "followUp" = "reply") {
+        const mode = content.length > messageLimit ? "file" : "split";
+        const result = formatMessageContent(content, mode)[0]! as InteractionReplyOptions; //This cast looks dumb but I promise it won't cause issues.
+
+        if (method === "reply") {
+            await interaction.reply(result);
+        } else if (method === "followUp") {
+            await interaction.followUp(result);
         }
     }
 
@@ -135,5 +150,6 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
         sendTypingIndicator,
         formatMessageContent,
         sendMessage,
+        replyToInteraction,
     };
 };
