@@ -13,7 +13,8 @@ export type DiscordChatService = {
     readonly sendTypingIndicator: (abortSignal: AbortSignal, channel: TextChannel) => Promise<void>;
     readonly formatMessageContent: (content: string, sendMode?: SendMode) => MessageCreateOptions[];
     readonly sendMessage: (content: string, channel: TextChannel, sendMode?: SendMode) => Promise<void>;
-    readonly replyToInteraction: (interaction: ChatInputCommandInteraction, content: string, method?: "reply" | "followUp") => Promise<void>;
+    readonly replyToInteraction: (interaction: ChatInputCommandInteraction, content: string, ephemeral?: boolean) => Promise<void>;
+    readonly followUpToInteraction: (interaction: ChatInputCommandInteraction, content: string, ephemeral?: boolean) => Promise<void>;
 };
 
 export type DiscordChatServiceDeps = {
@@ -109,16 +110,22 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
         }
     }
 
-    //Calls reply or followUp on the interaction, sending the result back as a file if content is too long.
-    async function replyToInteraction(interaction: ChatInputCommandInteraction, content: string, method: "reply" | "followUp" = "reply") {
+    //Calls reply on the interaction, sending the result back as a file if content is too long.
+    async function replyToInteraction(interaction: ChatInputCommandInteraction, content: string, ephemeral = false) {
         const mode = content.length > messageLimit ? "file" : "split";
-        const result = formatMessageContent(content, mode)[0]! as InteractionReplyOptions; //This cast looks dumb but I promise it won't cause issues.
+        const result = formatMessageContent(content, mode)[0]!;
+        const formatted: InteractionReplyOptions = { ...result, flags: ephemeral ? MessageFlags.Ephemeral : undefined };
 
-        if (method === "reply") {
-            await interaction.reply(result);
-        } else if (method === "followUp") {
-            await interaction.followUp(result);
-        }
+        await interaction.reply(formatted);
+    }
+
+    //Calls followUp on the interaction, sending the result back as a file if content is too long.
+    async function followUpToInteraction(interaction: ChatInputCommandInteraction, content: string, ephemeral = false) {
+        const mode = content.length > messageLimit ? "file" : "split";
+        const result = formatMessageContent(content, mode)[0]!;
+        const formatted: InteractionReplyOptions = { ...result, flags: ephemeral ? MessageFlags.Ephemeral : undefined };
+
+        await interaction.followUp(formatted);
     }
 
     //Helper function to split text intelligently
@@ -151,5 +158,6 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
         formatMessageContent,
         sendMessage,
         replyToInteraction,
+        followUpToInteraction,
     };
 };
