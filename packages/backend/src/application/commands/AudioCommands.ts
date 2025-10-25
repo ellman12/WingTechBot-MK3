@@ -1,3 +1,4 @@
+import type { DiscordChatService } from "@core/services/DiscordChatService";
 import type { SoundService } from "@core/services/SoundService.js";
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
@@ -5,9 +6,10 @@ import type { Command } from "./Commands.js";
 
 export type AudioCommandDeps = {
     readonly soundService: SoundService;
+    readonly discordChatService: DiscordChatService;
 };
 
-export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<string, Command> => {
+export const createAudioCommands = ({ soundService, discordChatService }: AudioCommandDeps): Record<string, Command> => {
     const addSound: Command = {
         data: new SlashCommandBuilder()
             .setName("add-sound")
@@ -17,20 +19,14 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
             .addStringOption(option => option.setName("url").setDescription("URL of the sound to add")),
         execute: async (interaction: ChatInputCommandInteraction) => {
             if (!interaction.guildId) {
-                await interaction.reply({
-                    content: "This command can only be used in a server!",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: "This command can only be used in a server!", flags: MessageFlags.Ephemeral });
                 return;
             }
 
             const soundName = interaction.options.getString("name")?.trim();
 
             if (!soundName) {
-                await interaction.reply({
-                    content: "You must provide a name for the sound.",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: "You must provide a name for the sound.", flags: MessageFlags.Ephemeral });
                 return;
             }
 
@@ -38,20 +34,14 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
             const fileInput = interaction.options.getAttachment("file");
 
             if (urlInput && fileInput) {
-                await interaction.reply({
-                    content: "You can only provide either a URL or a file attachment, not both.",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: "You can only provide either a URL or a file attachment, not both.", flags: MessageFlags.Ephemeral });
                 return;
             }
 
             const url = urlInput ? urlInput.trim() : fileInput?.url;
 
             if (!url) {
-                await interaction.reply({
-                    content: "You must provide either a URL or a file attachment.",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: "You must provide either a URL or a file attachment.", flags: MessageFlags.Ephemeral });
                 return;
             }
 
@@ -69,9 +59,7 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
                 });
             } catch (error) {
                 console.error(`[AudioCommands] Error adding sound "${soundName}":`, error);
-                await interaction.editReply({
-                    content: `Failed to add sound: ${error instanceof Error ? error.message : "Unknown error"}`,
-                });
+                await interaction.editReply({ content: `Failed to add sound: ${error instanceof Error ? error.message : "Unknown error"}` });
             }
         },
     };
@@ -85,17 +73,12 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
             const tagName = interaction.options.getString("tag-name")?.trim();
             const sounds = await soundService.listSounds(tagName);
             if (sounds.length === 0) {
-                await interaction.reply({
-                    content: tagName ? `No sounds with tag "${tagName}" found in the soundboard` : "No sounds found in the soundboard.",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: tagName ? `No sounds with tag "${tagName}" found in the soundboard` : "No sounds found in the soundboard.", flags: MessageFlags.Ephemeral });
                 return;
             }
 
-            await interaction.reply({
-                content: `Available sounds:\n${sounds.map(sound => `- ${sound}`).join("\n")}`,
-                flags: MessageFlags.Ephemeral,
-            });
+            const response = `Available sounds:\n${sounds.map(sound => `- ${sound}`).join("\n")}`;
+            await discordChatService.replyToInteraction(interaction, response, true);
         },
     };
 
@@ -108,10 +91,7 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
             const soundName = interaction.options.getString("name")?.trim();
 
             if (!soundName) {
-                await interaction.reply({
-                    content: "You must provide the name of the sound to delete.",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: "You must provide the name of the sound to delete.", flags: MessageFlags.Ephemeral });
                 return;
             }
 
@@ -119,15 +99,9 @@ export const createAudioCommands = ({ soundService }: AudioCommandDeps): Record<
 
             try {
                 await soundService.deleteSound(formattedSoundName);
-                await interaction.reply({
-                    content: `Sound "${soundName}" deleted successfully!`,
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: `Sound "${soundName}" deleted successfully!`, flags: MessageFlags.Ephemeral });
             } catch (error) {
-                await interaction.reply({
-                    content: `Failed to delete sound: ${error instanceof Error ? error.message : "Unknown error"}`,
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: `Failed to delete sound: ${error instanceof Error ? error.message : "Unknown error"}`, flags: MessageFlags.Ephemeral });
             }
         },
     };

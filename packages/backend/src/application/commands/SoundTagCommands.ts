@@ -1,3 +1,4 @@
+import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
@@ -5,9 +6,10 @@ import type { Command } from "./Commands.js";
 
 export type SoundTagCommandDeps = {
     readonly soundTagService: SoundTagService;
+    readonly discordChatService: DiscordChatService;
 };
 
-export const createSoundTagCommands = ({ soundTagService }: SoundTagCommandDeps): Record<string, Command> => {
+export const createSoundTagCommands = ({ soundTagService, discordChatService }: SoundTagCommandDeps): Record<string, Command> => {
     const tagSound: Command = {
         data: new SlashCommandBuilder()
             .setName("tag-sound")
@@ -54,7 +56,8 @@ export const createSoundTagCommands = ({ soundTagService }: SoundTagCommandDeps)
                 return;
             }
 
-            await interaction.reply({ content: `Available tags:\n${tags.map(tag => `- ${tag.name}`).join("\n")}`, flags: MessageFlags.Ephemeral });
+            const response = `Available tags:\n${tags.map(tag => `- ${tag.name}`).join("\n")}`;
+            await discordChatService.replyToInteraction(interaction, response, true);
         },
     };
 

@@ -62,7 +62,7 @@ export const createDiscordBot = async ({ config, soundService, soundTagService, 
             isReadyState = true;
 
             try {
-                await deployCommands(soundService, soundTagService, voiceService, reactionRepository, emoteRepository, config.discord.token, config.discord.clientId, config.discord.serverId);
+                await deployCommands(soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, config.discord.token, config.discord.clientId, config.discord.serverId);
             } catch (error) {
                 console.warn("⚠️ Failed to deploy commands automatically:", error);
                 console.log("💡 You can deploy commands manually with: pnpm discord:deploy-commands");
@@ -81,7 +81,7 @@ export const createDiscordBot = async ({ config, soundService, soundTagService, 
             console.log(`Global: ${rateLimitData.global}`);
         });
 
-        registerCommands(soundService, soundTagService, voiceService, reactionRepository, emoteRepository, registerEventHandler);
+        registerCommands(soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, registerEventHandler);
 
         registerReactionArchiveEvents(reactionArchiveService, registerEventHandler);
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
