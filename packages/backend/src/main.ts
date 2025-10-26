@@ -5,6 +5,7 @@ import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEm
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
 import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
+import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
@@ -76,6 +77,7 @@ export const createApplication = async (): Promise<App> => {
         llmInstructionRepo,
     });
     const autoReactionService = createAutoReactionService({ discordChatService, geminiLlmService, llmInstructionRepo });
+    const voiceService = createDiscordVoiceService({ soundService });
 
     const expressApp = createExpressApp({ db, config: serverConfig });
     const discordBot = await createDiscordBot({
@@ -88,6 +90,7 @@ export const createApplication = async (): Promise<App> => {
         messageArchiveService,
         discordChatService,
         autoReactionService,
+        voiceService,
     });
 
     let isReadyState = false;

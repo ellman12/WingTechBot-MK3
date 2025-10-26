@@ -21,10 +21,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
 
             if (!interaction.guildId) {
                 console.log(`[VoiceCommands] Join command rejected - not in guild`);
-                await interaction.reply({
-                    content: "This command can only be used in a server!",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: "This command can only be used in a server!", flags: MessageFlags.Ephemeral });
                 return;
             }
 
@@ -32,40 +29,21 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
                 const channel = interaction.options.getChannel("channel");
                 let targetChannelId: string;
 
-                console.log(
-                    `[VoiceCommands] Join command channel option:`,
-                    channel
-                        ? {
-                              id: channel.id,
-                              name: channel.name,
-                          }
-                        : "none"
-                );
+                console.log(`[VoiceCommands] Join command channel option:`, channel ? { id: channel.id, name: channel.name } : "none");
 
                 if (channel) {
                     targetChannelId = channel.id;
                     console.log(`[VoiceCommands] Using specified channel: ${channel.name} (${targetChannelId})`);
                 } else {
                     const voiceChannel = (interaction.member as GuildMember).voice.channel;
-                    console.log(
-                        `[VoiceCommands] User voice channel:`,
-                        voiceChannel
-                            ? {
-                                  id: voiceChannel.id,
-                                  name: voiceChannel.name,
-                              }
-                            : "none"
-                    );
+                    console.log(`[VoiceCommands] User voice channel:`, voiceChannel ? { id: voiceChannel.id, name: voiceChannel.name } : "none");
 
                     if (voiceChannel) {
                         targetChannelId = voiceChannel.id;
                         console.log(`[VoiceCommands] Using user's voice channel: ${voiceChannel.name} (${targetChannelId})`);
                     } else {
                         console.log(`[VoiceCommands] Join command rejected - user not in voice channel and no channel specified`);
-                        await interaction.reply({
-                            content: "You are not in a voice channel and no channel was specified!",
-                            flags: MessageFlags.Ephemeral,
-                        });
+                        await interaction.reply({ content: "You are not in a voice channel and no channel was specified!", flags: MessageFlags.Ephemeral });
                         return;
                     }
                 }
@@ -75,15 +53,12 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
 
                 if (isAlreadyConnected) {
                     console.log(`[VoiceCommands] Join command rejected - already connected`);
-                    await interaction.reply({
-                        content: "I'm already connected to a voice channel in this server!",
-                        flags: MessageFlags.Ephemeral,
-                    });
+                    await interaction.reply({ content: "I'm already connected to a voice channel in this server!", flags: MessageFlags.Ephemeral });
                     return;
                 }
 
                 console.log(`[VoiceCommands] Attempting to connect to channel ${targetChannelId} in guild ${interaction.guildId}`);
-                await voiceService.connect(targetChannelId, interaction.guildId);
+                await voiceService.connect(interaction.guild!, targetChannelId);
                 console.log(`[VoiceCommands] Successfully connected to voice channel`);
 
                 const channelName = channel?.name || (interaction.member as GuildMember).voice.channel?.name;
@@ -99,10 +74,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
                     userId: interaction.user.id,
                 });
 
-                await interaction.reply({
-                    content: `Failed to join the voice channel: ${error instanceof Error ? error.message : "Unknown error"}`,
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: `Failed to join the voice channel: ${error instanceof Error ? error.message : "Unknown error"}`, flags: MessageFlags.Ephemeral });
             }
         },
     };
@@ -111,10 +83,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
         data: new SlashCommandBuilder().setName("leave").setDescription("Leave the current voice channel"),
         execute: async (interaction: ChatInputCommandInteraction) => {
             if (!interaction.guildId) {
-                await interaction.reply({
-                    content: "This command can only be used in a server!",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: "This command can only be used in a server!", flags: MessageFlags.Ephemeral });
                 return;
             }
 
@@ -123,10 +92,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
                 await interaction.reply("👋 Left the voice channel!");
             } catch (error) {
                 console.error("Error leaving voice channel:", error);
-                await interaction.reply({
-                    content: "Failed to leave the voice channel. Please try again.",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: "Failed to leave the voice channel. Please try again.", flags: MessageFlags.Ephemeral });
             }
         },
     };
@@ -143,10 +109,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
 
             if (!interaction.guildId) {
                 console.log(`[VoiceCommands] Play command rejected - not in guild`);
-                await interaction.reply({
-                    content: "This command can only be used in a server!",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: "This command can only be used in a server!", flags: MessageFlags.Ephemeral });
                 return;
             }
 
@@ -170,29 +133,17 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
 
                 if (!isConnected) {
                     const voiceChannel = (interaction.member as GuildMember).voice.channel;
-                    console.log(
-                        `[VoiceCommands] User voice channel:`,
-                        voiceChannel
-                            ? {
-                                  id: voiceChannel.id,
-                                  name: voiceChannel.name,
-                              }
-                            : "none"
-                    );
+                    console.log(`[VoiceCommands] User voice channel:`, voiceChannel ? { id: voiceChannel.id, name: voiceChannel.name } : "none");
 
                     if (!voiceChannel) {
                         console.log(`[VoiceCommands] Play command rejected - bot not connected to voice channel`);
-                        await interaction.reply({
-                            content: "I'm not connected to a voice channel!",
-                            flags: MessageFlags.Ephemeral,
-                        });
+                        await interaction.reply({ content: "I'm not connected to a voice channel!", flags: MessageFlags.Ephemeral });
                         return;
                     }
 
-                    await voiceService.connect(voiceChannel.id, interaction.guildId);
+                    await voiceService.connect(interaction.guild!, voiceChannel.id);
                 }
 
-                // Send deferred reply immediately to avoid timeout
                 console.log(`[VoiceCommands] Deferring reply to avoid timeout`);
                 await interaction.deferReply();
 
@@ -226,7 +177,6 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
                     userId: interaction.user.id,
                 });
 
-                // Check if we've already deferred the reply
                 if (interaction.deferred) {
                     await interaction.editReply({
                         content: `Failed to play audio: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -245,10 +195,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
         data: new SlashCommandBuilder().setName("stop").setDescription("Stop audio playback"),
         execute: async (interaction: ChatInputCommandInteraction) => {
             if (!interaction.guildId) {
-                await interaction.reply({
-                    content: "This command can only be used in a server!",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: "This command can only be used in a server!", flags: MessageFlags.Ephemeral });
                 return;
             }
 
@@ -257,10 +204,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
                 await interaction.reply("⏹️ Stopped audio playback!");
             } catch (error) {
                 console.error("Error stopping audio:", error);
-                await interaction.reply({
-                    content: "Failed to stop audio. Please try again.",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: "Failed to stop audio. Please try again.", flags: MessageFlags.Ephemeral });
             }
         },
     };
@@ -272,10 +216,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
             .addIntegerOption(option => option.setName("level").setDescription("Volume level (0-100)").setRequired(false).setMinValue(0).setMaxValue(100)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             if (!interaction.guildId) {
-                await interaction.reply({
-                    content: "This command can only be used in a server!",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: "This command can only be used in a server!", flags: MessageFlags.Ephemeral });
                 return;
             }
 
@@ -291,10 +232,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
                 }
             } catch (error) {
                 console.error("Error with volume command:", error);
-                await interaction.reply({
-                    content: "Failed to set/get volume. Please try again.",
-                    flags: MessageFlags.Ephemeral,
-                });
+                await interaction.reply({ content: "Failed to set/get volume. Please try again.", flags: MessageFlags.Ephemeral });
             }
         },
     };
