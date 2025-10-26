@@ -71,13 +71,9 @@ export const createApplication = async (): Promise<App> => {
         emoteRepository,
     });
     const geminiLlmService = createGeminiLlmService();
-    const discordChatService = createDiscordChatService({
-        geminiLlmService,
-        messageArchiveService,
-        llmInstructionRepo,
-    });
-    const autoReactionService = createAutoReactionService({ discordChatService, geminiLlmService, llmInstructionRepo });
     const voiceService = createDiscordVoiceService({ soundService });
+    const discordChatService = createDiscordChatService({ geminiLlmService, messageArchiveService, llmInstructionRepo, soundRepository, voiceService });
+    const autoReactionService = createAutoReactionService({ discordChatService, geminiLlmService, llmInstructionRepo });
 
     const expressApp = createExpressApp({ db, config: serverConfig });
     const discordBot = await createDiscordBot({
