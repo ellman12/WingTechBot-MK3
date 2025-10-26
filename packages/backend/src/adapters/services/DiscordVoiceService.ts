@@ -3,10 +3,9 @@ import { createPlayingSound } from "@core/entities/PlayingSound.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { AudioPlayerStatus, type VoiceConnection, VoiceConnectionStatus, joinVoiceChannel } from "@discordjs/voice";
-import type { Client, VoiceChannel as DiscordVoiceChannel } from "discord.js";
+import type { Guild, VoiceChannel } from "discord.js";
 
 export type DiscordVoiceServiceDeps = {
-    readonly client: Client;
     readonly soundService: SoundService;
 };
 
@@ -17,29 +16,18 @@ type VoiceState = {
     isReady: boolean;
 };
 
-export const createDiscordVoiceService = ({ client, soundService }: DiscordVoiceServiceDeps): VoiceService => {
+export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceDeps): VoiceService => {
     const voiceStates = new Map<string, VoiceState>();
 
     // Note: We no longer create AudioResources for individual streams
     // Raw PCM streams are fed directly to the mixer
 
-    const connect = async (channelId: string, serverId: string): Promise<void> => {
+    const connect = async (guild: Guild, channelId: string): Promise<void> => {
+        const serverId = guild.id;
         console.log(`[DiscordVoiceService] Attempting to connect to channel ${channelId} in server ${serverId}`);
 
         try {
-            console.log(`[DiscordVoiceService] Fetching guild ${serverId}`);
-            const guild = await client.guilds.fetch(serverId);
-            console.log(`[DiscordVoiceService] Guild fetched: ${guild.name} (${guild.id})`);
-
-            console.log(`[DiscordVoiceService] Fetching channel ${channelId}`);
-            const channel = (await guild.channels.fetch(channelId)) as DiscordVoiceChannel;
-            console.log(`[DiscordVoiceService] Channel fetched:`, {
-                name: channel?.name,
-                id: channel?.id,
-                type: channel?.type,
-                isVoiceBased: channel?.isVoiceBased(),
-            });
-
+            const channel = (await guild.channels.fetch(channelId)) as VoiceChannel;
             if (!channel || !channel.isVoiceBased()) {
                 const error = new Error("Invalid voice channel");
                 console.error(`[DiscordVoiceService] ${error.message}`);
@@ -53,20 +41,11 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
             }
 
             console.log(`[DiscordVoiceService] Creating voice connection`);
-            const connection = joinVoiceChannel({
-                channelId: channelId,
-                guildId: serverId,
-                adapterCreator: channel.guild.voiceAdapterCreator,
-            });
+            const connection = joinVoiceChannel({ channelId: channelId, guildId: serverId, adapterCreator: channel.guild.voiceAdapterCreator });
             console.log(`[DiscordVoiceService] Voice connection created`);
 
             console.log(`[DiscordVoiceService] Creating overlapping audio player`);
-            const player = new OverlappingAudioPlayer({
-                sampleRate: 48000,
-                channels: 2,
-                bitDepth: 16,
-                maxConcurrentStreams: 8,
-            });
+            const player = new OverlappingAudioPlayer({ sampleRate: 48000, channels: 2, bitDepth: 16, maxConcurrentStreams: 8 });
             console.log(`[DiscordVoiceService] Overlapping audio player created`);
 
             console.log(`[DiscordVoiceService] Subscribing player to connection`);
@@ -87,11 +66,7 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
 
             player.on("error", error => {
                 console.error(`[VOICE SERVICE] Audio player error in server ${serverId}:`, error);
-                console.error(`[VOICE SERVICE] Error details:`, {
-                    name: error.name,
-                    message: error.message,
-                    stack: error.stack,
-                });
+                console.error(`[VOICE SERVICE] Error details:`, { name: error.name, message: error.message, stack: error.stack });
             });
 
             // Set up player event handlers
@@ -126,12 +101,7 @@ export const createDiscordVoiceService = ({ client, soundService }: DiscordVoice
             });
 
             console.log(`[DiscordVoiceService] Storing voice state for server ${serverId}`);
-            voiceStates.set(serverId, {
-                connection,
-                player,
-                volume: 100,
-                isReady: false,
-            });
+            voiceStates.set(serverId, { connection, player, volume: 100, isReady: false });
             console.log(`[DiscordVoiceService] Successfully connected to voice channel ${channel.name} in server ${serverId}`);
         } catch (error) {
             console.error(`[DiscordVoiceService] Failed to connect to voice channel:`, error);

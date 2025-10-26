@@ -1,5 +1,7 @@
+import type { Guild } from "discord.js";
+
 export type VoiceService = {
-    readonly connect: (channelId: string, serverId: string) => Promise<void>;
+    readonly connect: (guild: Guild, channelId: string) => Promise<void>;
     readonly disconnect: (serverId: string) => Promise<void>;
     readonly isConnected: (serverId: string) => boolean;
     readonly playAudio: (serverId: string, nameOrSource: string, volume?: number) => Promise<string>;
