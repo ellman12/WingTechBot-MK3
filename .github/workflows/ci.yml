@@ -414,12 +414,13 @@ jobs:
                   context: .
                   file: ./packages/backend/Dockerfile
                   push: false
+                  load: true
                   tags: wingtechbot-backend:test
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
                   target: production
 
-            - name: Test Docker image structure
+            - name: Verify Docker image
               run: |
                   docker images wingtechbot-backend:test
                   docker inspect wingtechbot-backend:test
