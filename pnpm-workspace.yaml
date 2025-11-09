@@ -2,5 +2,6 @@ packages:
     - packages/*
 
 ignoredBuiltDependencies:
+    - "@tailwindcss/oxide"
     - esbuild
     - pg

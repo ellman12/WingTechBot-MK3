@@ -1,7 +1,7 @@
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import { type DiscordChatService, MESSAGE_LENGTH_LIMIT } from "@core/services/DiscordChatService.js";
-import { formatEmoji } from "@core/utils/emojiUtils";
+import { formatEmoji } from "@core/utils/emojiUtils.js";
 import { getJumpUrl } from "@core/utils/messageUtils.js";
 import { type ChatInputCommandInteraction, GuildMember, MessageFlags, Role, SlashCommandBuilder, userMention } from "discord.js";
 
