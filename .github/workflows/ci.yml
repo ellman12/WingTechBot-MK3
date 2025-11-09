@@ -396,3 +396,30 @@ jobs:
 
             - name: Check database migrations
               run: pnpm --filter backend db:push --accept-data-loss
+
+    # Docker build test for backend
+    docker-build:
+        needs: setup
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build backend Docker image
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: ./packages/backend/Dockerfile
+                  push: false
+                  tags: wingtechbot-backend:test
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+                  target: production
+
+            - name: Test Docker image structure
+              run: |
+                  docker images wingtechbot-backend:test
+                  docker inspect wingtechbot-backend:test
