@@ -1,3 +1,4 @@
+import { parseAudioSource } from "@core/services/AudioFetcherService";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { ChannelType, ChatInputCommandInteraction, GuildMember, MessageFlags, SlashCommandBuilder } from "discord.js";
@@ -135,7 +136,8 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
             .setName("play")
             .setDescription("Play audio in the voice channel")
             .addStringOption(option => option.setName("source").setDescription("Audio source (URL, file path, or YouTube URL)").setRequired(true))
-            .addIntegerOption(option => option.setName("volume").setDescription("Volume level (0-100)").setRequired(false).setMinValue(0).setMaxValue(100)),
+            .addIntegerOption(option => option.setName("volume").setDescription("Volume level (0-100)").setRequired(false).setMinValue(0).setMaxValue(100))
+            .addBooleanOption(option => option.setName("preload").setDescription("If we should download fully first (for URLs").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             console.log(`[VoiceCommands] Play command received from user ${interaction.user.username} in guild ${interaction.guildId}`);
 
@@ -151,6 +153,9 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
             try {
                 const audioSource = interaction.options.getString("source", true);
                 const volume = interaction.options.getInteger("volume");
+                const shouldPreload = interaction.options.getBoolean("preload") || false;
+                const isPreloading = shouldPreload && parseAudioSource(audioSource) !== "soundboard";
+                const soundToPlay = isPreloading ? "currently-playing" : audioSource;
 
                 console.log(`[VoiceCommands] Play command parameters:`, {
                     guildId: interaction.guildId,
@@ -191,6 +196,10 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
                 console.log(`[VoiceCommands] Deferring reply to avoid timeout`);
                 await interaction.deferReply();
 
+                if (isPreloading) {
+                    await soundService.addSound("currently-playing", audioSource);
+                }
+
                 // Set volume if specified
                 if (volume !== null) {
                     console.log(`[VoiceCommands] Setting volume to ${volume}% for guild ${interaction.guildId}`);
@@ -201,7 +210,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
                 console.log(`[VoiceCommands] Starting audio playback for source: ${audioSource}`);
                 // Convert volume from 0-100 scale to 0-1 scale
                 const normalizedVolume = volume !== null ? volume / 100 : undefined;
-                const audioId = await voiceService.playAudio(interaction.guildId, audioSource, normalizedVolume);
+                const audioId = await voiceService.playAudio(interaction.guildId, soundToPlay, normalizedVolume);
                 console.log(`[VoiceCommands] Audio playback started successfully with ID: ${audioId}`);
 
                 const activeCount = voiceService.getActiveAudioCount(interaction.guildId);
@@ -286,122 +295,6 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
                     content: "Failed to set/get volume. Please try again.",
                     flags: MessageFlags.Ephemeral,
                 });
-            }
-        },
-    };
-
-    const playDlCommand: Command = {
-        data: new SlashCommandBuilder()
-            .setName("play-dl")
-            .setDescription("Download and automatically play audio from a URL")
-            .addStringOption(option => option.setName("url").setDescription("URL of the audio to download and play").setRequired(true))
-            .addIntegerOption(option => option.setName("volume").setDescription("Volume level (0-100)").setRequired(false).setMinValue(0).setMaxValue(100)),
-        execute: async (interaction: ChatInputCommandInteraction) => {
-            console.log(`[VoiceCommands] Play-dl command received from user ${interaction.user.username} in guild ${interaction.guildId}`);
-
-            if (!interaction.guildId) {
-                console.log(`[VoiceCommands] Play-dl command rejected - not in guild`);
-                await interaction.reply({
-                    content: "This command can only be used in a server!",
-                    flags: MessageFlags.Ephemeral,
-                });
-                return;
-            }
-
-            try {
-                const url = interaction.options.getString("url", true);
-                const volume = interaction.options.getInteger("volume");
-
-                console.log(`[VoiceCommands] Play-dl command parameters:`, {
-                    guildId: interaction.guildId,
-                    url,
-                    volume,
-                    userId: interaction.user.id,
-                    username: interaction.user.username,
-                });
-
-                // Check voice connection
-                const isConnected = voiceService.isConnected(interaction.guildId);
-                console.log(`[VoiceCommands] Voice service connection status for guild ${interaction.guildId}: ${isConnected}`);
-
-                if (!isConnected) {
-                    const voiceChannel = (interaction.member as GuildMember).voice.channel;
-                    console.log(
-                        `[VoiceCommands] User voice channel:`,
-                        voiceChannel
-                            ? {
-                                  id: voiceChannel.id,
-                                  name: voiceChannel.name,
-                              }
-                            : "none"
-                    );
-
-                    if (!voiceChannel) {
-                        console.log(`[VoiceCommands] Play-dl command rejected - bot not connected to voice channel`);
-                        await interaction.reply({
-                            content: "I'm not connected to a voice channel! Please join a voice channel first.",
-                            flags: MessageFlags.Ephemeral,
-                        });
-                        return;
-                    }
-
-                    await voiceService.connect(voiceChannel.id, interaction.guildId);
-                }
-
-                // Send deferred reply immediately to avoid timeout
-                console.log(`[VoiceCommands] Deferring reply to avoid timeout`);
-                await interaction.deferReply();
-
-                try {
-                    // First, download and add the sound with the name "currently-playing"
-                    console.log(`[VoiceCommands] Adding sound as "currently-playing" from URL: ${url}`);
-                    await soundService.addSound("currently-playing", url);
-                    console.log(`[VoiceCommands] Successfully downloaded audio as "currently-playing"`);
-
-                    // Set volume if specified
-                    if (volume !== null) {
-                        console.log(`[VoiceCommands] Setting volume to ${volume}% for guild ${interaction.guildId}`);
-                        await voiceService.setVolume(interaction.guildId, volume);
-                        console.log(`[VoiceCommands] Volume set successfully`);
-                    }
-
-                    // Then play the downloaded sound
-                    console.log(`[VoiceCommands] Starting playback of "currently-playing"`);
-                    // Convert volume from 0-100 scale to 0-1 scale if provided
-                    const normalizedVolume = volume !== null ? volume / 100 : undefined;
-                    const audioId = await voiceService.playAudio(interaction.guildId, "currently-playing", normalizedVolume);
-                    console.log(`[VoiceCommands] Audio playback started successfully with ID: ${audioId}`);
-
-                    const activeCount = voiceService.getActiveAudioCount(interaction.guildId);
-                    const responseMessage = `🎵 Downloaded and added audio from: ${url} (ID: ${audioId.substring(0, 8)}, Active: ${activeCount})`;
-                    console.log(`[VoiceCommands] Sending success response: ${responseMessage}`);
-                    await interaction.editReply(responseMessage);
-                } catch (downloadError) {
-                    console.error(`[VoiceCommands] Error during download/play process:`, downloadError);
-                    await interaction.editReply({
-                        content: `Failed to download or play audio: ${downloadError instanceof Error ? downloadError.message : "Unknown error"}`,
-                    });
-                }
-            } catch (error) {
-                console.error(`[VoiceCommands] Error in play-dl command for guild ${interaction.guildId}:`, error);
-                console.error(`[VoiceCommands] Error details:`, {
-                    message: error instanceof Error ? error.message : "Unknown error",
-                    stack: error instanceof Error ? error.stack : undefined,
-                    guildId: interaction.guildId,
-                    userId: interaction.user.id,
-                });
-
-                // Check if we've already deferred the reply
-                if (interaction.deferred) {
-                    await interaction.editReply({
-                        content: `Failed to execute play-dl command: ${error instanceof Error ? error.message : "Unknown error"}`,
-                    });
-                } else {
-                    await interaction.reply({
-                        content: `Failed to execute play-dl command: ${error instanceof Error ? error.message : "Unknown error"}`,
-                        flags: MessageFlags.Ephemeral,
-                    });
-                }
             }
         },
     };
@@ -519,7 +412,6 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
         play: playCommand,
         stop: stopCommand,
         volume: volumeCommand,
-        "play-dl": playDlCommand,
         "list-active": listActiveCommand,
         "stop-id": stopByIdCommand,
         "stop-all": stopAllCommand,

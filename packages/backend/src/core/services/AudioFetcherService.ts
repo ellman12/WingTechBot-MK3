@@ -10,7 +10,6 @@ export type YoutubeService = {
 };
 
 export type AudioFetcherService = {
-    readonly parseAudioSource: (source: string) => audioSource;
     readonly fetchUrlAudio: (link: string, abortSignal?: AbortSignal) => Promise<Readable>;
     readonly fetchSoundboardAudio: (name: string) => Promise<Readable>;
 };
@@ -23,18 +22,6 @@ export type AudioFetcherDeps = {
 
 export const createAudioFetcherService = ({ fileManager, soundRepository, youtubeService }: AudioFetcherDeps) => {
     console.log("[AudioFetcherService] Creating audio fetcher service");
-
-    const parseAudioSource = (source: string): audioSource => {
-        console.log(`[AudioFetcherService] Parsing audio source: ${source}`);
-
-        if (source.startsWith("http")) {
-            console.log(`[AudioFetcherService] Detected URL source: ${source}`);
-            return "url";
-        }
-
-        console.log(`[AudioFetcherService] Detected soundboard source: ${source}`);
-        return "soundboard";
-    };
 
     const fetchYoutubeAudio = async (link: string): Promise<Readable> => {
         console.log(`[AudioFetcherService] Fetching YouTube audio: ${link}`);
@@ -151,8 +138,19 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
     };
 
     return {
-        parseAudioSource,
         fetchUrlAudio,
         fetchSoundboardAudio,
     };
+};
+
+export const parseAudioSource = (source: string): audioSource => {
+    console.log(`[AudioFetcherService] Parsing audio source: ${source}`);
+
+    if (source.startsWith("http")) {
+        console.log(`[AudioFetcherService] Detected URL source: ${source}`);
+        return "url";
+    }
+
+    console.log(`[AudioFetcherService] Detected soundboard source: ${source}`);
+    return "soundboard";
 };
