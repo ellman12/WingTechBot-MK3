@@ -1,4 +1,4 @@
-import { parseAudioSource } from "@core/services/AudioFetcherService";
+import { parseAudioSource } from "@core/services/AudioFetcherService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { ChannelType, ChatInputCommandInteraction, GuildMember, MessageFlags, SlashCommandBuilder } from "discord.js";
