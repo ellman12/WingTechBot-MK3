@@ -7,9 +7,10 @@ import { Readable } from "stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock dependencies
+const parseAudioSource = vi.fn();
+
 const mockAudioFetcher: AudioFetcherService = {
     fetchUrlAudio: vi.fn(),
-    parseAudioSource: vi.fn(),
     fetchSoundboardAudio: vi.fn(),
 };
 
@@ -82,7 +83,7 @@ describe("SoundService", () => {
         it("should return direct file stream for soundboard audio", async () => {
             const mockFileStream = Readable.from(["audio data"]);
 
-            vi.mocked(mockAudioFetcher.parseAudioSource).mockReturnValue("soundboard");
+            vi.mocked(parseAudioSource).mockReturnValue("soundboard");
             vi.mocked(mockSoundRepository.getSoundByName).mockResolvedValue({
                 name: "test-sound",
                 path: "/test-sound.pcm",
@@ -97,7 +98,7 @@ describe("SoundService", () => {
         });
 
         it("should throw error for non-existent soundboard audio", async () => {
-            vi.mocked(mockAudioFetcher.parseAudioSource).mockReturnValue("soundboard");
+            vi.mocked(parseAudioSource).mockReturnValue("soundboard");
             vi.mocked(mockSoundRepository.getSoundByName).mockResolvedValue(null);
 
             await expect(soundService.getSound("non-existent")).rejects.toThrow("Sound with name non-existent not found");
@@ -107,7 +108,7 @@ describe("SoundService", () => {
             const mockAudioStream = Readable.from(["raw audio"]);
             const mockProcessedStream = Readable.from(["processed audio"]);
 
-            vi.mocked(mockAudioFetcher.parseAudioSource).mockReturnValue("youtube");
+            vi.mocked(parseAudioSource).mockReturnValue("youtube");
             vi.mocked(mockAudioFetcher.fetchUrlAudio).mockResolvedValue(mockAudioStream);
             vi.mocked(mockAudioProcessor.processAudioStream).mockReturnValue(mockProcessedStream);
 

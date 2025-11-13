@@ -22,12 +22,6 @@ const mockAudioFetcher: AudioFetcherService = {
         }
         throw new Error("Invalid URL");
     },
-    parseAudioSource: (source: string): "soundboard" | "url" | "youtube" => {
-        if (source.startsWith("http://") || source.startsWith("https://")) {
-            return source.includes("youtube.com") || source.includes("youtu.be") ? "youtube" : "url";
-        }
-        return "soundboard";
-    },
 };
 
 const mockSoundRepository = {
@@ -52,8 +46,8 @@ const mockSoundRepository = {
     },
 
     async getAllSoundsWithTagName(_name: string): Promise<Sound[]> {
-        return []
-    }
+        return [];
+    },
 };
 
 describe("SoundService Integration Tests", () => {

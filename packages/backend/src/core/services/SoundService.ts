@@ -2,7 +2,7 @@ import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import { createPreBufferedStream, readStreamToBytes } from "@core/utils/streamUtils.js";
 import { Readable } from "stream";
 
-import type { AudioFetcherService } from "./AudioFetcherService.js";
+import { type AudioFetcherService, parseAudioSource } from "./AudioFetcherService.js";
 import type { AudioProcessingService } from "./AudioProcessingService.js";
 import type { FileManager } from "./FileManager.js";
 
@@ -73,7 +73,7 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
             console.log(`[SoundService] Getting sound: ${nameOrSource}`);
 
             try {
-                const sourceType = audioFetcher.parseAudioSource(nameOrSource);
+                const sourceType = parseAudioSource(nameOrSource);
                 console.log(`[SoundService] Detected source type: ${sourceType} for: ${nameOrSource}`);
 
                 switch (sourceType) {
