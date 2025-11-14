@@ -4,7 +4,7 @@ import type { Kysely, Selectable } from "kysely";
 
 export type AutoSoundsRepository = {
     readonly addAutoSound: (userId: string, soundId: number, type: AutoSoundType) => Promise<AutoSound>;
-    readonly deleteAutoSound: (userId: string, soundId: number, type: AutoSoundType) => Promise<void>;
+    readonly deleteAutoSound: (userId: string, soundId: number, type: AutoSoundType) => Promise<AutoSound | null>;
     readonly getAutoSoundsForUser: (userId: string, type: AutoSoundType) => Promise<AutoSound[]>;
 };
 
@@ -23,30 +23,30 @@ export const createAutoSoundsRepository = (db: Kysely<DB>): AutoSoundsRepository
             throw new Error("Invalid ID");
         }
 
-        const [newAutoSound] = await db
-            .insertInto("auto_sounds")
-            .values({ user_id: userId, sound_id: soundId, type })
-            .onConflict(oc => oc.doNothing())
-            .returningAll()
-            .execute();
+        const existing = await db.selectFrom("auto_sounds").where("user_id", "=", userId).where("sound_id", "=", soundId).where("type", "=", type).selectAll().executeTakeFirst();
+        if (existing) {
+            return transformAutoSound(existing);
+        }
 
+        const newAutoSound = await db.insertInto("auto_sounds").values({ user_id: userId, sound_id: soundId, type }).returningAll().executeTakeFirst();
         if (!newAutoSound) {
             throw new Error("Failed to add new AutoSound");
         }
 
         console.log("AutoSound added:", newAutoSound);
-
         return transformAutoSound(newAutoSound);
     }
 
-    async function deleteAutoSound(userId: string, soundId: number, type: AutoSoundType): Promise<void> {
-        const query = await db.deleteFrom("auto_sounds").where("user_id", "=", userId).where("sound_id", "=", soundId).where("type", "=", type).executeTakeFirst();
+    async function deleteAutoSound(userId: string, soundId: number, type: AutoSoundType): Promise<AutoSound | null> {
+        const sound = await db.deleteFrom("auto_sounds").where("user_id", "=", userId).where("sound_id", "=", soundId).where("type", "=", type).returningAll().executeTakeFirst();
 
-        if (!query || query.numDeletedRows === 0n) {
-            throw new Error(`AutoSound with user_id, sound_id, type ${userId}, ${soundId}, ${type} not found`);
+        if (!sound) {
+            console.error(`AutoSound with user_id, sound_id, type ${userId}, ${soundId}, ${type} not found`);
+            return null;
         }
 
         console.log(`AutoSound with user_id, sound_id, type ${userId}, ${soundId}, ${type} deleted successfully`);
+        return transformAutoSound(sound);
     }
 
     async function getAutoSoundsForUser(userId: string, type: AutoSoundType): Promise<AutoSound[]> {

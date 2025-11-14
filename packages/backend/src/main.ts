@@ -82,6 +82,8 @@ export const createApplication = async (): Promise<App> => {
     const expressApp = createExpressApp({ db, config: serverConfig });
     const discordBot = await createDiscordBot({
         config,
+        autoSoundsRepository,
+        soundRepository,
         soundService,
         soundTagService,
         reactionRepository,

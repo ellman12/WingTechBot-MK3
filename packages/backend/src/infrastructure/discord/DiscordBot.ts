@@ -1,3 +1,4 @@
+import type { AutoSoundsRepository } from "@adapters/repositories/AutoSoundsRepository";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
 import { registerAutoReactionEvents } from "@application/eventHandlers/AutoReaction.js";
 import { registerAutoSoundsEvents } from "@application/eventHandlers/AutoSounds.js";
@@ -7,6 +8,7 @@ import { registerMessageArchiveEvents } from "@application/eventHandlers/Message
 import { registerReactionArchiveEvents } from "@application/eventHandlers/ReactionArchive.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
+import type { SoundRepository } from "@core/repositories/SoundRepository";
 import type { AutoReactionService } from "@core/services/AutoReactionService.js";
 import type { AutoSoundsService } from "@core/services/AutoSoundsService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
@@ -21,6 +23,8 @@ import type { Config } from "../config/Config.js";
 
 export type DiscordBotDeps = {
     readonly config: Config;
+    readonly autoSoundsRepository: AutoSoundsRepository;
+    readonly soundRepository: SoundRepository;
     readonly soundService: SoundService;
     readonly soundTagService: SoundTagService;
     readonly reactionRepository: ReactionRepository;
@@ -43,6 +47,8 @@ export type DiscordBot = {
 
 export const createDiscordBot = async ({
     config,
+    autoSoundsRepository,
+    soundRepository,
     soundService,
     soundTagService,
     reactionRepository,
@@ -76,7 +82,7 @@ export const createDiscordBot = async ({
             isReadyState = true;
 
             try {
-                await deployCommands(soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, config.discord.token, config.discord.clientId, config.discord.serverId);
+                await deployCommands(autoSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, config.discord.token, config.discord.clientId, config.discord.serverId);
             } catch (error) {
                 console.warn("⚠️ Failed to deploy commands automatically:", error);
                 console.log("💡 You can deploy commands manually with: pnpm discord:deploy-commands");
@@ -95,7 +101,7 @@ export const createDiscordBot = async ({
             console.log(`Global: ${rateLimitData.global}`);
         });
 
-        registerCommands(soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, registerEventHandler);
+        registerCommands(autoSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, registerEventHandler);
 
         registerReactionArchiveEvents(reactionArchiveService, registerEventHandler);
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
