@@ -1,7 +1,6 @@
 import type { AutoSound } from "@core/entities/AutoSound";
 import type { AutoSoundType, AutoSounds, DB } from "@db/types";
 import type { Kysely, Selectable } from "kysely";
-import type { AutoSoundsService } from "@core/services/AutoSoundsService";
 
 export type AutoSoundsRepository = {
     readonly addAutoSound: (userId: string, soundId: number, type: AutoSoundType) => Promise<AutoSound>;
@@ -41,12 +40,7 @@ export const createAutoSoundsRepository = (db: Kysely<DB>): AutoSoundsRepository
     }
 
     async function deleteAutoSound(userId: string, soundId: number, type: AutoSoundType): Promise<void> {
-        const query = await db
-            .deleteFrom("auto_sounds")
-            .where("user_id", "=", userId)
-            .where("sound_id", "=", soundId)
-            .where("type", "=", type)
-            .executeTakeFirst();
+        const query = await db.deleteFrom("auto_sounds").where("user_id", "=", userId).where("sound_id", "=", soundId).where("type", "=", type).executeTakeFirst();
 
         if (!query || query.numDeletedRows === 0n) {
             throw new Error(`AutoSound with user_id, sound_id, type ${userId}, ${soundId}, ${type} not found`);
@@ -56,13 +50,7 @@ export const createAutoSoundsRepository = (db: Kysely<DB>): AutoSoundsRepository
     }
 
     async function getAutoSoundsForUser(userId: string, type: AutoSoundType): Promise<AutoSound[]> {
-        const result = await db
-            .selectFrom("auto_sounds")
-            .innerJoin("sounds", "auto_sounds.sound_id", "sounds.id")
-            .where("user_id", "=", userId)
-            .where("type", "=", type)
-            .select(["sound_id", "name", "user_id", "type"])
-            .execute();
+        const result = await db.selectFrom("auto_sounds").innerJoin("sounds", "auto_sounds.sound_id", "sounds.id").where("user_id", "=", userId).where("type", "=", type).select(["sound_id", "name", "user_id", "type"]).execute();
 
         return result.map(r => ({
             userId: r.user_id,

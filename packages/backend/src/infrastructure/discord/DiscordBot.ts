@@ -1,5 +1,6 @@
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
 import { registerAutoReactionEvents } from "@application/eventHandlers/AutoReaction.js";
+import { registerAutoSoundsEvents } from "@application/eventHandlers/AutoSounds.js";
 import { registerDiscordChatEventHandlers } from "@application/eventHandlers/DiscordChat.js";
 import { registerVoiceServiceEventHandlers } from "@application/eventHandlers/DiscordVoiceService.js";
 import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive.js";
@@ -7,6 +8,7 @@ import { registerReactionArchiveEvents } from "@application/eventHandlers/Reacti
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { AutoReactionService } from "@core/services/AutoReactionService.js";
+import type { AutoSoundsService } from "@core/services/AutoSoundsService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { ReactionArchiveService } from "@core/services/ReactionArchiveService.js";
@@ -27,6 +29,7 @@ export type DiscordBotDeps = {
     readonly messageArchiveService: MessageArchiveService;
     readonly discordChatService: DiscordChatService;
     readonly autoReactionService: AutoReactionService;
+    readonly autoSoundsService: AutoSoundsService;
     readonly voiceService: VoiceService;
 };
 
@@ -48,6 +51,7 @@ export const createDiscordBot = async ({
     messageArchiveService,
     discordChatService,
     autoReactionService,
+    autoSoundsService,
     voiceService,
 }: DiscordBotDeps): Promise<DiscordBot> => {
     const client = new Client({
@@ -98,6 +102,7 @@ export const createDiscordBot = async ({
         registerDiscordChatEventHandlers(discordChatService, registerEventHandler);
         registerVoiceServiceEventHandlers(voiceService, registerEventHandler);
         registerAutoReactionEvents(autoReactionService, registerEventHandler);
+        registerAutoSoundsEvents(autoSoundsService, registerEventHandler);
     };
 
     const start = async (): Promise<void> => {
