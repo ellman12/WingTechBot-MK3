@@ -121,6 +121,7 @@ export const registerCommands = (
         console.log(`- ${command}`);
     });
 
+    //Normal slash commands
     registerEventHandler(Events.InteractionCreate, async interaction => {
         if (!interaction.isChatInputCommand()) return;
 
@@ -133,5 +134,18 @@ export const registerCommands = (
             console.error(error);
             await interaction.reply({ content: "There was an error while executing this command!", flags: MessageFlags.Ephemeral });
         }
+    });
+
+    //Slash commands that have autocomplete options
+    //TODO: we could easily refactor this to have a field in the Command type that returns where it should get autocomplete data (for each field).
+    registerEventHandler(Events.InteractionCreate, async interaction => {
+        if (interaction.isChatInputCommand() || !interaction.isAutocomplete() || interaction.commandName !== "play") return;
+
+        const focusedOption = interaction.options.getFocused(true);
+        const focusedValue = focusedOption.value;
+
+        const results = (focusedValue === "" ? await soundRepository.getAllSounds() : await soundRepository.tryGetSoundsWithinDistance(focusedValue)).map(s => s.name);
+        const choices = results.map(sound => ({ name: sound, value: sound }));
+        await interaction.respond(choices.slice(0, 25));
     });
 };
