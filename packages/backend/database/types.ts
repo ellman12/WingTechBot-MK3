@@ -4,9 +4,18 @@
  */
 import type { ColumnType } from "kysely";
 
+export type AutoSoundType = "UserJoin" | "UserLeave";
+
 export type Generated<T> = T extends ColumnType<infer S, infer I, infer U> ? ColumnType<S, I | undefined, U> : ColumnType<T, T | undefined, T>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
+
+export interface AutoSounds {
+    created_at: Generated<Timestamp>;
+    sound_id: number;
+    type: AutoSoundType;
+    user_id: string;
+}
 
 export interface Messages {
     author_id: string;
@@ -66,6 +75,7 @@ export interface Users {
 }
 
 export interface DB {
+    auto_sounds: AutoSounds;
     messages: Messages;
     reaction_emotes: ReactionEmotes;
     reactions: Reactions;
