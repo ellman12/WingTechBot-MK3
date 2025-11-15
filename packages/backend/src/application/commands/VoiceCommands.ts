@@ -1,16 +1,18 @@
+import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import { parseAudioSource } from "@core/services/AudioFetcherService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
-import { ChannelType, ChatInputCommandInteraction, GuildMember, MessageFlags, SlashCommandBuilder } from "discord.js";
+import { type AutocompleteFocusedOption, ChannelType, ChatInputCommandInteraction, GuildMember, MessageFlags, SlashCommandBuilder } from "discord.js";
 
 import type { Command } from "./Commands.js";
 
 export type VoiceCommandDeps = {
     readonly voiceService: VoiceService;
+    readonly soundRepository: SoundRepository;
     readonly soundService: SoundService;
 };
 
-export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommandDeps): Record<string, Command> => {
+export const createVoiceCommands = ({ voiceService, soundRepository, soundService }: VoiceCommandDeps): Record<string, Command> => {
     const joinCommand: Command = {
         data: new SlashCommandBuilder()
             .setName("join")
@@ -188,6 +190,16 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
                     });
                 }
             }
+        },
+        getAutocompleteChoices: async (focusedOption: AutocompleteFocusedOption) => {
+            const focusedValue = focusedOption.value;
+
+            if (focusedOption.name === "source") {
+                const sounds = focusedValue === "" ? await soundRepository.getAllSounds() : await soundRepository.tryGetSoundsWithinDistance(focusedValue);
+                return sounds.map(s => ({ name: s.name, value: s.name }));
+            }
+
+            return [];
         },
     };
 
