@@ -6,6 +6,7 @@ import { registerVoiceServiceEventHandlers } from "@application/eventHandlers/Di
 import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive.js";
 import { registerReactionArchiveEvents } from "@application/eventHandlers/ReactionArchive.js";
 import { registerVoiceEventSoundsEventHandlers } from "@application/eventHandlers/VoiceEventSounds.js";
+import { registerSoundboardThreadEventHandlers } from "@application/eventHandlers/SoundboardThreadService.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository";
@@ -16,6 +17,7 @@ import type { ReactionArchiveService } from "@core/services/ReactionArchiveServi
 import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
 import type { VoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
+import type { SoundboardThreadService } from "@core/services/SoundboardThreadService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, RESTEvents } from "discord.js";
 
@@ -32,6 +34,7 @@ export type DiscordBotDeps = {
     readonly reactionArchiveService: ReactionArchiveService;
     readonly messageArchiveService: MessageArchiveService;
     readonly discordChatService: DiscordChatService;
+    readonly soundboardThreadService: SoundboardThreadService;
     readonly autoReactionService: AutoReactionService;
     readonly voiceEventSoundsService: VoiceEventSoundsService;
     readonly voiceService: VoiceService;
@@ -56,6 +59,7 @@ export const createDiscordBot = async ({
     reactionArchiveService,
     messageArchiveService,
     discordChatService,
+    soundboardThreadService,
     autoReactionService,
     voiceEventSoundsService,
     voiceService,
@@ -118,6 +122,7 @@ export const createDiscordBot = async ({
         registerReactionArchiveEvents(reactionArchiveService, registerEventHandler);
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
         registerDiscordChatEventHandlers(discordChatService, registerEventHandler);
+        registerSoundboardThreadEventHandlers(soundboardThreadService, registerEventHandler);
         registerVoiceServiceEventHandlers(voiceService, registerEventHandler);
         registerAutoReactionEvents(autoReactionService, registerEventHandler);
         registerVoiceEventSoundsEventHandlers(voiceEventSoundsService, registerEventHandler);
@@ -139,6 +144,8 @@ export const createDiscordBot = async ({
 
             //Remove any messages that were deleted while bot offline.
             await messageArchiveService.removeDeletedMessages(guild, year);
+
+            await soundboardThreadService.findOrCreateSoundboardThread(guild);
         } catch (error) {
             console.error("❌ Failed to start Discord bot:", error);
             throw error;
