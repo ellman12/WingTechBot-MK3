@@ -6,4 +6,5 @@ export type SoundRepository = {
     readonly deleteSound: (name: string) => Promise<void>;
     readonly getAllSounds: () => Promise<Sound[]>;
     readonly getAllSoundsWithTagName: (tagName: string) => Promise<Sound[]>;
+    readonly tryGetSoundsWithinDistance: (needle: string) => Promise<(Sound & { distance: number })[]>;
 };
