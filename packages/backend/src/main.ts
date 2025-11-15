@@ -17,6 +17,7 @@ import { createMessageArchiveService } from "@core/services/MessageArchiveServic
 import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { createSoundTagService } from "@core/services/SoundTagService.js";
+import { createSoundboardThreadService } from "@core/services/SoundboardThreadService.js";
 import { runMigrations } from "@db/migrations.js";
 import "@dotenvx/dotenvx/config";
 import { getConfig } from "@infrastructure/config/Config.js";
@@ -75,7 +76,8 @@ export const createApplication = async (): Promise<App> => {
     });
     const geminiLlmService = createGeminiLlmService();
     const voiceService = createDiscordVoiceService({ soundService });
-    const discordChatService = createDiscordChatService({ geminiLlmService, messageArchiveService, llmInstructionRepo, soundRepository, voiceService });
+    const discordChatService = createDiscordChatService({ geminiLlmService, messageArchiveService, llmInstructionRepo });
+    const soundboardThreadService = createSoundboardThreadService({ soundRepository, voiceService });
     const autoReactionService = createAutoReactionService({ discordChatService, geminiLlmService, llmInstructionRepo });
     const autoSoundsService = createAutoSoundsService({ autoSoundsRepository, voiceService });
 
@@ -91,6 +93,7 @@ export const createApplication = async (): Promise<App> => {
         reactionArchiveService,
         messageArchiveService,
         discordChatService,
+        soundboardThreadService,
         autoReactionService,
         autoSoundsService,
         voiceService,

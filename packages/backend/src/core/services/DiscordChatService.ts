@@ -1,7 +1,5 @@
 import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
-import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
-import type { VoiceService } from "@core/services/VoiceService.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import { ChannelType, type ChatInputCommandInteraction, type InteractionReplyOptions, type Message, type MessageCreateOptions, MessageFlags, type TextChannel } from "discord.js";
 
@@ -24,17 +22,14 @@ export type DiscordChatServiceDeps = {
     readonly geminiLlmService: GeminiLlmService;
     readonly messageArchiveService: MessageArchiveService;
     readonly llmInstructionRepo: LlmInstructionRepository;
-    readonly soundRepository: SoundRepository;
-    readonly voiceService: VoiceService;
 };
 
 function validMessage(message: Message): boolean {
     return message.channel.type !== ChannelType.DM && !message.flags.has(MessageFlags.Ephemeral);
 }
 
-export const createDiscordChatService = ({ geminiLlmService, messageArchiveService, llmInstructionRepo, soundRepository, voiceService }: DiscordChatServiceDeps): DiscordChatService => {
+export const createDiscordChatService = ({ geminiLlmService, messageArchiveService, llmInstructionRepo }: DiscordChatServiceDeps): DiscordChatService => {
     const botId = process.env.DISCORD_CLIENT_ID!;
-    const botChannelId = process.env.DISCORD_BOT_CHANNEL_ID!;
     const botRoleId = process.env.DISCORD_BOT_ROLE_ID!;
 
     async function handleMessageCreated(message: Message) {
@@ -45,8 +40,6 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
         if (hasBeenPinged(message)) {
             await respondToPing(message);
         }
-
-        await tryToPlaySoundFromMessage(message);
     }
 
     //Removes the bot's mention from the message content, and replace all user and role pings with their names.
@@ -97,30 +90,6 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
             await sendMessage(response, channel, "split");
         } finally {
             controller.abort();
-        }
-    }
-
-    async function tryToPlaySoundFromMessage(message: Message) {
-        if (message.channel.id !== botChannelId) {
-            return;
-        }
-
-        const guild = message.guild!;
-        const guildId = guild.id;
-
-        try {
-            const sound = await soundRepository.getSoundByName(message.content);
-            if (!sound) {
-                return;
-            }
-
-            if (!voiceService.isConnected(guildId)) {
-                await voiceService.connect(guild, process.env.DEFAULT_VOICE_CHANNEL_ID!);
-            }
-
-            await voiceService.playAudio(guildId, sound.name);
-        } catch (error) {
-            console.error("[DiscordChatService]", error);
         }
     }
 
