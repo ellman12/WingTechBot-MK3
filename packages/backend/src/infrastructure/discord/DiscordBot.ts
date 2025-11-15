@@ -1,8 +1,8 @@
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
 import { registerAutoReactionEvents } from "@application/eventHandlers/AutoReaction.js";
-import { registerDiscordChatEventHandlers } from "@application/eventHandlers/DiscordChat.js";
 import { registerVoiceServiceEventHandlers } from "@application/eventHandlers/DiscordVoiceService.js";
+import { registerLlmConversationServiceEventHandlers } from "@application/eventHandlers/LlmConversation.js";
 import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive.js";
 import { registerReactionArchiveEvents } from "@application/eventHandlers/ReactionArchive.js";
 import { registerVoiceEventSoundsEventHandlers } from "@application/eventHandlers/VoiceEventSounds.js";
@@ -12,6 +12,7 @@ import type { ReactionRepository } from "@core/repositories/ReactionRepository.j
 import type { SoundRepository } from "@core/repositories/SoundRepository";
 import type { AutoReactionService } from "@core/services/AutoReactionService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
+import type { LlmConversationService } from "@core/services/LlmConversationService";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { ReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import type { SoundService } from "@core/services/SoundService.js";
@@ -34,6 +35,7 @@ export type DiscordBotDeps = {
     readonly reactionArchiveService: ReactionArchiveService;
     readonly messageArchiveService: MessageArchiveService;
     readonly discordChatService: DiscordChatService;
+    readonly llmConversationService: LlmConversationService;
     readonly soundboardThreadService: SoundboardThreadService;
     readonly autoReactionService: AutoReactionService;
     readonly voiceEventSoundsService: VoiceEventSoundsService;
@@ -59,6 +61,7 @@ export const createDiscordBot = async ({
     reactionArchiveService,
     messageArchiveService,
     discordChatService,
+    llmConversationService,
     soundboardThreadService,
     autoReactionService,
     voiceEventSoundsService,
@@ -121,7 +124,7 @@ export const createDiscordBot = async ({
 
         registerReactionArchiveEvents(reactionArchiveService, registerEventHandler);
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
-        registerDiscordChatEventHandlers(discordChatService, registerEventHandler);
+        registerLlmConversationServiceEventHandlers(llmConversationService, registerEventHandler);
         registerSoundboardThreadEventHandlers(soundboardThreadService, registerEventHandler);
         registerVoiceServiceEventHandlers(voiceService, registerEventHandler);
         registerAutoReactionEvents(autoReactionService, registerEventHandler);

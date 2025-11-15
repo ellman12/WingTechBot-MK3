@@ -1,15 +1,11 @@
-import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
-import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
-import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
-import { ChannelType, type ChatInputCommandInteraction, type InteractionReplyOptions, type Message, type MessageCreateOptions, MessageFlags, type TextChannel } from "discord.js";
+import { type ChatInputCommandInteraction, type InteractionReplyOptions, type Message, type MessageCreateOptions, MessageFlags, type TextChannel } from "discord.js";
 
 export const MESSAGE_LENGTH_LIMIT = 2000;
 
 export type SendMode = "split" | "file";
 
 export type DiscordChatService = {
-    readonly handleMessageCreated: (message: Message) => Promise<void>;
-
+    readonly hasBeenPinged: (latestMessage: Message) => boolean;
     readonly replaceUserAndRoleMentions: (message: Message) => Promise<string>;
     readonly sendTypingIndicator: (abortSignal: AbortSignal, channel: TextChannel) => Promise<void>;
     readonly formatMessageContent: (content: string, sendMode?: SendMode) => MessageCreateOptions[];
@@ -18,28 +14,17 @@ export type DiscordChatService = {
     readonly followUpToInteraction: (interaction: ChatInputCommandInteraction, content: string, ephemeral?: boolean) => Promise<void>;
 };
 
-export type DiscordChatServiceDeps = {
-    readonly geminiLlmService: GeminiLlmService;
-    readonly messageArchiveService: MessageArchiveService;
-    readonly llmInstructionRepo: LlmInstructionRepository;
-};
-
-function validMessage(message: Message): boolean {
-    return message.channel.type !== ChannelType.DM && !message.flags.has(MessageFlags.Ephemeral);
-}
-
-export const createDiscordChatService = ({ geminiLlmService, messageArchiveService, llmInstructionRepo }: DiscordChatServiceDeps): DiscordChatService => {
+//Helpers and utilities for sending/receiving Discord messages.
+export const createDiscordChatService = (): DiscordChatService => {
     const botId = process.env.DISCORD_CLIENT_ID!;
     const botRoleId = process.env.DISCORD_BOT_ROLE_ID!;
 
-    async function handleMessageCreated(message: Message) {
-        if (!validMessage(message)) {
-            return;
-        }
+    function hasBeenPinged(latestMessage: Message): boolean {
+        const mentionedByUser = latestMessage.mentions.users.has(botId);
+        const mentionedRoles = Array.from(latestMessage.mentions.roles.values());
+        const mentionedByRole = mentionedRoles.find(r => r.members.get(botId)) !== undefined;
 
-        if (hasBeenPinged(message)) {
-            await respondToPing(message);
-        }
+        return !latestMessage.mentions.everyone && (mentionedByUser || mentionedByRole);
     }
 
     //Removes the bot's mention from the message content, and replace all user and role pings with their names.
@@ -58,38 +43,11 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
         });
     }
 
-    function hasBeenPinged(latestMessage: Message): boolean {
-        const mentionedByUser = latestMessage.mentions.users.has(botId);
-        const mentionedRoles = Array.from(latestMessage.mentions.roles.values());
-        const mentionedByRole = mentionedRoles.find(r => r.members.get(botId)) !== undefined;
-
-        return !latestMessage.mentions.everyone && (mentionedByUser || mentionedByRole);
-    }
-
     //Repeatedly sends the indicator saying the bot is "typing" until told to stop.
     async function sendTypingIndicator(abortSignal: AbortSignal, channel: TextChannel): Promise<void> {
         while (!abortSignal.aborted) {
             await channel.sendTyping();
             await new Promise(res => setTimeout(res, 8000));
-        }
-    }
-
-    //Responds to a new message when appropriate.
-    async function respondToPing(message: Message) {
-        const channel = (await message.channel.fetch()) as TextChannel;
-        const controller = new AbortController();
-        void sendTypingIndicator(controller.signal, channel);
-
-        try {
-            //Get previous messages, ensuring we don't include the message that pinged the bot.
-            const previousMessages = (await messageArchiveService.getNewestDBMessages(channel.id, 10)).filter(m => m.id !== message.id);
-
-            const content = await replaceUserAndRoleMentions(message);
-            const systemInstruction = await llmInstructionRepo.getInstruction("generalChat");
-            const response = await geminiLlmService.generateMessage(content, previousMessages, systemInstruction);
-            await sendMessage(response, channel, "split");
-        } finally {
-            controller.abort();
         }
     }
 
@@ -155,8 +113,7 @@ export const createDiscordChatService = ({ geminiLlmService, messageArchiveServi
     }
 
     return {
-        handleMessageCreated,
-
+        hasBeenPinged,
         replaceUserAndRoleMentions,
         sendTypingIndicator,
         formatMessageContent,

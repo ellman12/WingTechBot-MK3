@@ -12,6 +12,7 @@ import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioSer
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { createAutoReactionService } from "@core/services/AutoReactionService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
+import { createLlmConversationService } from "@core/services/LlmConversationService";
 import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
 import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import { createSoundService } from "@core/services/SoundService.js";
@@ -76,7 +77,8 @@ export const createApplication = async (): Promise<App> => {
     });
     const geminiLlmService = createGeminiLlmService();
     const voiceService = createDiscordVoiceService({ soundService });
-    const discordChatService = createDiscordChatService({ geminiLlmService, messageArchiveService, llmInstructionRepo });
+    const discordChatService = createDiscordChatService();
+    const llmConversationService = createLlmConversationService({ discordChatService, geminiLlmService, messageArchiveService, llmInstructionRepo });
     const soundboardThreadService = createSoundboardThreadService({ soundRepository, voiceService });
     const autoReactionService = createAutoReactionService({ discordChatService, geminiLlmService, llmInstructionRepo });
     const voiceEventSoundsService = createVoiceEventSoundsService({ voiceEventSoundsRepository, voiceService });
@@ -93,6 +95,7 @@ export const createApplication = async (): Promise<App> => {
         reactionArchiveService,
         messageArchiveService,
         discordChatService,
+        llmConversationService,
         soundboardThreadService,
         autoReactionService,
         voiceEventSoundsService,
