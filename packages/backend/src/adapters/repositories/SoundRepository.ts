@@ -1,6 +1,7 @@
 import { transformSoundTag } from "@adapters/repositories/SoundTagRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { DB, Sounds, Soundtags } from "@db/types.js";
+import { distance } from "fastest-levenshtein";
 import { type Kysely, type Selectable, sql } from "kysely";
 
 import type { Sound } from "@/core/entities/Sound.js";
@@ -15,66 +16,90 @@ export const createSoundRepository = (db: Kysely<DB>): SoundRepository => {
         };
     };
 
-    return {
-        addSound: async (audio: Omit<Sound, "id">): Promise<Sound> => {
-            const [newSound] = await db
-                .insertInto("sounds")
-                .values({
-                    name: audio.name,
+    async function addSound(audio: Omit<Sound, "id">): Promise<Sound> {
+        const [newSound] = await db
+            .insertInto("sounds")
+            .values({
+                name: audio.name,
+                path: audio.path,
+            })
+            .onConflict(oc =>
+                oc.column("name").doUpdateSet({
                     path: audio.path,
                 })
-                .onConflict(oc =>
-                    oc.column("name").doUpdateSet({
-                        path: audio.path,
-                    })
-                )
-                .returningAll()
-                .execute();
+            )
+            .returningAll()
+            .execute();
 
-            if (!newSound) {
-                throw new Error("Failed to add sound");
-            }
+        if (!newSound) {
+            throw new Error("Failed to add sound");
+        }
 
-            console.log("Sound added:", newSound.name);
+        console.log("Sound added:", newSound.name);
 
-            return transformSound(newSound);
-        },
-        getSoundByName: async (name: string): Promise<Sound | null> => {
-            const sound = await db.selectFrom("sounds").where("sounds.name", "=", name).selectAll().executeTakeFirst();
+        return transformSound(newSound);
+    }
 
-            return sound ? transformSound(sound) : null;
-        },
-        deleteSound: async (name: string): Promise<void> => {
-            const query = await db.deleteFrom("sounds").where("sounds.name", "=", name).executeTakeFirst();
+    async function getSoundByName(name: string): Promise<Sound | null> {
+        const sound = await db.selectFrom("sounds").where("sounds.name", "=", name).selectAll().executeTakeFirst();
 
-            if (!query || query.numDeletedRows === 0n) {
-                throw new Error(`Sound with name "${name}" not found`);
-            }
+        return sound ? transformSound(sound) : null;
+    }
 
-            console.log(`Sound "${name}" deleted successfully`);
-        },
-        getAllSounds: async (): Promise<Sound[]> => {
-            const sounds = await db
-                .selectFrom("sounds as s")
-                .leftJoin("sound_soundtags as st", "s.id", "st.sound")
-                .leftJoin("soundtags as t", "st.tag", "t.id")
-                .select(["s.id", "s.name", "s.path", "s.created_at", sql<Selectable<Soundtags>[]>`COALESCE(JSON_AGG(t) FILTER (WHERE t.id IS NOT NULL), '[]')`.as("soundtags")])
-                .groupBy(["s.id", "s.name"])
-                .execute();
+    async function deleteSound(name: string): Promise<void> {
+        const query = await db.deleteFrom("sounds").where("sounds.name", "=", name).executeTakeFirst();
 
-            return sounds.map(s => transformSound(s, s.soundtags));
-        },
-        getAllSoundsWithTagName: async (tagName: string): Promise<Sound[]> => {
-            const sounds = await db
-                .selectFrom("sounds as s")
-                .leftJoin("sound_soundtags as st", "s.id", "st.sound")
-                .leftJoin("soundtags as t", "st.tag", "t.id")
-                .select(["s.id", "s.name", "s.path", "s.created_at", sql<Selectable<Soundtags>[]>`COALESCE(JSON_AGG(t) FILTER (WHERE t.id IS NOT NULL), '[]')`.as("soundtags")])
-                .where("t.name", "=", tagName)
-                .groupBy(["s.id", "s.name"])
-                .execute();
+        if (!query || query.numDeletedRows === 0n) {
+            throw new Error(`Sound with name "${name}" not found`);
+        }
 
-            return sounds.map(s => transformSound(s, s.soundtags));
-        },
+        console.log(`Sound "${name}" deleted successfully`);
+    }
+
+    async function getAllSounds(): Promise<Sound[]> {
+        const sounds = await db
+            .selectFrom("sounds as s")
+            .leftJoin("sound_soundtags as st", "s.id", "st.sound")
+            .leftJoin("soundtags as t", "st.tag", "t.id")
+            .select(["s.id", "s.name", "s.path", "s.created_at", sql<Selectable<Soundtags>[]>`COALESCE(JSON_AGG(t) FILTER (WHERE t.id IS NOT NULL), '[]')`.as("soundtags")])
+            .groupBy(["s.id", "s.name"])
+            .execute();
+
+        return sounds.map(s => transformSound(s, s.soundtags));
+    }
+
+    async function getAllSoundsWithTagName(tagName: string): Promise<Sound[]> {
+        const sounds = await db
+            .selectFrom("sounds as s")
+            .leftJoin("sound_soundtags as st", "s.id", "st.sound")
+            .leftJoin("soundtags as t", "st.tag", "t.id")
+            .select(["s.id", "s.name", "s.path", "s.created_at", sql<Selectable<Soundtags>[]>`COALESCE(JSON_AGG(t) FILTER (WHERE t.id IS NOT NULL), '[]')`.as("soundtags")])
+            .where("t.name", "=", tagName)
+            .groupBy(["s.id", "s.name"])
+            .execute();
+
+        return sounds.map(s => transformSound(s, s.soundtags));
+    }
+
+    async function tryGetSoundsWithinDistance(needle: string): Promise<(Sound & { distance: number })[]> {
+        const maxDistance = 3;
+
+        const availableSounds = await getAllSounds();
+        const distances = availableSounds
+            .map(s => ({ ...s, distance: distance(needle, s.name) }))
+            .filter(s => s.distance <= maxDistance)
+            .sort((a, b) => a.distance - b.distance);
+
+        console.log(`[SoundRepository] Sounds within distance of ${maxDistance} to "${needle}":`, distances);
+        return distances;
+    }
+
+    return {
+        addSound,
+        getSoundByName,
+        deleteSound,
+        getAllSounds,
+        getAllSoundsWithTagName,
+        tryGetSoundsWithinDistance,
     };
 };

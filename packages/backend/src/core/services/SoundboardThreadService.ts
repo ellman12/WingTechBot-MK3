@@ -1,6 +1,6 @@
 import type { SoundRepository } from "@core/repositories/SoundRepository";
 import type { VoiceService } from "@core/services/VoiceService.js";
-import { ChannelType, type Guild, type Message, type TextChannel, ThreadAutoArchiveDuration, type ThreadChannel } from "discord.js";
+import { ChannelType, type Guild, type Message, MessageFlags, type TextChannel, ThreadAutoArchiveDuration, type ThreadChannel } from "discord.js";
 
 export type SoundboardThreadService = {
     readonly findOrCreateSoundboardThread: (guild: Guild) => Promise<ThreadChannel>;
@@ -12,9 +12,13 @@ export type SoundboardThreadServiceDeps = {
     readonly voiceService: VoiceService;
 };
 
-export const createSoundboardThreadService = ({ soundRepository, voiceService }: SoundboardThreadServiceDeps) => {
-    const threadName = "WTB Soundboard";
+const threadName = "WTB Soundboard";
 
+function validMessage(message: Message): boolean {
+    return message.channel.type !== ChannelType.DM && !message.flags.has(MessageFlags.Ephemeral) && message.channel.name === threadName && message.author.id !== process.env.DISCORD_CLIENT_ID!;
+}
+
+export const createSoundboardThreadService = ({ soundRepository, voiceService }: SoundboardThreadServiceDeps) => {
     async function handleMessageCreated(message: Message) {
         await tryToPlaySoundFromMessage(message);
     }
@@ -37,24 +41,37 @@ export const createSoundboardThreadService = ({ soundRepository, voiceService }:
     }
 
     async function tryToPlaySoundFromMessage(message: Message) {
-        const channel = message.channel as TextChannel;
-        if (channel.name !== threadName) {
+        if (!validMessage(message)) {
             return;
         }
 
         try {
             const guild = message.guild!;
             const guildId = guild.id;
-            const sound = await soundRepository.getSoundByName(message.content);
-            if (!sound) {
+            const channel = message.channel as TextChannel;
+            const content = message.content;
+            const foundSounds = await soundRepository.tryGetSoundsWithinDistance(content);
+            if (foundSounds.length === 0) {
                 return;
+            }
+
+            //Since sound names are unique there can only be one with distance of 0.
+            const closestSound = foundSounds.find(s => s.distance === 0);
+            if (!closestSound) {
+                if (foundSounds.length > 1) {
+                    const response = `Found multiple sounds: ${foundSounds.map(s => s.name).join(", ")}`;
+                    await channel.send(response);
+                    return;
+                }
+
+                await channel.send(`Correcting "${content}" to sound "${foundSounds[0]!.name}"`);
             }
 
             if (!voiceService.isConnected(guildId)) {
                 await voiceService.connect(message.guild!, process.env.DEFAULT_VOICE_CHANNEL_ID!);
             }
 
-            await voiceService.playAudio(guildId, sound.name);
+            await voiceService.playAudio(guildId, (closestSound ?? foundSounds[0]!).name);
         } catch (error) {
             console.error("[SoundboardThreadService]", error);
         }
