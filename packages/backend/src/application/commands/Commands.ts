@@ -8,7 +8,7 @@ import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
-import { ChatInputCommandInteraction, Events, MessageFlags, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
+import { type ApplicationCommandOptionChoiceData, type AutocompleteFocusedOption, ChatInputCommandInteraction, Events, MessageFlags, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
 
 import type { DiscordBot } from "@/infrastructure/discord/DiscordBot.js";
 
@@ -19,6 +19,7 @@ import { createVoiceCommands } from "./VoiceCommands.js";
 export type Command = {
     readonly data: SlashCommandOptionsOnlyBuilder;
     readonly execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
+    readonly getAutocompleteChoices?: (focusedOption: AutocompleteFocusedOption) => Promise<ApplicationCommandOptionChoiceData[]>;
 };
 
 export const createCommands = (
@@ -36,7 +37,7 @@ export const createCommands = (
         createAudioCommands({ soundService, discordChatService }),
         createReactionCommands({ reactionRepository, emoteRepository, discordChatService }),
         createSoundTagCommands({ soundTagService, discordChatService }),
-        createVoiceCommands({ voiceService, soundService }),
+        createVoiceCommands({ voiceService, soundRepository, soundService }),
     ];
 
     // Assert that there are no duplicate command name in a way where we can have an arbitrary number of commands
@@ -137,15 +138,14 @@ export const registerCommands = (
     });
 
     //Slash commands that have autocomplete options
-    //TODO: we could easily refactor this to have a field in the Command type that returns where it should get autocomplete data (for each field).
     registerEventHandler(Events.InteractionCreate, async interaction => {
-        if (interaction.isChatInputCommand() || !interaction.isAutocomplete() || interaction.commandName !== "play") return;
+        if (interaction.isChatInputCommand() || !interaction.isAutocomplete()) return;
+
+        const command = commands[interaction.commandName];
+        if (!command) return;
 
         const focusedOption = interaction.options.getFocused(true);
-        const focusedValue = focusedOption.value;
-
-        const results = (focusedValue === "" ? await soundRepository.getAllSounds() : await soundRepository.tryGetSoundsWithinDistance(focusedValue)).map(s => s.name);
-        const choices = results.map(sound => ({ name: sound, value: sound }));
+        const choices = (await command.getAutocompleteChoices?.(focusedOption)) ?? [];
         await interaction.respond(choices.slice(0, 25));
     });
 };
