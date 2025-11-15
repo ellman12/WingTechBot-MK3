@@ -28,7 +28,7 @@ export const createAutoSoundsService = ({ autoSoundsRepository, voiceService }: 
 
         const guild = newState.guild;
         const userId = newState.member!.id;
-        const availableSounds = await autoSoundsRepository.getAutoSoundsForUser(userId, type);
+        const availableSounds = await autoSoundsRepository.getAutoSounds({ userId, type });
         const sound = randomArrayItem(availableSounds);
 
         if (!sound) {

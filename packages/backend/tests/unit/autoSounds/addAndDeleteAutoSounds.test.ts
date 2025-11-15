@@ -14,14 +14,14 @@ describe("Add and Delete AutoSounds", async () => {
 
         const sound = await soundsRepo.addSound({ name: "test_sound", path: "./" });
         const autoSound = await autoSoundsRepo.addAutoSound(userId, sound.id!, type);
-        let autoSounds = await autoSoundsRepo.getAutoSoundsForUser(userId, type);
+        let autoSounds = await autoSoundsRepo.getAutoSounds({ userId, type });
 
         expect(autoSounds).toHaveLength(1);
         expect(autoSounds[0]!.userId).toEqual(userId);
         expect(autoSounds[0]!.soundId).toEqual(autoSound.soundId);
 
         await autoSoundsRepo.deleteAutoSound(userId, sound.id!, type);
-        autoSounds = await autoSoundsRepo.getAutoSoundsForUser(userId, type);
+        autoSounds = await autoSoundsRepo.getAutoSounds({ userId, type });
 
         expect(autoSounds).toHaveLength(0);
     });

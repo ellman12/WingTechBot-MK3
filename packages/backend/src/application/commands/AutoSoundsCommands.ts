@@ -1,13 +1,16 @@
-import type { AutoSoundsRepository } from "@adapters/repositories/AutoSoundsRepository";
-import type { Command } from "@application/commands/Commands";
-import type { SoundRepository } from "@core/repositories/SoundRepository";
+import type { AutoSoundsRepository } from "@adapters/repositories/AutoSoundsRepository.js";
+import type { Command } from "@application/commands/Commands.js";
+import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { AutoSoundType } from "@db/types";
-import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
+import { type APIApplicationCommandOptionChoice, type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
 export type AutoSoundsCommandsDeps = {
     readonly autoSoundsRepository: AutoSoundsRepository;
     readonly soundRepository: SoundRepository;
 };
+
+const eventTypes: AutoSoundType[] = ["UserJoin", "UserLeave"];
+const eventTypeChoices: APIApplicationCommandOptionChoice<string>[] = eventTypes.map(t => ({ name: t, value: t }));
 
 export const createAutoSoundsCommands = ({ autoSoundsRepository, soundRepository }: AutoSoundsCommandsDeps): Record<string, Command> => {
     const assignAutoSound: Command = {
@@ -16,7 +19,7 @@ export const createAutoSoundsCommands = ({ autoSoundsRepository, soundRepository
             .setDescription("Assigns a user an AutoSound for an event")
             .addUserOption(option => option.setName("user").setDescription("The user to assign the sound to").setRequired(true))
             .addStringOption(option => option.setName("sound-name").setDescription("The name of the sound to assign to").setRequired(true))
-            .addStringOption(option => option.setName("event-type").setDescription("The name of the event to listen for").setRequired(true).addChoices({ name: "UserJoin", value: "UserJoin" }, { name: "UserLeave", value: "UserLeave" })),
+            .addStringOption(option => option.setName("event-type").setDescription("The name of the event to listen for").setRequired(true).setChoices(eventTypeChoices)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             const user = interaction.options.getUser("user")!;
             const soundName = interaction.options.getString("sound-name")!;
@@ -40,7 +43,7 @@ export const createAutoSoundsCommands = ({ autoSoundsRepository, soundRepository
             .setDescription("Removes an AutoSound for a user and event")
             .addUserOption(option => option.setName("user").setDescription("The user to assign the sound to").setRequired(true))
             .addStringOption(option => option.setName("sound-name").setDescription("The name of the sound to assign to").setRequired(true))
-            .addStringOption(option => option.setName("event-type").setDescription("The name of the event to listen for").setRequired(true).addChoices({ name: "UserJoin", value: "UserJoin" }, { name: "UserLeave", value: "UserLeave" })),
+            .addStringOption(option => option.setName("event-type").setDescription("The name of the event to listen for").setRequired(true).setChoices(eventTypeChoices)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             const user = interaction.options.getUser("user")!;
             const soundName = interaction.options.getString("sound-name")!;
@@ -62,8 +65,39 @@ export const createAutoSoundsCommands = ({ autoSoundsRepository, soundRepository
         },
     };
 
+    const listAutoSounds: Command = {
+        data: new SlashCommandBuilder()
+            .setName("list-auto-sounds")
+            .setDescription("Lists active AutoSounds")
+            .addUserOption(option => option.setName("user").setDescription("The optional user to filter by").setRequired(false))
+            .addStringOption(option => option.setName("sound-name").setDescription("The optional sound name to filter by").setRequired(false))
+            .addStringOption(option => option.setName("event-type").setDescription("The optional name of the event type to filter by").setRequired(false).setChoices(eventTypeChoices)),
+        execute: async (interaction: ChatInputCommandInteraction) => {
+            const user = interaction.options.getUser("user") ?? undefined;
+            const soundName = interaction.options.getString("sound-name") ?? undefined;
+            const eventType = interaction.options.getString("event-type") ?? undefined;
+
+            const soundId = (await soundRepository.getSoundByName(soundName ?? ""))?.id ?? undefined;
+
+            const sounds = await autoSoundsRepository.getAutoSounds({
+                userId: user?.id,
+                soundId,
+                type: eventType as AutoSoundType,
+            });
+
+            if (sounds.length === 0) {
+                await interaction.reply("No AutoSounds");
+                return;
+            }
+
+            const result = sounds.map(s => `${(interaction.guild!.members.cache.get(s.userId)?.user.username ?? "Unknown User").padEnd(16)}${s.soundName!.padEnd(16)}${s.type}`);
+            await interaction.reply(`\`\`\`User\t\t\tSound\t\t\tType\n-----------------------------------------\n${result.join("\n")}\`\`\``);
+        },
+    };
+
     return {
         "assign-auto-sound": assignAutoSound,
         "remove-auto-sound": removeAutoSound,
+        "list-auto-sounds": listAutoSounds,
     };
 };

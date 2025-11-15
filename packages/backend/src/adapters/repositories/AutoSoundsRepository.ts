@@ -1,11 +1,17 @@
-import type { AutoSound } from "@core/entities/AutoSound";
+import type { AutoSound } from "@core/entities/AutoSound.js";
 import type { AutoSoundType, AutoSounds, DB } from "@db/types";
 import type { Kysely, Selectable } from "kysely";
 
 export type AutoSoundsRepository = {
     readonly addAutoSound: (userId: string, soundId: number, type: AutoSoundType) => Promise<AutoSound>;
     readonly deleteAutoSound: (userId: string, soundId: number, type: AutoSoundType) => Promise<AutoSound | null>;
-    readonly getAutoSoundsForUser: (userId: string, type: AutoSoundType) => Promise<AutoSound[]>;
+    readonly getAutoSounds: (filters: GetAutoSoundsFilters) => Promise<AutoSound[]>;
+};
+
+export type GetAutoSoundsFilters = {
+    userId?: string;
+    soundId?: number;
+    type?: AutoSoundType;
 };
 
 //Stores sounds automatically played when certain events happen.
@@ -49,8 +55,17 @@ export const createAutoSoundsRepository = (db: Kysely<DB>): AutoSoundsRepository
         return transformAutoSound(sound);
     }
 
-    async function getAutoSoundsForUser(userId: string, type: AutoSoundType): Promise<AutoSound[]> {
-        const result = await db.selectFrom("auto_sounds").innerJoin("sounds", "auto_sounds.sound_id", "sounds.id").where("user_id", "=", userId).where("type", "=", type).select(["sound_id", "name", "user_id", "type"]).execute();
+    async function getAutoSounds(filters: GetAutoSoundsFilters): Promise<AutoSound[]> {
+        const { userId, soundId, type } = filters;
+
+        const result = await db
+            .selectFrom("auto_sounds")
+            .innerJoin("sounds", "auto_sounds.sound_id", "sounds.id")
+            .$if(userId !== undefined, qb => qb.where("user_id", "=", userId!))
+            .$if(soundId !== undefined, qb => qb.where("sound_id", "=", soundId!))
+            .$if(type !== undefined, qb => qb.where("type", "=", type!))
+            .select(["sound_id", "name", "user_id", "type"])
+            .execute();
 
         return result.map(r => ({
             userId: r.user_id,
@@ -63,6 +78,6 @@ export const createAutoSoundsRepository = (db: Kysely<DB>): AutoSoundsRepository
     return {
         addAutoSound,
         deleteAutoSound,
-        getAutoSoundsForUser,
+        getAutoSounds,
     };
 };
