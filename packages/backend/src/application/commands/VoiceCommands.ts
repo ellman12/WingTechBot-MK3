@@ -2,6 +2,7 @@ import { parseAudioSource } from "@core/services/AudioFetcherService.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
+import { parseTimeSpan, randomSleep } from "@core/utils/timeUtils.js";
 import { ChannelType, ChatInputCommandInteraction, GuildMember, MessageFlags, SlashCommandBuilder } from "discord.js";
 
 import type { Command } from "./Commands.js";
@@ -105,7 +106,9 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
             .setDescription("Play audio in the voice channel")
             .addStringOption(option => option.setName("audio-source").setDescription("Audio source (URL, file path, or YouTube URL)").setRequired(true).setAutocomplete(true))
             .addIntegerOption(option => option.setName("volume").setDescription("Volume level (0-100)").setRequired(false).setMinValue(0).setMaxValue(100))
-            .addBooleanOption(option => option.setName("preload").setDescription("If we should download fully first (for URLs").setRequired(false)),
+            .addBooleanOption(option => option.setName("preload").setDescription("If we should download fully first (for URLs").setRequired(false))
+            .addIntegerOption(option => option.setName("repeat-amount").setDescription("How many times to repeat the sound").setRequired(false).setMinValue(1))
+            .addStringOption(option => option.setName("repeat-delay").setDescription("Delay between each sound. Can be a number or a range.").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             console.log(`[VoiceCommands] Play command received from user ${interaction.user.username} in guild ${interaction.guildId}`);
 
@@ -116,19 +119,18 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
             }
 
             try {
-                const audioSource = interaction.options.getString("audio-source", true);
-                const volume = interaction.options.getInteger("volume");
-                const shouldPreload = interaction.options.getBoolean("preload") || false;
+                const options = interaction.options;
+                const audioSource = options.getString("audio-source", true);
+                const volume = options.getInteger("volume");
+                const shouldPreload = options.getBoolean("preload") ?? false;
+                const repeatAmount = options.getInteger("repeat-amount") ?? 1;
+                const unparsedRepeatDelay = options.getString("repeat-delay");
+                const { minDelay, maxDelay } = parsePlayCommandRepeatDelay(unparsedRepeatDelay);
+
                 const isPreloading = shouldPreload && parseAudioSource(audioSource) !== "soundboard";
                 const soundToPlay = isPreloading ? "currently-playing" : audioSource;
 
-                console.log(`[VoiceCommands] Play command parameters:`, {
-                    guildId: interaction.guildId,
-                    audioSource,
-                    volume,
-                    userId: interaction.user.id,
-                    username: interaction.user.username,
-                });
+                console.log(`[VoiceCommands] Play command parameters:`, { guildId: interaction.guildId, audioSource, volume, userId: interaction.user.id, username: interaction.user.username });
 
                 const isConnected = voiceService.isConnected(interaction.guildId);
                 console.log(`[VoiceCommands] Voice service connection status for guild ${interaction.guildId}: ${isConnected}`);
@@ -153,23 +155,22 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                     await soundService.addSound("currently-playing", audioSource);
                 }
 
-                // Set volume if specified
                 if (volume !== null) {
                     console.log(`[VoiceCommands] Setting volume to ${volume}% for guild ${interaction.guildId}`);
                     await voiceService.setVolume(interaction.guildId, volume);
                     console.log(`[VoiceCommands] Volume set successfully`);
                 }
 
-                console.log(`[VoiceCommands] Starting audio playback for source: ${audioSource}`);
-                // Convert volume from 0-100 scale to 0-1 scale
                 const normalizedVolume = volume !== null ? volume / 100 : undefined;
-                const audioId = await voiceService.playAudio(interaction.guildId, soundToPlay, normalizedVolume);
-                console.log(`[VoiceCommands] Audio playback started successfully with ID: ${audioId}`);
 
                 const activeCount = voiceService.getActiveAudioCount(interaction.guildId);
-                const responseMessage = `🎵 Added audio from: ${audioSource} (ID: ${audioId.substring(0, 8)}, Active: ${activeCount})`;
-                console.log(`[VoiceCommands] Sending success response: ${responseMessage}`);
+                const responseMessage = `🎵 Added audio from: "${audioSource}" (${activeCount + 1} active)`;
                 await interaction.editReply(responseMessage);
+
+                for (let i = 0; i < repeatAmount; i++) {
+                    await voiceService.playAudio(interaction.guildId, soundToPlay, normalizedVolume);
+                    await randomSleep(minDelay, maxDelay);
+                }
             } catch (error) {
                 console.error(`[VoiceCommands] Error playing audio in guild ${interaction.guildId}:`, error);
                 console.error(`[VoiceCommands] Error details:`, {
@@ -180,18 +181,27 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                 });
 
                 if (interaction.deferred) {
-                    await interaction.editReply({
-                        content: `Failed to play audio: ${error instanceof Error ? error.message : "Unknown error"}`,
-                    });
+                    await interaction.editReply({ content: `Failed to play audio: ${error instanceof Error ? error.message : "Unknown error"}` });
                 } else {
-                    await interaction.reply({
-                        content: `Failed to play audio: ${error instanceof Error ? error.message : "Unknown error"}`,
-                        flags: MessageFlags.Ephemeral,
-                    });
+                    await interaction.reply({ content: `Failed to play audio: ${error instanceof Error ? error.message : "Unknown error"}`, flags: MessageFlags.Ephemeral });
                 }
             }
         },
         getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
+    };
+
+    //Converts input like "1 second" or "2 min - 10 min" into millisecond values.
+    const parsePlayCommandRepeatDelay = (unparsedRepeatDelay: string | null): { minDelay: number; maxDelay: number } => {
+        if (!unparsedRepeatDelay) return { minDelay: 0, maxDelay: 0 };
+
+        const matches = unparsedRepeatDelay.match(/^(\d*\s*[a-z]*)\s*-?\s*(\d*\s*[a-z]*)$/i);
+        if (!matches) {
+            throw new Error("Invalid repeat delay format");
+        }
+
+        const minDelay = parseTimeSpan(matches[1]!);
+        const maxDelay = matches[2] ? parseTimeSpan(matches[2]) : minDelay;
+        return { minDelay, maxDelay };
     };
 
     const stopCommand: Command = {
