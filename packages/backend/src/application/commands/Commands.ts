@@ -35,10 +35,10 @@ export const createCommands = (
     commandChoicesService: CommandChoicesService
 ): Record<string, Command> => {
     const commandRecords = [
-        createAutoSoundsCommands({ autoSoundsRepository, soundRepository }),
-        createAudioCommands({ soundService, discordChatService }),
+        createAutoSoundsCommands({ autoSoundsRepository, soundRepository, commandChoicesService }),
+        createAudioCommands({ soundService, discordChatService, commandChoicesService }),
         createReactionCommands({ reactionRepository, emoteRepository, discordChatService }),
-        createSoundTagCommands({ soundTagService, discordChatService }),
+        createSoundTagCommands({ soundTagService, discordChatService, commandChoicesService }),
         createVoiceCommands({ voiceService, soundService, commandChoicesService }),
     ];
 

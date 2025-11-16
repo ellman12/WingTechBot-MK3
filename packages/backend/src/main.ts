@@ -12,9 +12,9 @@ import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioSer
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { createAutoReactionService } from "@core/services/AutoReactionService.js";
 import { createAutoSoundsService } from "@core/services/AutoSoundsService.js";
-import { createCommandChoicesService } from "@core/services/CommandChoicesService";
+import { createCommandChoicesService } from "@core/services/CommandChoicesService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
-import { createLlmConversationService } from "@core/services/LlmConversationService";
+import { createLlmConversationService } from "@core/services/LlmConversationService.js";
 import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
 import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import { createSoundService } from "@core/services/SoundService.js";

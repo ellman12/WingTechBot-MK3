@@ -48,6 +48,10 @@ const mockSoundRepository = {
     async getAllSoundsWithTagName(_name: string): Promise<Sound[]> {
         return [];
     },
+
+    async tryGetSoundsWithinDistance(): Promise<(Sound & { distance: number })[]> {
+        return [];
+    },
 };
 
 describe("SoundService Integration Tests", () => {
