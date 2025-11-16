@@ -6,4 +6,5 @@ export type SoundTagRepository = {
     readonly addTagToSound: (soundId: number, tagId: number) => Promise<void>;
     readonly removeTagFromSound: (soundId: number, tagId: number) => Promise<void>;
     readonly getAllTags: () => Promise<SoundTag[]>;
+    readonly tryGetTagsWithinDistance: (needle: string) => Promise<(SoundTag & { distance: number })[]>;
 };
