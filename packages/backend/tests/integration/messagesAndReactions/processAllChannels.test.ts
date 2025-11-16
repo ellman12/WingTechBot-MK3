@@ -1,8 +1,9 @@
+import { sleep } from "@core/utils/timeUtils";
 import type { Message } from "discord.js";
 
 import { getApp } from "@/main";
 
-import { getTestingChannel, recreateDatabase, setUpIntegrationTest, sleep } from "../../utils/testUtils.js";
+import { getTestingChannel, recreateDatabase, setUpIntegrationTest } from "../../utils/testUtils.js";
 
 const timeout = 360 * 1000;
 const delay = 6000;

@@ -1,6 +1,8 @@
+import { sleep } from "@core/utils/timeUtils";
+
 import { getApp } from "@/main";
 
-import { createMessagesAndReactions, getTestingChannel, recreateDatabase, setUpIntegrationTest, sleep, verifyTesterReactions } from "../../utils/testUtils";
+import { createMessagesAndReactions, getTestingChannel, recreateDatabase, setUpIntegrationTest, verifyTesterReactions } from "../../utils/testUtils";
 
 const timeout = 360 * 1000;
 

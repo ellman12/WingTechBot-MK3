@@ -62,10 +62,6 @@ export async function createTestDb(): Promise<Kysely<DB>> {
     return kysely;
 }
 
-export function sleep(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 export async function getTestingGuild(bot: DiscordBot): Promise<Guild> {
     return bot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
 }

@@ -1,8 +1,9 @@
 import { reactionScoldMessages } from "@core/services/AutoReactionService";
+import { sleep } from "@core/utils/timeUtils";
 
 import { getApp } from "@/main";
 
-import { getTestingChannel, setUpIntegrationTest, sleep } from "../../utils/testUtils";
+import { getTestingChannel, setUpIntegrationTest } from "../../utils/testUtils";
 
 const timeout = 120 * 1000;
 
