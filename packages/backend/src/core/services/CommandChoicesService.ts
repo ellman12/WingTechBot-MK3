@@ -16,7 +16,7 @@ export const createCommandChoicesService = ({ soundRepository, soundTagRepositor
         const fieldName = focusedOption.name;
         const focusedValue = focusedOption.value;
 
-        if (fieldName === "sound-name") {
+        if (fieldName === "sound-name" || fieldName === "audio-source") {
             const sounds = focusedValue === "" ? await soundRepository.getAllSounds() : await soundRepository.tryGetSoundsWithinDistance(focusedValue);
             return sounds.map(s => ({ name: s.name, value: s.name }));
         }

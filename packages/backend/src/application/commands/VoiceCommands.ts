@@ -103,7 +103,7 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
         data: new SlashCommandBuilder()
             .setName("play")
             .setDescription("Play audio in the voice channel")
-            .addStringOption(option => option.setName("source").setDescription("Audio source (URL, file path, or YouTube URL)").setRequired(true).setAutocomplete(true))
+            .addStringOption(option => option.setName("audio-source").setDescription("Audio source (URL, file path, or YouTube URL)").setRequired(true).setAutocomplete(true))
             .addIntegerOption(option => option.setName("volume").setDescription("Volume level (0-100)").setRequired(false).setMinValue(0).setMaxValue(100))
             .addBooleanOption(option => option.setName("preload").setDescription("If we should download fully first (for URLs").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
@@ -116,7 +116,7 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
             }
 
             try {
-                const audioSource = interaction.options.getString("source", true);
+                const audioSource = interaction.options.getString("audio-source", true);
                 const volume = interaction.options.getInteger("volume");
                 const shouldPreload = interaction.options.getBoolean("preload") || false;
                 const isPreloading = shouldPreload && parseAudioSource(audioSource) !== "soundboard";
