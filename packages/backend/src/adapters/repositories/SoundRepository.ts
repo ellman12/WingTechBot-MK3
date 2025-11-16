@@ -63,6 +63,7 @@ export const createSoundRepository = (db: Kysely<DB>): SoundRepository => {
             .leftJoin("soundtags as t", "st.tag", "t.id")
             .select(["s.id", "s.name", "s.path", "s.created_at", sql<Selectable<Soundtags>[]>`COALESCE(JSON_AGG(t) FILTER (WHERE t.id IS NOT NULL), '[]')`.as("soundtags")])
             .groupBy(["s.id", "s.name"])
+            .orderBy("s.name")
             .execute();
 
         return sounds.map(s => transformSound(s, s.soundtags));
@@ -76,6 +77,7 @@ export const createSoundRepository = (db: Kysely<DB>): SoundRepository => {
             .select(["s.id", "s.name", "s.path", "s.created_at", sql<Selectable<Soundtags>[]>`COALESCE(JSON_AGG(t) FILTER (WHERE t.id IS NOT NULL), '[]')`.as("soundtags")])
             .where("t.name", "=", tagName)
             .groupBy(["s.id", "s.name"])
+            .orderBy("s.name")
             .execute();
 
         return sounds.map(s => transformSound(s, s.soundtags));
