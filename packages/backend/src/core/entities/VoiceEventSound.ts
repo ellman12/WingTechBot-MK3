@@ -1,8 +1,8 @@
-import type { AutoSoundType } from "@db/types";
+import type { VoiceEventSoundType } from "@db/types";
 
-export type AutoSound = {
+export type VoiceEventSound = {
     readonly userId: string;
     readonly soundId: number;
     readonly soundName?: string; //Nullable because not everything needs it.
-    readonly type: AutoSoundType;
+    readonly type: VoiceEventSoundType;
 };

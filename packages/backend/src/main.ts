@@ -1,22 +1,22 @@
 #!/usr/bin/env node
-import { createAutoSoundsRepository } from "@adapters/repositories/AutoSoundsRepository.js";
 import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
 import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
+import { createVoiceEventsSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { createAutoReactionService } from "@core/services/AutoReactionService.js";
-import { createAutoSoundsService } from "@core/services/AutoSoundsService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
 import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
 import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { createSoundTagService } from "@core/services/SoundTagService.js";
+import { createVoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
 import { runMigrations } from "@db/migrations.js";
 import "@dotenvx/dotenvx/config";
 import { getConfig } from "@infrastructure/config/Config.js";
@@ -51,7 +51,7 @@ export const createApplication = async (): Promise<App> => {
     const ytdl = createYtdlYoutubeService();
 
     const soundRepository = createSoundRepository(db);
-    const autoSoundsRepository = createAutoSoundsRepository(db);
+    const voiceEventSoundsRepository = createVoiceEventsSoundsRepository(db);
     const soundTagRepository = createSoundTagRepository(db);
     const messageRepository = createMessageRepository(db);
     const reactionRepository = createReactionRepository(db);
@@ -77,12 +77,12 @@ export const createApplication = async (): Promise<App> => {
     const voiceService = createDiscordVoiceService({ soundService });
     const discordChatService = createDiscordChatService({ geminiLlmService, messageArchiveService, llmInstructionRepo, soundRepository, voiceService });
     const autoReactionService = createAutoReactionService({ discordChatService, geminiLlmService, llmInstructionRepo });
-    const autoSoundsService = createAutoSoundsService({ autoSoundsRepository, voiceService });
+    const voiceEventSoundsService = createVoiceEventSoundsService({ voiceEventSoundsRepository, voiceService });
 
     const expressApp = createExpressApp({ db, config: serverConfig });
     const discordBot = await createDiscordBot({
         config,
-        autoSoundsRepository,
+        voiceEventSoundsRepository,
         soundRepository,
         soundService,
         soundTagService,
@@ -92,7 +92,7 @@ export const createApplication = async (): Promise<App> => {
         messageArchiveService,
         discordChatService,
         autoReactionService,
-        autoSoundsService,
+        voiceEventSoundsService,
         voiceService,
     });
 

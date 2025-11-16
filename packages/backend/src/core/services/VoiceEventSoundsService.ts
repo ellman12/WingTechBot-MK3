@@ -1,20 +1,20 @@
-import type { AutoSoundsRepository } from "@adapters/repositories/AutoSoundsRepository.js";
+import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { randomArrayItem } from "@core/utils/probabilityUtils.js";
-import type { AutoSoundType } from "@db/types";
+import type { VoiceEventSoundType } from "@db/types";
 import { VoiceState } from "discord.js";
 
-export type AutoSoundsService = {
+export type VoiceEventSoundsService = {
     voiceStateUpdate: (oldState: VoiceState, newState: VoiceState) => Promise<void>;
 };
 
-export type AutoSoundsServiceDeps = {
-    autoSoundsRepository: AutoSoundsRepository;
+export type VoiceEventSoundsServiceDeps = {
+    voiceEventSoundsRepository: VoiceEventSoundsRepository;
     voiceService: VoiceService;
 };
 
-export const createAutoSoundsService = ({ autoSoundsRepository, voiceService }: AutoSoundsServiceDeps): AutoSoundsService => {
-    function getEventType(oldState: VoiceState, newState: VoiceState): AutoSoundType | "" {
+export const createVoiceEventSoundsService = ({ voiceEventSoundsRepository, voiceService }: VoiceEventSoundsServiceDeps): VoiceEventSoundsService => {
+    function getEventType(oldState: VoiceState, newState: VoiceState): VoiceEventSoundType | "" {
         if (oldState.channelId === null && newState.channelId !== null) return "UserJoin";
         if (oldState.channelId !== null && newState.channelId === null) return "UserLeave";
         return "";
@@ -28,7 +28,7 @@ export const createAutoSoundsService = ({ autoSoundsRepository, voiceService }: 
 
         const guild = newState.guild;
         const userId = newState.member!.id;
-        const availableSounds = await autoSoundsRepository.getAutoSounds({ userId, type });
+        const availableSounds = await voiceEventSoundsRepository.getVoiceEventSounds({ userId, type });
         const sound = randomArrayItem(availableSounds);
 
         if (!sound) {

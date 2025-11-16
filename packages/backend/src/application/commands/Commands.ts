@@ -1,6 +1,6 @@
-import type { AutoSoundsRepository } from "@adapters/repositories/AutoSoundsRepository.js";
-import { createAutoSoundsCommands } from "@application/commands/AutoSoundsCommands.js";
+import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import { createReactionCommands } from "@application/commands/ReactionCommands.js";
+import { createVoiceEventSoundsCommands } from "@application/commands/VoiceEventSoundsCommands.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
@@ -22,7 +22,7 @@ export type Command = {
 };
 
 export const createCommands = (
-    autoSoundsRepository: AutoSoundsRepository,
+    voiceEventSoundsRepository: VoiceEventSoundsRepository,
     soundRepository: SoundRepository,
     soundService: SoundService,
     soundTagService: SoundTagService,
@@ -32,7 +32,7 @@ export const createCommands = (
     discordChatService: DiscordChatService
 ): Record<string, Command> => {
     const commandRecords = [
-        createAutoSoundsCommands({ autoSoundsRepository, soundRepository }),
+        createVoiceEventSoundsCommands({ voiceEventSoundsRepository, soundRepository }),
         createAudioCommands({ soundService, discordChatService }),
         createReactionCommands({ reactionRepository, emoteRepository, discordChatService }),
         createSoundTagCommands({ soundTagService, discordChatService }),
@@ -61,7 +61,7 @@ export const createCommands = (
 };
 
 export const deployCommands = async (
-    autoSoundsRepository: AutoSoundsRepository,
+    voiceEventSoundsRepository: VoiceEventSoundsRepository,
     soundRepository: SoundRepository,
     soundService: SoundService,
     soundTagService: SoundTagService,
@@ -76,7 +76,7 @@ export const deployCommands = async (
     try {
         console.log("🚀 Deploying Discord commands...");
 
-        const commandMap = createCommands(autoSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService);
+        const commandMap = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService);
         const commands = Object.values(commandMap).map(command => command.data.toJSON());
 
         console.log(`📋 Deploying ${commands.length} commands:`);
@@ -103,7 +103,7 @@ export const deployCommands = async (
 };
 
 export const registerCommands = (
-    autoSoundsRepository: AutoSoundsRepository,
+    voiceEventSoundsRepository: VoiceEventSoundsRepository,
     soundRepository: SoundRepository,
     soundService: SoundService,
     soundTagService: SoundTagService,
@@ -115,7 +115,7 @@ export const registerCommands = (
 ): void => {
     console.log("🔄 Registering commands...");
 
-    const commands = createCommands(autoSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService);
+    const commands = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService);
     console.log(`✅ Registered ${Object.keys(commands).length} Commands:`);
     Object.keys(commands).forEach(command => {
         console.log(`- ${command}`);
