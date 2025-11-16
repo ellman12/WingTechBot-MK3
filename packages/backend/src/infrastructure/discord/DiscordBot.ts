@@ -11,6 +11,7 @@ import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRe
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository";
 import type { AutoReactionService } from "@core/services/AutoReactionService.js";
+import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { LlmConversationService } from "@core/services/LlmConversationService";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
@@ -40,6 +41,7 @@ export type DiscordBotDeps = {
     readonly autoReactionService: AutoReactionService;
     readonly voiceEventSoundsService: VoiceEventSoundsService;
     readonly voiceService: VoiceService;
+    readonly commandChoicesService: CommandChoicesService;
 };
 
 export type DiscordBot = {
@@ -66,6 +68,7 @@ export const createDiscordBot = async ({
     autoReactionService,
     voiceEventSoundsService,
     voiceService,
+    commandChoicesService,
 }: DiscordBotDeps): Promise<DiscordBot> => {
     const client = new Client({
         intents: [
@@ -98,6 +101,7 @@ export const createDiscordBot = async ({
                     reactionRepository,
                     emoteRepository,
                     discordChatService,
+                    commandChoicesService,
                     config.discord.token,
                     config.discord.clientId,
                     config.discord.serverId
@@ -120,7 +124,7 @@ export const createDiscordBot = async ({
             console.log(`Global: ${rateLimitData.global}`);
         });
 
-        registerCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, registerEventHandler);
+        registerCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, registerEventHandler);
 
         registerReactionArchiveEvents(reactionArchiveService, registerEventHandler);
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);

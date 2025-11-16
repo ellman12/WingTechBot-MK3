@@ -11,6 +11,7 @@ import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAud
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { createAutoReactionService } from "@core/services/AutoReactionService.js";
+import { createCommandChoicesService } from "@core/services/CommandChoicesService";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
 import { createLlmConversationService } from "@core/services/LlmConversationService";
 import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
@@ -60,6 +61,7 @@ export const createApplication = async (): Promise<App> => {
     const emoteRepository = createReactionEmoteRepository(db);
     const llmInstructionRepo = createLlmInstructionRepository(fileManager);
 
+    const commandChoicesService = createCommandChoicesService({ soundRepository, soundTagRepository });
     const audioProcessingService = createFfmpegAudioProcessingService({ ffmpeg });
     const audioFetchService = createAudioFetcherService({ fileManager, soundRepository, youtubeService: ytdl });
     const soundService = createSoundService({
@@ -100,6 +102,7 @@ export const createApplication = async (): Promise<App> => {
         autoReactionService,
         voiceEventSoundsService,
         voiceService,
+        commandChoicesService,
     });
 
     let isReadyState = false;

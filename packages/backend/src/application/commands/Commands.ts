@@ -4,6 +4,7 @@ import { createVoiceEventSoundsCommands } from "@application/commands/VoiceEvent
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
+import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
@@ -30,14 +31,15 @@ export const createCommands = (
     voiceService: VoiceService,
     reactionRepository: ReactionRepository,
     emoteRepository: ReactionEmoteRepository,
-    discordChatService: DiscordChatService
+    discordChatService: DiscordChatService,
+    commandChoicesService: CommandChoicesService
 ): Record<string, Command> => {
     const commandRecords = [
         createVoiceEventSoundsCommands({ voiceEventSoundsRepository, soundRepository }),
         createAudioCommands({ soundService, discordChatService }),
         createReactionCommands({ reactionRepository, emoteRepository, discordChatService }),
         createSoundTagCommands({ soundTagService, discordChatService }),
-        createVoiceCommands({ voiceService, soundRepository, soundService }),
+        createVoiceCommands({ voiceService, soundService, commandChoicesService }),
     ];
 
     // Assert that there are no duplicate command name in a way where we can have an arbitrary number of commands
@@ -70,6 +72,7 @@ export const deployCommands = async (
     reactionRepository: ReactionRepository,
     emoteRepository: ReactionEmoteRepository,
     discordChatService: DiscordChatService,
+    commandChoicesService: CommandChoicesService,
     token: string,
     clientId: string,
     guildId?: string
@@ -77,7 +80,7 @@ export const deployCommands = async (
     try {
         console.log("🚀 Deploying Discord commands...");
 
-        const commandMap = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService);
+        const commandMap = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService);
         const commands = Object.values(commandMap).map(command => command.data.toJSON());
 
         console.log(`📋 Deploying ${commands.length} commands:`);
@@ -112,11 +115,12 @@ export const registerCommands = (
     reactionRepository: ReactionRepository,
     emoteRepository: ReactionEmoteRepository,
     discordChatService: DiscordChatService,
+    commandChoicesService: CommandChoicesService,
     registerEventHandler: DiscordBot["registerEventHandler"]
 ): void => {
     console.log("🔄 Registering commands...");
 
-    const commands = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService);
+    const commands = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService);
     console.log(`✅ Registered ${Object.keys(commands).length} Commands:`);
     Object.keys(commands).forEach(command => {
         console.log(`- ${command}`);
