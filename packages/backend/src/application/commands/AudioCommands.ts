@@ -1,3 +1,4 @@
+import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService";
 import type { SoundService } from "@core/services/SoundService.js";
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
@@ -7,9 +8,10 @@ import type { Command } from "./Commands.js";
 export type AudioCommandDeps = {
     readonly soundService: SoundService;
     readonly discordChatService: DiscordChatService;
+    readonly commandChoicesService: CommandChoicesService;
 };
 
-export const createAudioCommands = ({ soundService, discordChatService }: AudioCommandDeps): Record<string, Command> => {
+export const createAudioCommands = ({ soundService, discordChatService, commandChoicesService }: AudioCommandDeps): Record<string, Command> => {
     const addSound: Command = {
         data: new SlashCommandBuilder()
             .setName("add-sound")
@@ -68,7 +70,7 @@ export const createAudioCommands = ({ soundService, discordChatService }: AudioC
         data: new SlashCommandBuilder()
             .setName("list-sounds")
             .setDescription("List all sounds in the soundboard")
-            .addStringOption(option => option.setName("tag-name").setDescription("List sounds with this tag name").setRequired(false)),
+            .addStringOption(option => option.setName("tag-name").setDescription("List sounds with this tag name").setRequired(false).setAutocomplete(true)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             const tagName = interaction.options.getString("tag-name")?.trim();
             const sounds = await soundService.listSounds(tagName);
@@ -80,15 +82,16 @@ export const createAudioCommands = ({ soundService, discordChatService }: AudioC
             const response = `Available sounds:\n${sounds.map(sound => `- ${sound}`).join("\n")}`;
             await discordChatService.replyToInteraction(interaction, response, true);
         },
+        getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
     };
 
     const deleteSound: Command = {
         data: new SlashCommandBuilder()
             .setName("delete-sound")
             .setDescription("Delete a sound from the soundboard")
-            .addStringOption(option => option.setName("name").setDescription("Name of the sound to delete").setRequired(true)),
+            .addStringOption(option => option.setName("sound-name").setDescription("Name of the sound to delete").setRequired(true).setAutocomplete(true)),
         execute: async (interaction: ChatInputCommandInteraction) => {
-            const soundName = interaction.options.getString("name")?.trim();
+            const soundName = interaction.options.getString("sound-name")?.trim();
 
             if (!soundName) {
                 await interaction.reply({ content: "You must provide the name of the sound to delete.", flags: MessageFlags.Ephemeral });
@@ -104,6 +107,7 @@ export const createAudioCommands = ({ soundService, discordChatService }: AudioC
                 await interaction.reply({ content: `Failed to delete sound: ${error instanceof Error ? error.message : "Unknown error"}`, flags: MessageFlags.Ephemeral });
             }
         },
+        getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
     };
 
     return {

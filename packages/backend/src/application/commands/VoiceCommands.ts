@@ -1,4 +1,5 @@
 import { parseAudioSource } from "@core/services/AudioFetcherService.js";
+import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { ChannelType, ChatInputCommandInteraction, GuildMember, MessageFlags, SlashCommandBuilder } from "discord.js";
@@ -8,9 +9,10 @@ import type { Command } from "./Commands.js";
 export type VoiceCommandDeps = {
     readonly voiceService: VoiceService;
     readonly soundService: SoundService;
+    readonly commandChoicesService: CommandChoicesService;
 };
 
-export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommandDeps): Record<string, Command> => {
+export const createVoiceCommands = ({ voiceService, soundService, commandChoicesService }: VoiceCommandDeps): Record<string, Command> => {
     const joinCommand: Command = {
         data: new SlashCommandBuilder()
             .setName("join")
@@ -101,7 +103,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
         data: new SlashCommandBuilder()
             .setName("play")
             .setDescription("Play audio in the voice channel")
-            .addStringOption(option => option.setName("source").setDescription("Audio source (URL, file path, or YouTube URL)").setRequired(true))
+            .addStringOption(option => option.setName("audio-source").setDescription("Audio source (URL, file path, or YouTube URL)").setRequired(true).setAutocomplete(true))
             .addIntegerOption(option => option.setName("volume").setDescription("Volume level (0-100)").setRequired(false).setMinValue(0).setMaxValue(100))
             .addBooleanOption(option => option.setName("preload").setDescription("If we should download fully first (for URLs").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
@@ -114,7 +116,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
             }
 
             try {
-                const audioSource = interaction.options.getString("source", true);
+                const audioSource = interaction.options.getString("audio-source", true);
                 const volume = interaction.options.getInteger("volume");
                 const shouldPreload = interaction.options.getBoolean("preload") || false;
                 const isPreloading = shouldPreload && parseAudioSource(audioSource) !== "soundboard";
@@ -189,6 +191,7 @@ export const createVoiceCommands = ({ voiceService, soundService }: VoiceCommand
                 }
             }
         },
+        getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
     };
 
     const stopCommand: Command = {

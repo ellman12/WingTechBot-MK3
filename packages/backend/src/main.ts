@@ -11,12 +11,15 @@ import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAud
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { createAutoReactionService } from "@core/services/AutoReactionService.js";
+import { createCommandChoicesService } from "@core/services/CommandChoicesService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
+import { createLlmConversationService } from "@core/services/LlmConversationService.js";
 import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
 import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { createSoundTagService } from "@core/services/SoundTagService.js";
 import { createVoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
+import { createSoundboardThreadService } from "@core/services/SoundboardThreadService.js";
 import { runMigrations } from "@db/migrations.js";
 import "@dotenvx/dotenvx/config";
 import { getConfig } from "@infrastructure/config/Config.js";
@@ -58,6 +61,7 @@ export const createApplication = async (): Promise<App> => {
     const emoteRepository = createReactionEmoteRepository(db);
     const llmInstructionRepo = createLlmInstructionRepository(fileManager);
 
+    const commandChoicesService = createCommandChoicesService({ soundRepository, soundTagRepository });
     const audioProcessingService = createFfmpegAudioProcessingService({ ffmpeg });
     const audioFetchService = createAudioFetcherService({ fileManager, soundRepository, youtubeService: ytdl });
     const soundService = createSoundService({
@@ -75,7 +79,9 @@ export const createApplication = async (): Promise<App> => {
     });
     const geminiLlmService = createGeminiLlmService();
     const voiceService = createDiscordVoiceService({ soundService });
-    const discordChatService = createDiscordChatService({ geminiLlmService, messageArchiveService, llmInstructionRepo, soundRepository, voiceService });
+    const discordChatService = createDiscordChatService();
+    const llmConversationService = createLlmConversationService({ discordChatService, geminiLlmService, messageArchiveService, llmInstructionRepo });
+    const soundboardThreadService = createSoundboardThreadService({ soundRepository, voiceService });
     const autoReactionService = createAutoReactionService({ discordChatService, geminiLlmService, llmInstructionRepo });
     const voiceEventSoundsService = createVoiceEventSoundsService({ voiceEventSoundsRepository, voiceService });
 
@@ -91,9 +97,12 @@ export const createApplication = async (): Promise<App> => {
         reactionArchiveService,
         messageArchiveService,
         discordChatService,
+        llmConversationService,
+        soundboardThreadService,
         autoReactionService,
         voiceEventSoundsService,
         voiceService,
+        commandChoicesService,
     });
 
     let isReadyState = false;
