@@ -8,6 +8,8 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U> ? Col
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export type VoiceEventSoundType = "UserJoin" | "UserLeave";
+
 export interface Messages {
     author_id: string;
     channel_id: string;
@@ -65,6 +67,13 @@ export interface Users {
     username: string;
 }
 
+export interface VoiceEventSounds {
+    created_at: Generated<Timestamp>;
+    sound_id: number;
+    type: VoiceEventSoundType;
+    user_id: string;
+}
+
 export interface DB {
     messages: Messages;
     reaction_emotes: ReactionEmotes;
@@ -73,4 +82,5 @@ export interface DB {
     sounds: Sounds;
     soundtags: Soundtags;
     users: Users;
+    voice_event_sounds: VoiceEventSounds;
 }
