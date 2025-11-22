@@ -4,11 +4,12 @@ import { createVoiceEventSoundsCommands } from "@application/commands/VoiceEvent
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
+import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
-import { ChatInputCommandInteraction, Events, MessageFlags, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
+import { type ApplicationCommandOptionChoiceData, type AutocompleteFocusedOption, ChatInputCommandInteraction, Events, MessageFlags, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
 
 import type { DiscordBot } from "@/infrastructure/discord/DiscordBot.js";
 
@@ -19,6 +20,7 @@ import { createVoiceCommands } from "./VoiceCommands.js";
 export type Command = {
     readonly data: SlashCommandOptionsOnlyBuilder;
     readonly execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
+    readonly getAutocompleteChoices?: (focusedOption: AutocompleteFocusedOption) => Promise<ApplicationCommandOptionChoiceData[]>;
 };
 
 export const createCommands = (
@@ -29,14 +31,15 @@ export const createCommands = (
     voiceService: VoiceService,
     reactionRepository: ReactionRepository,
     emoteRepository: ReactionEmoteRepository,
-    discordChatService: DiscordChatService
+    discordChatService: DiscordChatService,
+    commandChoicesService: CommandChoicesService
 ): Record<string, Command> => {
     const commandRecords = [
-        createVoiceEventSoundsCommands({ voiceEventSoundsRepository, soundRepository }),
-        createAudioCommands({ soundService, discordChatService }),
+        createVoiceEventSoundsCommands({ voiceEventSoundsRepository, soundRepository, commandChoicesService }),
+        createAudioCommands({ soundService, discordChatService, commandChoicesService }),
         createReactionCommands({ reactionRepository, emoteRepository, discordChatService }),
-        createSoundTagCommands({ soundTagService, discordChatService }),
-        createVoiceCommands({ voiceService, soundService }),
+        createSoundTagCommands({ soundTagService, discordChatService, commandChoicesService }),
+        createVoiceCommands({ voiceService, soundService, commandChoicesService }),
     ];
 
     // Assert that there are no duplicate command name in a way where we can have an arbitrary number of commands
@@ -69,6 +72,7 @@ export const deployCommands = async (
     reactionRepository: ReactionRepository,
     emoteRepository: ReactionEmoteRepository,
     discordChatService: DiscordChatService,
+    commandChoicesService: CommandChoicesService,
     token: string,
     clientId: string,
     guildId?: string
@@ -76,7 +80,7 @@ export const deployCommands = async (
     try {
         console.log("🚀 Deploying Discord commands...");
 
-        const commandMap = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService);
+        const commandMap = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService);
         const commands = Object.values(commandMap).map(command => command.data.toJSON());
 
         console.log(`📋 Deploying ${commands.length} commands:`);
@@ -111,16 +115,18 @@ export const registerCommands = (
     reactionRepository: ReactionRepository,
     emoteRepository: ReactionEmoteRepository,
     discordChatService: DiscordChatService,
+    commandChoicesService: CommandChoicesService,
     registerEventHandler: DiscordBot["registerEventHandler"]
 ): void => {
     console.log("🔄 Registering commands...");
 
-    const commands = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService);
+    const commands = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService);
     console.log(`✅ Registered ${Object.keys(commands).length} Commands:`);
     Object.keys(commands).forEach(command => {
         console.log(`- ${command}`);
     });
 
+    //Normal slash commands
     registerEventHandler(Events.InteractionCreate, async interaction => {
         if (!interaction.isChatInputCommand()) return;
 
@@ -133,5 +139,17 @@ export const registerCommands = (
             console.error(error);
             await interaction.reply({ content: "There was an error while executing this command!", flags: MessageFlags.Ephemeral });
         }
+    });
+
+    //Slash commands that have autocomplete options
+    registerEventHandler(Events.InteractionCreate, async interaction => {
+        if (interaction.isChatInputCommand() || !interaction.isAutocomplete()) return;
+
+        const command = commands[interaction.commandName];
+        if (!command) return;
+
+        const focusedOption = interaction.options.getFocused(true);
+        const choices = (await command.getAutocompleteChoices?.(focusedOption)) ?? [];
+        await interaction.respond(choices.slice(0, 25));
     });
 };
