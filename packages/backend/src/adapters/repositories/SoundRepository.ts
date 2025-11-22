@@ -1,7 +1,7 @@
 import { transformSoundTag } from "@adapters/repositories/SoundTagRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
+import { getItemsWithinDistance } from "@core/utils/searchUtils.js";
 import type { DB, Sounds, Soundtags } from "@db/types.js";
-import { distance } from "fastest-levenshtein";
 import { type Kysely, type Selectable, sql } from "kysely";
 
 import type { Sound } from "@/core/entities/Sound.js";
@@ -84,15 +84,9 @@ export const createSoundRepository = (db: Kysely<DB>): SoundRepository => {
     }
 
     async function tryGetSoundsWithinDistance(needle: string): Promise<(Sound & { distance: number })[]> {
-        const maxDistance = 3;
-
         const availableSounds = await getAllSounds();
-        const distances = availableSounds
-            .map(s => ({ ...s, distance: distance(needle, s.name) }))
-            .filter(s => s.distance <= maxDistance)
-            .sort((a, b) => a.distance - b.distance);
-
-        console.log(`[SoundRepository] Sounds within distance of ${maxDistance} to "${needle}":`, distances);
+        const distances = getItemsWithinDistance(availableSounds, needle, t => t.name, 3);
+        console.log(`[SoundRepository] Sounds within distance of 3 to "${needle}":`, distances);
         return distances;
     }
 
