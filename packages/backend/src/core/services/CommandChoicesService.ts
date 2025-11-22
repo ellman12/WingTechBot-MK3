@@ -12,24 +12,19 @@ export type CommandChoicesServiceDeps = {
 };
 
 export const createCommandChoicesService = ({ soundRepository, soundTagRepository }: CommandChoicesServiceDeps): CommandChoicesService => {
-    async function getAutocompleteChoices(focusedOption: AutocompleteFocusedOption): Promise<ApplicationCommandOptionChoiceData[]> {
-        const fieldName = focusedOption.name;
-        const focusedValue = focusedOption.value;
+    async function getAutocompleteChoices({ name: fieldName, value: focusedValue }: AutocompleteFocusedOption): Promise<ApplicationCommandOptionChoiceData[]> {
+        const handlers: Record<string, () => Promise<{ name: string }[]>> = {
+            "sound-name": () => (focusedValue === "" ? soundRepository.getAllSounds() : soundRepository.tryGetSoundsWithinDistance(focusedValue)),
+            "audio-source": () => (focusedValue === "" ? soundRepository.getAllSounds() : soundRepository.tryGetSoundsWithinDistance(focusedValue)),
+            "tag-name": () => (focusedValue === "" ? soundTagRepository.getAllTags() : soundTagRepository.tryGetTagsWithinDistance(focusedValue)),
+        };
 
-        if (fieldName === "sound-name" || fieldName === "audio-source") {
-            const sounds = focusedValue === "" ? await soundRepository.getAllSounds() : await soundRepository.tryGetSoundsWithinDistance(focusedValue);
-            return sounds.map(s => ({ name: s.name, value: s.name }));
-        }
+        const handler = handlers[fieldName];
+        if (!handler) return [];
 
-        if (fieldName === "tag-name") {
-            const tags = focusedValue === "" ? await soundTagRepository.getAllTags() : await soundTagRepository.tryGetTagsWithinDistance(focusedValue);
-            return tags.map(t => ({ name: t.name, value: t.name }));
-        }
-
-        return [];
+        const results = await handler();
+        return results.map(({ name }) => ({ name, value: name }));
     }
 
-    return {
-        getAutocompleteChoices,
-    };
+    return { getAutocompleteChoices };
 };
