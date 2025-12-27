@@ -173,9 +173,24 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
             const audioId = `audio_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
             const audioStream = await soundService.getSound(nameOrSource, abortController.signal);
+
+            console.log(`[DiscordVoiceService] Creating PlayingSound with metadata:`, {
+                id: audioId,
+                source: nameOrSource,
+                volume,
+            });
+
             const audioSource = createPlayingSound(audioId, audioStream, volume, {
                 source: nameOrSource,
                 server: serverId,
+                formatInfo: {
+                    format: "s16le",
+                    container: "s16le",
+                    codec: "pcm_s16le",
+                    sampleRate: 48000,
+                    channels: 2,
+                    bitrate: 0,
+                },
             });
 
             // Replace the abort controller with our pre-existing one

@@ -63,6 +63,22 @@ export const createFfmpegService = (): FfmpegService => {
             throw new Error("Failed to start ffmpeg process");
         }
 
+        // Handle stdin errors to prevent EPIPE crashes
+        ffmpegInstance.stdin.on("error", (err: NodeJS.ErrnoException) => {
+            // Ignore EPIPE errors on stdin - ffmpeg might close early if input is invalid
+            if (err.code !== "EPIPE") {
+                console.error(`ffmpeg stdin error: ${err.message}`);
+            }
+        });
+
+        // Handle input stream errors to prevent EPIPE crashes
+        inputStream.on("error", (err: NodeJS.ErrnoException) => {
+            // Ignore EPIPE errors - ffmpeg might close early if input is invalid
+            if (err.code !== "EPIPE") {
+                console.error(`ffmpeg input stream error: ${err.message}`);
+            }
+        });
+
         // Optimize input piping
         inputStream.pipe(ffmpegInstance.stdin, { end: true });
 
@@ -88,21 +104,44 @@ export const createFfmpegService = (): FfmpegService => {
         if (!ffmpegInstance.pid) {
             throw new Error("Failed to start ffmpeg process");
         }
+
+        // Handle stdin errors to prevent EPIPE crashes
+        ffmpegInstance.stdin.on("error", (err: NodeJS.ErrnoException) => {
+            // Ignore EPIPE errors on stdin - ffmpeg might close early if input is invalid
+            if (err.code !== "EPIPE") {
+                console.error(`ffmpeg stdin error: ${err.message}`);
+            }
+        });
+
+        // Handle input stream errors to prevent EPIPE crashes
+        inputStream.on("error", (err: NodeJS.ErrnoException) => {
+            // Ignore EPIPE errors - ffmpeg might close early if input is invalid
+            if (err.code !== "EPIPE") {
+                console.error(`ffmpeg input stream error: ${err.message}`);
+            }
+        });
+
         inputStream.pipe(ffmpegInstance.stdin);
 
         return new Promise<Uint8Array>((resolve, reject) => {
             const chunks: Uint8Array[] = [];
+            const stderrChunks: string[] = [];
+
             ffmpegInstance.stdout.on("data", (chunk: Uint8Array) => {
                 chunks.push(chunk);
             });
 
             ffmpegInstance.stderr.on("data", (data: Uint8Array) => {
-                console.error(`ffmpeg stderr: ${data.toString()}`);
+                const errorMsg = data.toString();
+                stderrChunks.push(errorMsg);
+                console.error(`ffmpeg stderr: ${errorMsg}`);
             });
 
             ffmpegInstance.on("close", code => {
                 if (code !== 0) {
-                    reject(new Error(`ffmpeg process exited with code ${code}`));
+                    const stderrOutput = stderrChunks.join("").trim();
+                    const errorDetails = stderrOutput || "No error details provided by ffmpeg";
+                    reject(new Error(`ffmpeg process exited with code ${code}. FFmpeg args: ${args.join(" ")}. Error: ${errorDetails}`));
                 } else {
                     resolve(Buffer.concat(chunks));
                 }
@@ -120,6 +159,21 @@ export const createFfmpegService = (): FfmpegService => {
         if (!ffmpegInstance.pid) {
             throw new Error("Failed to start ffmpeg process");
         }
+
+        // Handle stdin errors to prevent EPIPE crashes
+        ffmpegInstance.stdin.on("error", (err: NodeJS.ErrnoException) => {
+            if (err.code !== "EPIPE") {
+                console.error(`ffmpeg stdin error: ${err.message}`);
+            }
+        });
+
+        // Handle input stream errors to prevent EPIPE crashes
+        inputStream.on("error", (err: NodeJS.ErrnoException) => {
+            if (err.code !== "EPIPE") {
+                console.error(`ffmpeg input stream error: ${err.message}`);
+            }
+        });
+
         inputStream.pipe(ffmpegInstance.stdin);
 
         return ffmpegInstance.stdout;
@@ -132,6 +186,16 @@ export const createFfmpegService = (): FfmpegService => {
 
         return new Promise<Uint8Array>((resolve, reject) => {
             const chunks: Uint8Array[] = [];
+            const stderrChunks: string[] = [];
+
+            // Handle stdin errors to prevent EPIPE crashes
+            ffmpegInstance.stdin.on("error", (err: NodeJS.ErrnoException) => {
+                // Ignore EPIPE errors on stdin - ffmpeg might close early if input is invalid
+                if (err.code !== "EPIPE") {
+                    console.error(`ffmpeg stdin error: ${err.message}`);
+                }
+            });
+
             ffmpegInstance.stdin.write(input);
             ffmpegInstance.stdin.end();
 
@@ -140,12 +204,16 @@ export const createFfmpegService = (): FfmpegService => {
             });
 
             ffmpegInstance.stderr.on("data", (data: Uint8Array) => {
-                console.error(`ffmpeg stderr: ${data.toString()}`);
+                const errorMsg = data.toString();
+                stderrChunks.push(errorMsg);
+                console.error(`ffmpeg stderr: ${errorMsg}`);
             });
 
             ffmpegInstance.on("close", code => {
                 if (code !== 0) {
-                    reject(new Error(`ffmpeg process exited with code ${code}`));
+                    const stderrOutput = stderrChunks.join("").trim();
+                    const errorDetails = stderrOutput || "No error details provided by ffmpeg";
+                    reject(new Error(`ffmpeg process exited with code ${code}. FFmpeg args: ${args.join(" ")}. Error: ${errorDetails}`));
                 } else {
                     resolve(Buffer.concat(chunks));
                 }
@@ -167,6 +235,13 @@ export const createFfmpegService = (): FfmpegService => {
             const stdoutChunks: Uint8Array[] = [];
             const stderrChunks: string[] = [];
 
+            // Handle stdin errors to prevent EPIPE crashes
+            ffmpegInstance.stdin.on("error", (err: NodeJS.ErrnoException) => {
+                if (err.code !== "EPIPE") {
+                    console.error(`ffmpeg stdin error: ${err.message}`);
+                }
+            });
+
             ffmpegInstance.stdin.write(input);
             ffmpegInstance.stdin.end();
 
@@ -180,7 +255,9 @@ export const createFfmpegService = (): FfmpegService => {
 
             ffmpegInstance.on("close", code => {
                 if (code !== 0) {
-                    reject(new Error(`ffmpeg process exited with code ${code}`));
+                    const stderrOutput = stderrChunks.join("").trim();
+                    const errorDetails = stderrOutput || "No error details provided by ffmpeg";
+                    reject(new Error(`ffmpeg process exited with code ${code}. FFmpeg args: ${args.join(" ")}. Error: ${errorDetails}`));
                 } else {
                     resolve({
                         stdout: Buffer.concat(stdoutChunks),

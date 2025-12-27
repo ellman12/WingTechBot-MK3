@@ -68,9 +68,20 @@ describe("FfmpegAudioProcessingService", () => {
 
             vi.mocked(mockFfmpegService.convertStreamToStream).mockReturnValue(mockProcessedStream);
 
-            const result = audioProcessingService.processAudioStream(inputStream);
+            const result = audioProcessingService.processAudioStream({
+                stream: inputStream,
+                formatInfo: {
+                    format: "webm",
+                    container: "webm",
+                    codec: "opus",
+                    sampleRate: 48000,
+                    channels: 2,
+                    bitrate: 128000,
+                },
+            });
 
             expect(mockFfmpegService.convertStreamToStream).toHaveBeenCalledWith(inputStream, {
+                // No inputFormat - FFmpeg auto-detects
                 outputFormat: "s16le",
                 codec: "pcm_s16le",
                 sampleRate: 48000,
@@ -86,7 +97,17 @@ describe("FfmpegAudioProcessingService", () => {
 
             vi.mocked(mockFfmpegService.convertStreamToStream).mockReturnValue(mockProcessedStream);
 
-            const result = audioProcessingService.processAudioStream(inputStream);
+            const result = audioProcessingService.processAudioStream({
+                stream: inputStream,
+                formatInfo: {
+                    format: "webm",
+                    container: "webm",
+                    codec: "opus",
+                    sampleRate: 48000,
+                    channels: 2,
+                    bitrate: 128000,
+                },
+            });
 
             // The result should be a buffered stream (PassThrough stream)
             expect(result).toBeInstanceOf(Readable);
@@ -105,7 +126,17 @@ describe("FfmpegAudioProcessingService", () => {
                 return errorStream;
             });
 
-            const result = audioProcessingService.processAudioStream(inputStream);
+            const result = audioProcessingService.processAudioStream({
+                stream: inputStream,
+                formatInfo: {
+                    format: "webm",
+                    container: "webm",
+                    codec: "opus",
+                    sampleRate: 48000,
+                    channels: 2,
+                    bitrate: 128000,
+                },
+            });
 
             expect(result).toBeInstanceOf(Readable);
 
