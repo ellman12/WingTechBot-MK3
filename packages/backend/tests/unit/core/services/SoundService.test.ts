@@ -1,5 +1,6 @@
 import type { SoundRepository } from "@core/repositories/SoundRepository";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService";
+import { parseAudioSource } from "@core/services/AudioFetcherService";
 import type { AudioProcessingService } from "@core/services/AudioProcessingService";
 import type { FileManager } from "@core/services/FileManager";
 import { createSoundService } from "@core/services/SoundService";
@@ -7,8 +8,16 @@ import type { Config } from "@infrastructure/config/Config";
 import { Readable } from "stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Mock parseAudioSource from AudioFetcherService
+vi.mock("@core/services/AudioFetcherService", async () => {
+    const actual = await vi.importActual<typeof import("@core/services/AudioFetcherService")>("@core/services/AudioFetcherService");
+    return {
+        ...actual,
+        parseAudioSource: vi.fn(),
+    };
+});
+
 // Mock dependencies
-const parseAudioSource = vi.fn();
 
 const mockAudioFetcher: AudioFetcherService = {
     fetchUrlAudio: vi.fn(),
@@ -115,7 +124,9 @@ describe("SoundService", () => {
 
             const result = await soundService.getSound("test-sound");
 
-            expect(result).toBe(mockFileStream);
+            // The result should be a pre-buffered stream (PassThrough), not the original stream
+            expect(result).toBeInstanceOf(Readable);
+            expect(result).not.toBe(mockFileStream);
             expect(mockSoundRepository.getSoundByName).toHaveBeenCalledWith("test-sound");
             expect(mockFileManager.readStream).toHaveBeenCalledWith("./sounds/test-sound.pcm");
         });
