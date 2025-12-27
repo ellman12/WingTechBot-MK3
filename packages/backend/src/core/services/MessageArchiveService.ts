@@ -99,13 +99,22 @@ async function processMessage(discordMessage: Message, existingMessages: Map<str
 async function getMessage(guild: Guild, channelId: string, messageId: string): Promise<Message | null> {
     //Instead of returning null it errors if the message doesn't exist :(
     try {
-        const channel = (await guild.channels.fetch(channelId)) as TextChannel;
-        return await channel.messages.fetch(messageId);
-    } catch (error) {
-        if (error instanceof DiscordAPIError && error.code === 10008) {
+        const channel = await guild.channels.fetch(channelId);
+        if (!channel || !channel.isTextBased()) {
+            // Channel doesn't exist or is not a text channel - message is effectively deleted
             return null;
+        }
+        return await (channel as TextChannel).messages.fetch(messageId);
+    } catch (error) {
+        if (error instanceof DiscordAPIError) {
+            // 10008 = Unknown Message (message was deleted)
+            // 10003 = Unknown Channel (channel was deleted)
+            if (error.code === 10008 || error.code === 10003) {
+                return null;
+            }
+            console.error(`❌ Failed to fetch message ${messageId} in channel ${channelId}:`, error);
         } else {
-            console.error(`❌ Failed to fetch message ${messageId}`, error);
+            console.error(`❌ Failed to fetch message ${messageId} in channel ${channelId}:`, error);
         }
     }
 

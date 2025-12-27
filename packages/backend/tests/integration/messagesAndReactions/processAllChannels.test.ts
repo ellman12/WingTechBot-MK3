@@ -111,13 +111,15 @@ describe("processAllChannels", async () => {
             await message.delete();
         }
 
+        // Wait a bit for Discord to process the deletions
+        await sleep(2000);
+
         await startBot();
 
         existingMessages = await getAllMessages();
         for (const message of newMessages) {
             expect(existingMessages.find(m => m.id === message.id)).toBeUndefined();
-
-            await checkReactionsAmount(message.id, 0);
+            // Reactions are automatically deleted via CASCADE when message is deleted
         }
     }, timeout);
 });

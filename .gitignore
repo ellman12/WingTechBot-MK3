@@ -4,6 +4,7 @@ node_modules
 .env.test
 
 /packages/backend/sounds/
+/packages/backend/cache/
 **/dist
 
 .idea

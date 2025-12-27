@@ -1,5 +1,6 @@
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import { createPreBufferedStream, readStreamToBytes } from "@core/utils/streamUtils.js";
+import type { Config } from "@infrastructure/config/Config.js";
 import { Readable } from "stream";
 
 import { type AudioFetcherService, parseAudioSource } from "./AudioFetcherService.js";
@@ -18,12 +19,12 @@ export type SoundServiceDeps = {
     readonly audioProcessor: AudioProcessingService;
     readonly fileManager: FileManager;
     readonly soundRepository: SoundRepository;
+    readonly config: Config;
 };
 
-const AUDIO_FILE_STORE_PATH = "./sounds";
-
-export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, soundRepository }: SoundServiceDeps): SoundService => {
-    console.log("[SoundService] Creating sound service");
+export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, soundRepository, config }: SoundServiceDeps): SoundService => {
+    const AUDIO_FILE_STORE_PATH = config.sounds.storagePath;
+    console.log(`[SoundService] Creating sound service with storage path: ${AUDIO_FILE_STORE_PATH}`);
 
     return {
         addSound: async (name: string, source: string): Promise<void> => {
@@ -36,15 +37,20 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                 const timeout = setTimeout(() => abortController.abort(), 60000); // 60 second timeout for downloads
 
                 try {
-                    const audioStream = await audioFetcher.fetchUrlAudio(source, abortController.signal);
+                    const audioWithMetadata = await audioFetcher.fetchUrlAudio(source, abortController.signal);
                     clearTimeout(timeout);
 
                     console.log(`[SoundService] Reading stream to bytes for: ${name}`);
-                    const audio: Uint8Array = await readStreamToBytes(audioStream);
+                    const audio: Uint8Array = await readStreamToBytes(audioWithMetadata.stream);
                     console.log(`[SoundService] Read ${audio.length} bytes for: ${name}`);
 
-                    console.log(`[SoundService] Processing audio for: ${name}`);
-                    const processedAudio = await audioProcessor.deepProcessAudio(audio);
+                    console.log(`[SoundService] Processing audio for: ${name}`, {
+                        originalFormat: audioWithMetadata.formatInfo?.format,
+                        originalContainer: audioWithMetadata.formatInfo?.container,
+                        targetFormat: "pcm_s16le",
+                        targetContainer: "s16le",
+                    });
+                    const processedAudio = await audioProcessor.deepProcessAudio(audio, audioWithMetadata.formatInfo?.format, audioWithMetadata.formatInfo?.container);
                     console.log(`[SoundService] Processed audio result: ${processedAudio.length} bytes for: ${name}`);
 
                     const path = `/${name}.pcm`;
@@ -90,20 +96,26 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                         console.log(`[SoundService] Reading soundboard file: ${soundPath}`);
 
                         const stream = fileManager.readStream(soundPath);
-                        const elapsedTime = Date.now() - startTime;
-                        console.log(`[SoundService] Successfully created direct soundboard stream for: ${nameOrSource} in ${elapsedTime}ms`);
+                        console.log(`[SoundService] Pre-buffering soundboard stream for: ${nameOrSource}`);
 
-                        // Try bypassing buffering for local files to eliminate potential stream processing issues
-                        console.log(`[SoundService] Returning direct file stream to eliminate buffering overhead`);
-                        return stream;
+                        // Pre-buffer soundboard audio to ensure smooth playback
+                        const preBufferedStream = await createPreBufferedStream(stream, `soundboard:${nameOrSource}`, abortSignal);
+
+                        const elapsedTime = Date.now() - startTime;
+                        console.log(`[SoundService] Successfully pre-buffered soundboard stream for: ${nameOrSource} in ${elapsedTime}ms`);
+                        return preBufferedStream;
                     }
                     case "url":
                     case "youtube": {
                         console.log(`[SoundService] Fetching and processing URL/YouTube audio: ${nameOrSource}`);
-                        const audioStream = await audioFetcher.fetchUrlAudio(nameOrSource, abortSignal);
-                        console.log(`[SoundService] Got audio stream, processing for: ${nameOrSource}`);
+                        const audioWithMetadata = await audioFetcher.fetchUrlAudio(nameOrSource, abortSignal);
+                        console.log(`[SoundService] Processing URL/YouTube audio: ${nameOrSource}`, {
+                            detectedFormat: audioWithMetadata.formatInfo?.format,
+                            detectedContainer: audioWithMetadata.formatInfo?.container,
+                            willProcessTo: "pcm_s16le",
+                        });
 
-                        const processedStream = audioProcessor.processAudioStream(audioStream);
+                        const processedStream = audioProcessor.processAudioStream(audioWithMetadata);
                         console.log(`[SoundService] Pre-buffering processed stream for: ${nameOrSource}`);
 
                         // Use pre-buffering for URL/YouTube content to ensure smooth playback

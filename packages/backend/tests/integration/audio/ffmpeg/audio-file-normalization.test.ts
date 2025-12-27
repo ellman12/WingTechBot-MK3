@@ -86,7 +86,17 @@ describe("Audio File Normalization Integration Test", () => {
 
         // Process through real-time stream processing
         const startTime = Date.now();
-        const outputStream = ffmpegAudioService.processAudioStream(inputStream);
+        const outputStream = ffmpegAudioService.processAudioStream({
+            stream: inputStream,
+            formatInfo: {
+                format: "mp3",
+                container: "mp3",
+                codec: "mp3",
+                sampleRate: 44100,
+                channels: 2,
+                bitrate: 128000,
+            },
+        });
 
         expect(outputStream).toBeInstanceOf(Readable);
 

@@ -33,16 +33,34 @@ describe("FfmpegAudioProcessingService", () => {
     describe("deepProcessAudio", () => {
         it("should normalize and convert audio to PCM", async () => {
             const inputAudio = new Uint8Array([1, 2, 3, 4]);
-            const normalizedAudio = new Uint8Array([5, 6, 7, 8]);
-            const finalAudio = new Uint8Array([9, 10, 11, 12]);
+            const wavAudio = new Uint8Array([5, 6, 7, 8]);
+            const normalizedAudio = new Uint8Array([9, 10, 11, 12]);
+            const finalAudio = new Uint8Array([13, 14, 15, 16]);
 
+            // First convertAudio call: convert input to WAV
+            vi.mocked(mockFfmpegService.convertAudio).mockResolvedValueOnce(wavAudio);
+            // normalizeAudio call: normalize the WAV audio
             vi.mocked(mockFfmpegService.normalizeAudio).mockResolvedValue(normalizedAudio);
-            vi.mocked(mockFfmpegService.convertAudio).mockResolvedValue(finalAudio);
+            // Second convertAudio call: convert normalized WAV to final PCM
+            vi.mocked(mockFfmpegService.convertAudio).mockResolvedValueOnce(finalAudio);
 
             const result = await audioProcessingService.deepProcessAudio(inputAudio);
 
-            expect(mockFfmpegService.normalizeAudio).toHaveBeenCalledWith(inputAudio, {});
-            expect(mockFfmpegService.convertAudio).toHaveBeenCalledWith(normalizedAudio, {
+            // First conversion: input to WAV
+            expect(mockFfmpegService.convertAudio).toHaveBeenNthCalledWith(1, inputAudio, {
+                inputFormat: undefined,
+                outputFormat: "wav",
+                codec: "pcm_s16le",
+                sampleRate: 48000,
+                channels: 2,
+            });
+            // Normalization: WAV audio with options
+            expect(mockFfmpegService.normalizeAudio).toHaveBeenCalledWith(wavAudio, {
+                sampleRate: 48000,
+                channels: 2,
+            });
+            // Final conversion: normalized WAV to PCM
+            expect(mockFfmpegService.convertAudio).toHaveBeenNthCalledWith(2, normalizedAudio, {
                 inputFormat: "wav",
                 outputFormat: "s16le",
                 codec: "pcm_s16le",
@@ -68,9 +86,20 @@ describe("FfmpegAudioProcessingService", () => {
 
             vi.mocked(mockFfmpegService.convertStreamToStream).mockReturnValue(mockProcessedStream);
 
-            const result = audioProcessingService.processAudioStream(inputStream);
+            const result = audioProcessingService.processAudioStream({
+                stream: inputStream,
+                formatInfo: {
+                    format: "webm",
+                    container: "webm",
+                    codec: "opus",
+                    sampleRate: 48000,
+                    channels: 2,
+                    bitrate: 128000,
+                },
+            });
 
             expect(mockFfmpegService.convertStreamToStream).toHaveBeenCalledWith(inputStream, {
+                inputFormat: "webm",
                 outputFormat: "s16le",
                 codec: "pcm_s16le",
                 sampleRate: 48000,
@@ -86,7 +115,17 @@ describe("FfmpegAudioProcessingService", () => {
 
             vi.mocked(mockFfmpegService.convertStreamToStream).mockReturnValue(mockProcessedStream);
 
-            const result = audioProcessingService.processAudioStream(inputStream);
+            const result = audioProcessingService.processAudioStream({
+                stream: inputStream,
+                formatInfo: {
+                    format: "webm",
+                    container: "webm",
+                    codec: "opus",
+                    sampleRate: 48000,
+                    channels: 2,
+                    bitrate: 128000,
+                },
+            });
 
             // The result should be a buffered stream (PassThrough stream)
             expect(result).toBeInstanceOf(Readable);
@@ -105,7 +144,17 @@ describe("FfmpegAudioProcessingService", () => {
                 return errorStream;
             });
 
-            const result = audioProcessingService.processAudioStream(inputStream);
+            const result = audioProcessingService.processAudioStream({
+                stream: inputStream,
+                formatInfo: {
+                    format: "webm",
+                    container: "webm",
+                    codec: "opus",
+                    sampleRate: 48000,
+                    channels: 2,
+                    bitrate: 128000,
+                },
+            });
 
             expect(result).toBeInstanceOf(Readable);
 
