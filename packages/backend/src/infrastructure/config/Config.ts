@@ -3,7 +3,7 @@ export type Config = {
     readonly database: { readonly url: string };
     readonly discord: { readonly token: string; readonly clientId: string; readonly serverId?: string };
     readonly sounds: { readonly storagePath: string };
-    readonly cache: { readonly audioDownloadPath: string; readonly ttlHours: number };
+    readonly cache: { readonly audioDownloadPath: string; readonly ttlHours: number; readonly maxSizeMb: number };
     readonly ffmpeg: { readonly ffmpegPath?: string; readonly ffprobePath?: string };
 };
 
@@ -15,7 +15,7 @@ const loadConfig = (): Config => {
         database: { url: process.env.DATABASE_URL || "postgresql://wingtechbot:wingtechbot_password@localhost:5432/wingtechbot" },
         discord: { token: process.env.DISCORD_TOKEN || "", clientId: process.env.DISCORD_CLIENT_ID || "", ...(process.env.DISCORD_GUILD_ID && { serverId: process.env.DISCORD_GUILD_ID }) },
         sounds: { storagePath: process.env.SOUNDS_STORAGE_PATH || "./sounds" },
-        cache: { audioDownloadPath: process.env.AUDIO_CACHE_PATH || "./cache/audio", ttlHours: Number(process.env.AUDIO_CACHE_TTL_HOURS) || 24 },
+        cache: { audioDownloadPath: process.env.AUDIO_CACHE_PATH || "./cache/audio", ttlHours: Number(process.env.AUDIO_CACHE_TTL_HOURS) || 24, maxSizeMb: Number(process.env.AUDIO_CACHE_MAX_SIZE_MB) || 1000 },
         ffmpeg: { ffmpegPath: process.env.FFMPEG_PATH, ffprobePath: process.env.FFPROBE_PATH },
     };
 };
@@ -26,7 +26,7 @@ const loadTesterBotConfig = (): Config => {
         database: { url: process.env.DATABASE_URL || "postgresql://wingtechbot:wingtechbot_password@localhost:5432/wingtechbot" },
         discord: { token: process.env.TESTER_DISCORD_TOKEN || "", clientId: process.env.TESTER_DISCORD_CLIENT_ID || "", ...(process.env.TESTER_DISCORD_GUILD_ID && { serverId: process.env.TESTER_DISCORD_GUILD_ID }) },
         sounds: { storagePath: process.env.SOUNDS_STORAGE_PATH || "./sounds" },
-        cache: { audioDownloadPath: process.env.AUDIO_CACHE_PATH || "./cache/audio", ttlHours: Number(process.env.AUDIO_CACHE_TTL_HOURS) || 24 },
+        cache: { audioDownloadPath: process.env.AUDIO_CACHE_PATH || "./cache/audio", ttlHours: Number(process.env.AUDIO_CACHE_TTL_HOURS) || 24, maxSizeMb: Number(process.env.AUDIO_CACHE_MAX_SIZE_MB) || 1000 },
         ffmpeg: { ffmpegPath: process.env.FFMPEG_PATH, ffprobePath: process.env.FFPROBE_PATH },
     };
 };

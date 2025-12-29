@@ -26,8 +26,9 @@ export type AudioCacheServiceDeps = {
 export const createAudioCacheService = ({ fileManager, config }: AudioCacheServiceDeps): AudioCacheService => {
     const cachePath = config.cache.audioDownloadPath;
     const ttlMs = config.cache.ttlHours * 60 * 60 * 1000;
+    const maxSizeBytes = config.cache.maxSizeMb * 1024 * 1024;
 
-    console.log(`[AudioCacheService] Creating cache service with path: ${cachePath}, TTL: ${config.cache.ttlHours}h`);
+    console.log(`[AudioCacheService] Creating cache service with path: ${cachePath}, TTL: ${config.cache.ttlHours}h, Max Size: ${config.cache.maxSizeMb}MB`);
 
     /**
      * Generate a cache key from a URL
@@ -149,6 +150,9 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
             }
 
             console.log(`[AudioCacheService] Successfully cached: ${url}`);
+
+            // Evict oldest files if cache size exceeds limit
+            await evictIfNeeded();
         } catch (error) {
             console.error(`[AudioCacheService] Error saving to cache:`, error);
             // Don't throw - caching failure shouldn't break the download
@@ -184,6 +188,67 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
             console.log(`[AudioCacheService] Cache cleanup complete. Removed ${cleanedCount} expired entries.`);
         } catch (error) {
             console.error(`[AudioCacheService] Error during cache cleanup:`, error);
+        }
+    };
+
+    /**
+     * Evict oldest cache files if total size exceeds the limit
+     * Files are evicted based on oldest mtime (shortest TTL remaining)
+     */
+    const evictIfNeeded = async (): Promise<void> => {
+        try {
+            const cacheFiles = await fileManager.listFiles(cachePath);
+
+            // Calculate total cache size
+            let totalSize = 0;
+            const fileStats: Array<{ path: string; size: number; mtime: number }> = [];
+
+            for (const file of cacheFiles) {
+                try {
+                    const stats = await fileManager.getFileStats(file);
+                    totalSize += stats.size;
+                    fileStats.push({
+                        path: file,
+                        size: stats.size,
+                        mtime: stats.mtime.getTime(),
+                    });
+                } catch (error) {
+                    console.error(`[AudioCacheService] Error getting stats for ${file}:`, error);
+                }
+            }
+
+            console.log(`[AudioCacheService] Current cache size: ${(totalSize / 1024 / 1024).toFixed(2)}MB / ${config.cache.maxSizeMb}MB`);
+
+            if (totalSize <= maxSizeBytes) {
+                console.log(`[AudioCacheService] Cache size within limit, no eviction needed`);
+                return;
+            }
+
+            // Sort files by mtime (oldest first - shortest TTL remaining)
+            fileStats.sort((a, b) => a.mtime - b.mtime);
+
+            let evictedCount = 0;
+            let evictedSize = 0;
+
+            // Evict oldest files until we're under the limit
+            for (const file of fileStats) {
+                if (totalSize - evictedSize <= maxSizeBytes) {
+                    break;
+                }
+
+                try {
+                    await fileManager.deleteFile(file.path);
+                    evictedSize += file.size;
+                    evictedCount++;
+                    console.log(`[AudioCacheService] Evicted: ${file.path} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+                } catch (error) {
+                    console.error(`[AudioCacheService] Error evicting file ${file.path}:`, error);
+                }
+            }
+
+            console.log(`[AudioCacheService] Eviction complete. Removed ${evictedCount} files (${(evictedSize / 1024 / 1024).toFixed(2)}MB). New size: ${((totalSize - evictedSize) / 1024 / 1024).toFixed(2)}MB`);
+        } catch (error) {
+            console.error(`[AudioCacheService] Error during cache eviction:`, error);
         }
     };
 

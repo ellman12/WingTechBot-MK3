@@ -26,4 +26,5 @@ volumes:
 
 networks:
   app-network:
-    driver: bridge 
+    name: backend_app-network
+    driver: bridge

@@ -42,7 +42,7 @@ export const createFfmpegAudioProcessingService = ({ ffmpeg }: FfmpegAudioServic
 
     return {
         deepProcessAudio: async (audio: Uint8Array, format?: string, container?: string): Promise<Uint8Array> => {
-            console.log(`[FfmpegAudioProcessingService] Step 1: Converting audio to WAV (format: ${format || "auto-detect"}, container: ${container || "auto-detect"})`);
+            console.log(`[FfmpegAudioProcessingService] Step 1: Converting audio to PCM with normalization (format: ${format || "auto-detect"}, container: ${container || "auto-detect"})`);
 
             let inputFormat = format || undefined;
 
@@ -57,30 +57,19 @@ export const createFfmpegAudioProcessingService = ({ ffmpeg }: FfmpegAudioServic
                 console.log(`[FfmpegAudioProcessingService] No format provided, FFmpeg will auto-detect (may cause errors)`);
             }
 
-            const wavAudio = await ffmpeg.convertAudio(audio, {
+            // Convert directly to PCM s16le with normalization in a single pass
+            const pcmAudio = await ffmpeg.convertAudio(audio, {
                 inputFormat,
-                outputFormat: "wav",
-                codec: "pcm_s16le",
-                sampleRate: 48000,
-                channels: 2,
-            });
-
-            console.log("[FfmpegAudioProcessingService] Step 2: Normalizing WAV audio");
-
-            const normalizedAudio = await ffmpeg.normalizeAudio(wavAudio, {
-                sampleRate: 48000,
-                channels: 2,
-            });
-
-            console.log("[FfmpegAudioProcessingService] Step 3: Converting to final PCM format");
-
-            return ffmpeg.convertAudio(normalizedAudio, {
-                inputFormat: "wav",
                 outputFormat: "s16le",
                 codec: "pcm_s16le",
                 sampleRate: 48000,
                 channels: 2,
+                extraArgs: ["-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11:linear=true"],
             });
+
+            console.log("[FfmpegAudioProcessingService] Step 2: Audio converted and normalized to PCM");
+
+            return pcmAudio;
         },
         processAudioStream: (audioWithMetadata: AudioStreamWithMetadata): Readable => {
             const { stream: audioStream } = audioWithMetadata;
