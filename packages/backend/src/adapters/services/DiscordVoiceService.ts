@@ -14,6 +14,7 @@ type VoiceState = {
     player: OverlappingAudioPlayer;
     volume: number;
     isReady: boolean;
+    audioIdCounter: number;
 };
 
 export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceDeps): VoiceService => {
@@ -101,7 +102,7 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
             });
 
             console.log(`[DiscordVoiceService] Storing voice state for server ${serverId}`);
-            voiceStates.set(serverId, { connection, player, volume: 100, isReady: false });
+            voiceStates.set(serverId, { connection, player, volume: 100, isReady: false, audioIdCounter: 0 });
             console.log(`[DiscordVoiceService] Successfully connected to voice channel ${channel.name} in server ${serverId}`);
         } catch (error) {
             console.error(`[DiscordVoiceService] Failed to connect to voice channel:`, error);
@@ -170,7 +171,8 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
         try {
             // Create abort controller for the entire operation
             const abortController = new AbortController();
-            const audioId = `audio_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+            // Generate simple sequential ID (e.g., "1", "2", "3")
+            const audioId = `${++state.audioIdCounter}`;
 
             const audioStream = await soundService.getSound(nameOrSource, abortController.signal);
 
@@ -208,7 +210,7 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
             // Add audio source to the player
             const resultId = state.player.addAudioSource(audioSource);
 
-            console.log(`[DiscordVoiceService] Added audio ${resultId.substring(0, 8)} (${state.player.getActiveAudioCount()} active)`);
+            console.log(`[DiscordVoiceService] Added audio ${resultId} (${state.player.getActiveAudioCount()} active)`);
             return resultId;
         } catch (error) {
             console.error(`[DiscordVoiceService] Failed to play audio ${nameOrSource}:`, error);
