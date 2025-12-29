@@ -54,7 +54,7 @@ const mockConfig: Config = {
     database: { url: "postgresql://test:test@localhost:5432/test" },
     discord: { token: "test-token", clientId: "test-client-id" },
     sounds: { storagePath: "./sounds" },
-    cache: { audioDownloadPath: "./cache/audio", ttlHours: 24 },
+    cache: { audioDownloadPath: "./cache/audio", ttlHours: 24, maxSizeMb: 1000 },
     ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
 };
 

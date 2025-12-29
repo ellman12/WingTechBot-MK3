@@ -1,5 +1,7 @@
-import { type ChildProcess, spawn } from "child_process";
-import { Readable } from "stream";
+import type { ChildProcess } from "child_process";
+import ffmpeg from "fluent-ffmpeg";
+import type { FfmpegCommand } from "fluent-ffmpeg";
+import { PassThrough, Readable } from "stream";
 
 export type FfmpegConvertOptions = {
     readonly inputFormat?: string; // Input format (e.g., 'wav', 'mp3')
@@ -34,347 +36,320 @@ export type FfmpegService = {
 };
 
 export const createFfmpegService = (): FfmpegService => {
-    const run = (inputStream: Readable, args: string[]) => {
-        // Add aggressive real-time streaming optimizations
-        const optimizedArgs = [
-            "-i",
-            "pipe:0",
-            "-fflags",
-            "+genpts+igndts", // Generate timestamps and ignore input timestamps
-            "-avoid_negative_ts",
-            "make_zero", // Avoid timing issues
-            "-max_muxing_queue_size",
-            "1024", // Larger muxing queue for streaming
-            "-preset",
-            "ultrafast", // Fastest encoding preset
-            "-tune",
-            "zerolatency", // Optimize for real-time streaming
-            ...args,
-            "-loglevel",
-            "error",
-            "pipe:1",
-        ];
-
-        const ffmpegInstance = spawn("ffmpeg", optimizedArgs, {
-            stdio: ["pipe", "pipe", "pipe"],
-        });
-
-        if (!ffmpegInstance.pid) {
-            throw new Error("Failed to start ffmpeg process");
-        }
-
-        // Handle stdin errors to prevent EPIPE crashes
-        ffmpegInstance.stdin.on("error", (err: NodeJS.ErrnoException) => {
-            // Ignore EPIPE errors on stdin - ffmpeg might close early if input is invalid
-            if (err.code !== "EPIPE") {
-                console.error(`ffmpeg stdin error: ${err.message}`);
-            }
-        });
-
-        // Handle input stream errors to prevent EPIPE crashes
-        inputStream.on("error", (err: NodeJS.ErrnoException) => {
-            // Ignore EPIPE errors - ffmpeg might close early if input is invalid
-            if (err.code !== "EPIPE") {
-                console.error(`ffmpeg input stream error: ${err.message}`);
-            }
-        });
-
-        // Optimize input piping
-        inputStream.pipe(ffmpegInstance.stdin, { end: true });
-
-        ffmpegInstance.stdout.on("error", err => {
-            console.error(`ffmpeg stdout error: ${err.message}`);
-        });
-
-        ffmpegInstance.stderr.on("data", data => {
-            const errorMsg = data.toString().trim();
-            if (errorMsg && !errorMsg.includes("frame=") && !errorMsg.includes("size=")) {
-                console.error(`ffmpeg stderr: ${errorMsg}`);
-            }
-        });
-
-        ffmpegInstance.stdout.on("close", () => {
-            console.log(`[FfmpegService] FFmpeg stdout closed`);
-        });
-
-        return ffmpegInstance;
-    };
-    const runStreamAsync = (inputStream: Readable, args: string[]) => {
-        const ffmpegInstance = spawn("ffmpeg", ["-i", "pipe:0", ...args, "-loglevel", "error", "pipe:1"]);
-        if (!ffmpegInstance.pid) {
-            throw new Error("Failed to start ffmpeg process");
-        }
-
-        // Handle stdin errors to prevent EPIPE crashes
-        ffmpegInstance.stdin.on("error", (err: NodeJS.ErrnoException) => {
-            // Ignore EPIPE errors on stdin - ffmpeg might close early if input is invalid
-            if (err.code !== "EPIPE") {
-                console.error(`ffmpeg stdin error: ${err.message}`);
-            }
-        });
-
-        // Handle input stream errors to prevent EPIPE crashes
-        inputStream.on("error", (err: NodeJS.ErrnoException) => {
-            // Ignore EPIPE errors - ffmpeg might close early if input is invalid
-            if (err.code !== "EPIPE") {
-                console.error(`ffmpeg input stream error: ${err.message}`);
-            }
-        });
-
-        inputStream.pipe(ffmpegInstance.stdin);
-
-        return new Promise<Uint8Array>((resolve, reject) => {
-            const chunks: Uint8Array[] = [];
-            const stderrChunks: string[] = [];
-
-            ffmpegInstance.stdout.on("data", (chunk: Uint8Array) => {
-                chunks.push(chunk);
-            });
-
-            ffmpegInstance.stderr.on("data", (data: Uint8Array) => {
-                const errorMsg = data.toString();
-                stderrChunks.push(errorMsg);
-                console.error(`ffmpeg stderr: ${errorMsg}`);
-            });
-
-            ffmpegInstance.on("close", code => {
-                if (code !== 0) {
-                    const stderrOutput = stderrChunks.join("").trim();
-                    const errorDetails = stderrOutput || "No error details provided by ffmpeg";
-                    reject(new Error(`ffmpeg process exited with code ${code}. FFmpeg args: ${args.join(" ")}. Error: ${errorDetails}`));
-                } else {
-                    resolve(Buffer.concat(chunks));
+    /**
+     * Create a fluent-ffmpeg command with optimized settings for real-time streaming
+     */
+    const createCommand = (inputStream: Readable, options?: { inputFormat?: string }): FfmpegCommand => {
+        const cmd = ffmpeg(inputStream)
+            // Real-time streaming optimizations
+            .addOutputOptions([
+                "-fflags",
+                "+genpts+igndts", // Generate timestamps and ignore input timestamps
+                "-avoid_negative_ts",
+                "make_zero", // Avoid timing issues
+                "-max_muxing_queue_size",
+                "1024", // Larger muxing queue for streaming
+                "-preset",
+                "ultrafast", // Fastest encoding preset
+                "-tune",
+                "zerolatency", // Optimize for real-time streaming
+            ])
+            .on("error", (err, stdout, stderr) => {
+                console.error("[FfmpegService] FFmpeg error:", err.message);
+                if (stderr) {
+                    console.error("[FfmpegService] FFmpeg stderr:", stderr);
+                }
+            })
+            .on("stderr", stderrLine => {
+                // Only log actual errors, not progress info
+                if (stderrLine && !stderrLine.includes("frame=") && !stderrLine.includes("size=")) {
+                    console.error("[FfmpegService] FFmpeg:", stderrLine);
                 }
             });
 
-            ffmpegInstance.on("error", err => {
-                console.error(`ffmpeg process error: ${err.message}`);
-                reject(err);
+        // Set input format if specified
+        if (options?.inputFormat) {
+            cmd.inputFormat(options.inputFormat);
+        }
+
+        return cmd;
+    };
+
+    /**
+     * Apply conversion options to a fluent-ffmpeg command
+     */
+    const applyConvertOptions = (cmd: FfmpegCommand, options: FfmpegConvertOptions): FfmpegCommand => {
+        if (options.codec) {
+            cmd.audioCodec(options.codec);
+        }
+        if (options.sampleRate) {
+            cmd.audioFrequency(options.sampleRate);
+        }
+        if (options.channels) {
+            cmd.audioChannels(options.channels);
+        }
+        if (options.bitrate) {
+            cmd.audioBitrate(options.bitrate);
+        }
+        if (options.extraArgs && options.extraArgs.length > 0) {
+            cmd.addOutputOptions(options.extraArgs);
+        }
+        if (options.outputFormat) {
+            cmd.format(options.outputFormat);
+        }
+
+        return cmd;
+    };
+
+    /**
+     * Legacy raw execution method for backward compatibility
+     * Kept for cases that need direct process access
+     */
+    const run = (inputStream: Readable, args: string[]): ChildProcess => {
+        const outputStream = new PassThrough();
+        const cmd = ffmpeg(inputStream)
+            .addOutputOptions(args)
+            .format("pipe")
+            .on("error", err => {
+                console.error("[FfmpegService] Process error:", err.message);
             });
+
+        // Return the underlying process for compatibility
+        const process = cmd.pipe(outputStream, { end: true }) as unknown as ChildProcess;
+        return process;
+    };
+
+    /**
+     * Convert stream input to buffer output
+     */
+    const runStreamAsync = async (inputStream: Readable, args: string[]): Promise<Uint8Array> => {
+        return new Promise((resolve, reject) => {
+            const chunks: Uint8Array[] = [];
+
+            ffmpeg(inputStream)
+                .addOutputOptions(args)
+                .format("pipe")
+                .on("error", err => {
+                    reject(new Error(`FFmpeg error: ${err.message}`));
+                })
+                .on("end", () => {
+                    resolve(Buffer.concat(chunks));
+                })
+                .pipe()
+                .on("data", (chunk: Uint8Array) => {
+                    chunks.push(chunk);
+                });
         });
     };
-    const runAsyncStream = (input: Uint8Array, args: string[]) => {
+
+    /**
+     * Convert buffer input to stream output
+     */
+    const runAsyncStream = (input: Uint8Array, args: string[]): Readable => {
         const inputStream = Readable.from(input);
-        const ffmpegInstance = spawn("ffmpeg", ["-i", "pipe:0", ...args, "-loglevel", "error", "pipe:1"]);
-        if (!ffmpegInstance.pid) {
-            throw new Error("Failed to start ffmpeg process");
-        }
+        const outputStream = new PassThrough();
 
-        // Handle stdin errors to prevent EPIPE crashes
-        ffmpegInstance.stdin.on("error", (err: NodeJS.ErrnoException) => {
-            if (err.code !== "EPIPE") {
-                console.error(`ffmpeg stdin error: ${err.message}`);
-            }
-        });
+        ffmpeg(inputStream)
+            .addOutputOptions(args)
+            .format("pipe")
+            .on("error", err => {
+                outputStream.destroy(err);
+            })
+            .pipe(outputStream, { end: true });
 
-        // Handle input stream errors to prevent EPIPE crashes
-        inputStream.on("error", (err: NodeJS.ErrnoException) => {
-            if (err.code !== "EPIPE") {
-                console.error(`ffmpeg input stream error: ${err.message}`);
-            }
-        });
-
-        inputStream.pipe(ffmpegInstance.stdin);
-
-        return ffmpegInstance.stdout;
+        return outputStream;
     };
-    const runAsync = (input: Uint8Array, args: string[]) => {
-        const ffmpegInstance = spawn("ffmpeg", ["-i", "pipe:0", ...args, "-loglevel", "error", "pipe:1"]);
-        if (!ffmpegInstance.pid) {
-            throw new Error("Failed to start ffmpeg process");
-        }
 
-        return new Promise<Uint8Array>((resolve, reject) => {
-            const chunks: Uint8Array[] = [];
-            const stderrChunks: string[] = [];
-
-            // Handle stdin errors to prevent EPIPE crashes
-            ffmpegInstance.stdin.on("error", (err: NodeJS.ErrnoException) => {
-                // Ignore EPIPE errors on stdin - ffmpeg might close early if input is invalid
-                if (err.code !== "EPIPE") {
-                    console.error(`ffmpeg stdin error: ${err.message}`);
-                }
-            });
-
-            ffmpegInstance.stdin.write(input);
-            ffmpegInstance.stdin.end();
-
-            ffmpegInstance.stdout.on("data", (chunk: Uint8Array) => {
-                chunks.push(chunk);
-            });
-
-            ffmpegInstance.stderr.on("data", (data: Uint8Array) => {
-                const errorMsg = data.toString();
-                stderrChunks.push(errorMsg);
-                console.error(`ffmpeg stderr: ${errorMsg}`);
-            });
-
-            ffmpegInstance.on("close", code => {
-                if (code !== 0) {
-                    const stderrOutput = stderrChunks.join("").trim();
-                    const errorDetails = stderrOutput || "No error details provided by ffmpeg";
-                    reject(new Error(`ffmpeg process exited with code ${code}. FFmpeg args: ${args.join(" ")}. Error: ${errorDetails}`));
-                } else {
-                    resolve(Buffer.concat(chunks));
-                }
-            });
-
-            ffmpegInstance.on("error", err => {
-                console.error(`ffmpeg process error: ${err.message}`);
-                reject(err);
-            });
-        });
+    /**
+     * Convert buffer input to buffer output
+     */
+    const runAsync = async (input: Uint8Array, args: string[]): Promise<Uint8Array> => {
+        const inputStream = Readable.from(input);
+        return runStreamAsync(inputStream, args);
     };
-    const runAsyncWithStderr = (input: Uint8Array, args: string[]) => {
-        const ffmpegInstance = spawn("ffmpeg", ["-i", "pipe:0", ...args, "pipe:1"]);
-        if (!ffmpegInstance.pid) {
-            throw new Error("Failed to start ffmpeg process");
-        }
 
-        return new Promise<{ stdout: Uint8Array; stderr: string }>((resolve, reject) => {
+    /**
+     * Run FFmpeg with stderr capture
+     */
+    const runAsyncWithStderr = async (input: Uint8Array, args: string[]): Promise<{ stdout: Uint8Array; stderr: string }> => {
+        const inputStream = Readable.from(input);
+
+        return new Promise((resolve, reject) => {
             const stdoutChunks: Uint8Array[] = [];
             const stderrChunks: string[] = [];
 
-            // Handle stdin errors to prevent EPIPE crashes
-            ffmpegInstance.stdin.on("error", (err: NodeJS.ErrnoException) => {
-                if (err.code !== "EPIPE") {
-                    console.error(`ffmpeg stdin error: ${err.message}`);
-                }
-            });
-
-            ffmpegInstance.stdin.write(input);
-            ffmpegInstance.stdin.end();
-
-            ffmpegInstance.stdout.on("data", (chunk: Uint8Array) => {
-                stdoutChunks.push(chunk);
-            });
-
-            ffmpegInstance.stderr.on("data", (data: Uint8Array) => {
-                stderrChunks.push(data.toString());
-            });
-
-            ffmpegInstance.on("close", code => {
-                if (code !== 0) {
-                    const stderrOutput = stderrChunks.join("").trim();
-                    const errorDetails = stderrOutput || "No error details provided by ffmpeg";
-                    reject(new Error(`ffmpeg process exited with code ${code}. FFmpeg args: ${args.join(" ")}. Error: ${errorDetails}`));
-                } else {
+            ffmpeg(inputStream)
+                .addOutputOptions(args)
+                .format("pipe")
+                .on("error", err => {
+                    reject(new Error(`FFmpeg error: ${err.message}. stderr: ${stderrChunks.join("")}`));
+                })
+                .on("stderr", line => {
+                    stderrChunks.push(line + "\n");
+                })
+                .on("end", () => {
                     resolve({
                         stdout: Buffer.concat(stdoutChunks),
                         stderr: stderrChunks.join(""),
                     });
-                }
-            });
-
-            ffmpegInstance.on("error", err => {
-                console.error(`ffmpeg process error: ${err.message}`);
-                reject(err);
-            });
+                })
+                .pipe()
+                .on("data", (chunk: Uint8Array) => {
+                    stdoutChunks.push(chunk);
+                });
         });
     };
 
-    const createConvertArgs = (options: FfmpegConvertOptions): string[] => {
-        if (!options.outputFormat) {
-            throw new Error("Output format must be specified for audio conversion to stream");
-        }
+    /**
+     * Convert audio buffer with specified options
+     */
+    const convertAudio = async (input: Uint8Array, options: FfmpegConvertOptions): Promise<Uint8Array> => {
+        const inputStream = Readable.from(input);
 
-        if (!options.codec) {
-            throw new Error("Codec must be specified for audio conversion to stream");
-        }
+        return new Promise((resolve, reject) => {
+            const chunks: Uint8Array[] = [];
 
-        const args = [];
-        // Only specify input format if explicitly provided, let FFmpeg auto-detect otherwise
-        if (options.inputFormat) {
-            args.push("-f", options.inputFormat);
-        }
-        // Only specify output format for the output, not input
-        if (options.sampleRate) {
-            args.push("-ar", options.sampleRate.toString());
-        }
-        if (options.channels) {
-            args.push("-ac", options.channels.toString());
-        }
-        if (options.codec) {
-            args.push("-c:a", options.codec);
-        }
-        if (options.bitrate) {
-            args.push("-b:a", options.bitrate);
-        }
-        if (options.extraArgs) {
-            args.push(...options.extraArgs);
-        }
-        // Add output format at the end
-        args.push("-f", options.outputFormat);
+            let cmd = createCommand(inputStream, { inputFormat: options.inputFormat });
+            cmd = applyConvertOptions(cmd, options);
 
-        return args;
-    };
-
-    const convertAudio = async (input: Uint8Array, options: FfmpegConvertOptions) => {
-        const args = createConvertArgs(options);
-        return runAsync(input, args);
-    };
-
-    const convertStreamToAudio = async (inputStream: Readable, options: FfmpegConvertOptions) => {
-        const args = createConvertArgs(options);
-
-        return runStreamAsync(inputStream, args);
-    };
-
-    const convertStreamToStream = (inputStream: Readable, options: FfmpegConvertOptions) => {
-        const args = createConvertArgs(options);
-
-        console.log(`[FfmpegService] Converting stream with args:`, args);
-        const ffmpegInstance = run(inputStream, args);
-
-        return ffmpegInstance.stdout;
-    };
-    const convertAudioToStream = (input: Uint8Array, options: FfmpegConvertOptions) => {
-        const args = createConvertArgs(options);
-
-        return runAsyncStream(input, args);
+            cmd.on("error", err => {
+                reject(new Error(`Audio conversion failed: ${err.message}`));
+            })
+                .on("end", () => {
+                    resolve(Buffer.concat(chunks));
+                })
+                .pipe()
+                .on("data", (chunk: Uint8Array) => {
+                    chunks.push(chunk);
+                });
+        });
     };
 
     /**
-     * Normalizes audio in real-time using FFmpeg's loudnorm filter.
-     * Returns a Readable stream that outputs the normalized audio in WAV format.
+     * Convert audio stream to buffer
      */
-    const normalizeAudioStreamRealtime = (inputStream: Readable) => {
-        const args = ["-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11", "-f", "wav"];
-        return run(inputStream, args).stdout;
+    const convertStreamToAudio = async (inputStream: Readable, options: FfmpegConvertOptions): Promise<Uint8Array> => {
+        return new Promise((resolve, reject) => {
+            const chunks: Uint8Array[] = [];
+
+            let cmd = createCommand(inputStream, { inputFormat: options.inputFormat });
+            cmd = applyConvertOptions(cmd, options);
+
+            cmd.on("error", err => {
+                reject(new Error(`Stream conversion failed: ${err.message}`));
+            })
+                .on("end", () => {
+                    resolve(Buffer.concat(chunks));
+                })
+                .pipe()
+                .on("data", (chunk: Uint8Array) => {
+                    chunks.push(chunk);
+                });
+        });
     };
 
     /**
-     * Normalizes audio using FFmpeg's loudnorm filter.
-     * Returns a Promise that resolves to the normalized audio as a Uint8Array, in WAV format.
+     * Convert audio stream to stream (most commonly used for real-time processing)
      */
-    const normalizeAudio = async (input: Uint8Array, options: Pick<FfmpegConvertOptions, "channels" | "sampleRate">) => {
-        console.log("Starting audio normalization process..");
+    const convertStreamToStream = (inputStream: Readable, options: FfmpegConvertOptions): Readable => {
+        const outputStream = new PassThrough();
 
-        const preprocessArgs = ["-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json", "-f", "null"];
-        const preprocessResult = await runAsyncWithStderr(input, preprocessArgs);
+        let cmd = createCommand(inputStream, { inputFormat: options.inputFormat });
+        cmd = applyConvertOptions(cmd, options);
 
-        console.log(`FFmpeg preprocess stderr: ${preprocessResult.stderr}`);
+        console.log(`[FfmpegService] Converting stream: ${options.inputFormat || "auto"} -> ${options.outputFormat} ` + `(${options.sampleRate || "?"}Hz, ${options.channels || "?"}ch, codec: ${options.codec})`);
 
-        const jsonMatch = preprocessResult.stderr.match(/\{[^{}]*"input_i"[^{}]*\}/);
+        cmd.on("error", err => {
+            console.error(`[FfmpegService] Stream conversion error: ${err.message}`);
+            outputStream.destroy(err);
+        })
+            .on("end", () => {
+                console.log("[FfmpegService] Stream conversion completed");
+            })
+            .pipe(outputStream, { end: true });
+
+        return outputStream;
+    };
+
+    /**
+     * Convert audio buffer to stream
+     */
+    const convertAudioToStream = (input: Uint8Array, options: FfmpegConvertOptions): Readable => {
+        const inputStream = Readable.from(input);
+        return convertStreamToStream(inputStream, options);
+    };
+
+    /**
+     * Normalize audio stream in real-time using loudnorm filter
+     */
+    const normalizeAudioStreamRealtime = (inputStream: Readable): Readable => {
+        const outputStream = new PassThrough();
+
+        ffmpeg(inputStream)
+            .audioFilters("loudnorm=I=-16:TP=-1.5:LRA=11:linear=true")
+            .format("wav")
+            .on("error", err => {
+                console.error(`[FfmpegService] Normalization error: ${err.message}`);
+                outputStream.destroy(err);
+            })
+            .pipe(outputStream, { end: true });
+
+        return outputStream;
+    };
+
+    /**
+     * Two-pass audio normalization with measurement for better quality
+     */
+    const normalizeAudio = async (input: Uint8Array, options: Partial<Pick<FfmpegConvertOptions, "channels" | "sampleRate">>): Promise<Uint8Array> => {
+        console.log("[FfmpegService] Starting two-pass audio normalization");
+
+        // First pass: measure audio characteristics
+        const measureResult = await runAsyncWithStderr(input, ["-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json", "-f", "null"]);
+
+        console.log(`[FfmpegService] Measurement complete`);
+
+        // Extract normalization parameters from JSON output
+        const jsonMatch = measureResult.stderr.match(/\{[^{}]*"input_i"[^{}]*\}/);
         if (!jsonMatch) {
             throw new Error("Could not extract loudnorm parameters from FFmpeg output");
         }
+
         const normalizationParams = JSON.parse(jsonMatch[0]);
+        console.log(`[FfmpegService] Normalization parameters:`, normalizationParams);
 
-        console.log(`Normalization parameters: ${JSON.stringify(normalizationParams)}`);
+        // Second pass: apply normalization with measured parameters
+        const inputStream = Readable.from(input);
+        const sampleRate = options.sampleRate || 48000;
+        const channels = options.channels || 2;
 
-        const args = [
-            "-filter:a",
-            `loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=${normalizationParams.input_i}:measured_LRA=${normalizationParams.input_lra}:measured_TP=${normalizationParams.input_tp}:measured_thresh=${normalizationParams.input_thresh}:offset=${normalizationParams.target_offset}:linear=true`,
-            "-f",
-            "wav",
-            "-ar",
-            options.sampleRate?.toString() || "48000",
-            "-ac",
-            options.channels?.toString() || "2",
-        ];
+        return new Promise((resolve, reject) => {
+            const chunks: Uint8Array[] = [];
 
-        return runAsync(input, args);
+            ffmpeg(inputStream)
+                .audioFilters(
+                    `loudnorm=I=-14:TP=-1.5:LRA=11:` +
+                        `measured_I=${normalizationParams.input_i}:` +
+                        `measured_LRA=${normalizationParams.input_lra}:` +
+                        `measured_TP=${normalizationParams.input_tp}:` +
+                        `measured_thresh=${normalizationParams.input_thresh}:` +
+                        `offset=${normalizationParams.target_offset}:` +
+                        `linear=true`
+                )
+                .format("wav")
+                .audioFrequency(sampleRate)
+                .audioChannels(channels)
+                .on("error", err => {
+                    reject(new Error(`Normalization failed: ${err.message}`));
+                })
+                .on("end", () => {
+                    console.log("[FfmpegService] Normalization complete");
+                    resolve(Buffer.concat(chunks));
+                })
+                .pipe()
+                .on("data", (chunk: Uint8Array) => {
+                    chunks.push(chunk);
+                });
+        });
     };
 
     return {
