@@ -1,4 +1,4 @@
-import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
+import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import { oneIn, randomArrayItem } from "@core/utils/probabilityUtils.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
@@ -10,8 +10,8 @@ export type AutoReactionService = {
 };
 
 export type AutoReactionServiceDeps = {
-    discordChatService: DiscordChatService;
-    geminiLlmService: GeminiLlmService;
+    readonly discordChatService: DiscordChatService;
+    readonly geminiLlmService: GeminiLlmService;
     readonly llmInstructionRepo: LlmInstructionRepository;
 };
 
