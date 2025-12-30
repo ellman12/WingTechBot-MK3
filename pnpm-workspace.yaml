@@ -4,3 +4,7 @@ packages:
 ignoredBuiltDependencies:
     - esbuild
     - pg
+
+onlyBuiltDependencies:
+    - "@discordjs/opus"
+    - "@scarf/scarf"

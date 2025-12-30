@@ -9,6 +9,7 @@ import { createVoiceEventsSoundsRepository } from "@adapters/repositories/VoiceE
 import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
+import { createAudioCacheService } from "@core/services/AudioCacheService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { createAutoReactionService } from "@core/services/AutoReactionService.js";
 import { createCommandChoicesService } from "@core/services/CommandChoicesService.js";
@@ -18,8 +19,8 @@ import { createMessageArchiveService } from "@core/services/MessageArchiveServic
 import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { createSoundTagService } from "@core/services/SoundTagService.js";
-import { createVoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
 import { createSoundboardThreadService } from "@core/services/SoundboardThreadService.js";
+import { createVoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
 import { runMigrations } from "@db/migrations.js";
 import "@dotenvx/dotenvx/config";
 import { getConfig } from "@infrastructure/config/Config.js";
@@ -51,7 +52,9 @@ export const createApplication = async (): Promise<App> => {
 
     const fileManager = createFileManager();
     const ffmpeg = createFfmpegService();
-    const ytdl = createYtdlYoutubeService();
+
+    const ffprobeService = new (await import("@infrastructure/ffmpeg/FfprobeService.js")).FfprobeService(config);
+    const audioFormatDetectionService = new (await import("@core/services/AudioFormatDetectionService.js")).AudioFormatDetectionService(ffprobeService);
 
     const soundRepository = createSoundRepository(db);
     const voiceEventSoundsRepository = createVoiceEventsSoundsRepository(db);
@@ -63,12 +66,23 @@ export const createApplication = async (): Promise<App> => {
 
     const commandChoicesService = createCommandChoicesService({ soundRepository, soundTagRepository });
     const audioProcessingService = createFfmpegAudioProcessingService({ ffmpeg });
-    const audioFetchService = createAudioFetcherService({ fileManager, soundRepository, youtubeService: ytdl });
+    const audioCacheService = createAudioCacheService({ fileManager, config });
+
+    const ytdlWithFormatDetection = createYtdlYoutubeService(audioFormatDetectionService);
+
+    const audioFetchService = createAudioFetcherService({
+        fileManager,
+        soundRepository,
+        youtubeService: ytdlWithFormatDetection,
+        cacheService: audioCacheService,
+        formatDetectionService: audioFormatDetectionService,
+    });
     const soundService = createSoundService({
         audioFetcher: audioFetchService,
         audioProcessor: audioProcessingService,
         fileManager,
         soundRepository,
+        config,
     });
     const soundTagService = createSoundTagService({ soundRepository, soundTagRepository });
     const reactionArchiveService = createReactionArchiveService({ reactionRepository, emoteRepository });

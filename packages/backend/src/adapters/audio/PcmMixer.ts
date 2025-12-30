@@ -29,12 +29,13 @@ export class PcmMixer extends Transform {
     private activeStreams = new Map<string, StreamState>();
     private streamBuffers = new Map<string, Buffer>();
     private isProcessing = false;
-    private processingTimer: NodeJS.Timeout | null = null;
+    private processingInterval: NodeJS.Timeout | null = null;
+    private readonly minBufferSize: number; // Minimum buffer before mixing
 
     constructor(options: PcmMixerOptions) {
         super({
             objectMode: false,
-            highWaterMark: 64 * 1024, // 64KB buffer
+            highWaterMark: 128 * 1024, // Increased to 128KB for smoother playback
         });
 
         this.sampleRate = options.sampleRate;
@@ -43,7 +44,11 @@ export class PcmMixer extends Transform {
         this.bytesPerSample = (this.bitDepth / 8) * this.channels;
         this.maxConcurrentStreams = options.maxConcurrentStreams ?? 8;
 
-        console.log(`[PcmMixer] Initialized mixer: ${this.sampleRate}Hz, ${this.channels}ch, ${this.bitDepth}-bit`);
+        // Calculate minimum buffer size (40ms worth of audio for smoother playback)
+        const samplesPerBuffer = Math.floor(this.sampleRate * 0.04); // 40ms
+        this.minBufferSize = samplesPerBuffer * this.bytesPerSample;
+
+        console.log(`[PcmMixer] Initialized mixer: ${this.sampleRate}Hz, ${this.channels}ch, ${this.bitDepth}-bit, minBuffer: ${this.minBufferSize} bytes`);
     }
 
     public addStream(streamInfo: PcmStreamInfo): boolean {
@@ -134,15 +139,19 @@ export class PcmMixer extends Transform {
 
         console.log(`[PcmMixer] Starting audio processing with ${this.activeStreams.size} streams`);
         this.isProcessing = true;
-        this.processAudio();
+
+        // Process every 20ms to match the chunk size (20ms of audio at 48kHz)
+        this.processingInterval = setInterval(() => {
+            this.processAudio();
+        }, 20);
     }
 
     private stopProcessing(): void {
         console.log(`[PcmMixer] Stopping audio processing`);
         this.isProcessing = false;
-        if (this.processingTimer) {
-            clearTimeout(this.processingTimer);
-            this.processingTimer = null;
+        if (this.processingInterval) {
+            clearInterval(this.processingInterval);
+            this.processingInterval = null;
         }
     }
 
@@ -155,23 +164,36 @@ export class PcmMixer extends Transform {
         const samplesPerChunk = Math.floor(this.sampleRate * 0.02); // 20ms
         const bytesPerChunk = samplesPerChunk * this.bytesPerSample;
 
-        // Check if we can mix a chunk (either from data or need to output silence)
-        if (this.streamBuffers.size > 0) {
+        // Check if we have enough buffered data across all streams
+        const hasEnoughData = this.checkMinimumBufferLevel(bytesPerChunk);
+
+        if (hasEnoughData && this.streamBuffers.size > 0) {
             const mixedChunk = this.mixChunk(bytesPerChunk);
-            if (mixedChunk) {
+            if (mixedChunk && mixedChunk.length > 0) {
                 this.push(mixedChunk);
-            } else {
-                // If we can't mix (not enough data), push silence to maintain timing
-                const silenceChunk = Buffer.alloc(bytesPerChunk);
-                this.push(silenceChunk);
             }
         }
+        // Note: Removed silence padding - better to wait for data than push gaps
 
         // Clean up streams that have ended AND have empty buffers
         this.cleanupFinishedStreams();
+    }
 
-        // Continue processing at the correct rate (20ms intervals for real-time playback)
-        this.processingTimer = setTimeout(() => this.processAudio(), 20);
+    private checkMinimumBufferLevel(requiredBytes: number): boolean {
+        // Check if at least one active stream has enough data
+        // This prevents mixing partial chunks that cause audio artifacts
+        for (const [streamId, streamState] of this.activeStreams.entries()) {
+            if (streamState.hasEnded) continue; // Skip ended streams
+
+            const buffer = this.streamBuffers.get(streamId);
+            if (buffer && buffer.length >= requiredBytes) {
+                return true; // At least one stream has enough data
+            }
+        }
+
+        // If all streams have ended, allow mixing of remaining data
+        const allEnded = Array.from(this.activeStreams.values()).every(s => s.hasEnded);
+        return allEnded;
     }
 
     private cleanupFinishedStreams(): void {

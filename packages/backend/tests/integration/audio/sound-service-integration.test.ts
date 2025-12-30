@@ -1,7 +1,10 @@
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService";
+import type { AudioStreamWithMetadata } from "@core/entities/AudioStream";
+import { createAudioStreamWithFormat } from "@core/entities/AudioStream";
 import type { Sound } from "@core/entities/Sound";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService";
 import { createSoundService } from "@core/services/SoundService";
+import type { Config } from "@infrastructure/config/Config";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService";
 import { createFileManager } from "@infrastructure/filestore/FileManager";
 import { existsSync, readFileSync, unlinkSync } from "fs";
@@ -12,13 +15,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // Mock implementations for integration testing
 const mockAudioFetcher: AudioFetcherService = {
     fetchSoundboardAudio: vi.fn(),
-    fetchUrlAudio: async (url: string): Promise<Readable> => {
+    fetchUrlAudio: async (url: string): Promise<AudioStreamWithMetadata> => {
         // Return the test MP3 file as a stream for URL requests
         if (url.startsWith("http")) {
             const testDir = "./tests/integration/audio";
             const testFilePath = join(testDir, "test.mp3");
             const fileBuffer = readFileSync(testFilePath);
-            return Readable.from([fileBuffer]);
+            return createAudioStreamWithFormat(Readable.from([fileBuffer]), {
+                format: "mp3",
+                container: "mp3",
+                codec: "mp3",
+                sampleRate: 44100,
+                channels: 2,
+                bitrate: 128000,
+            });
         }
         throw new Error("Invalid URL");
     },
@@ -58,6 +68,15 @@ describe("SoundService Integration Tests", () => {
     let soundService: ReturnType<typeof createSoundService>;
     let tempFiles: string[] = [];
 
+    const testConfig: Config = {
+        server: { port: 3000, environment: "test" },
+        database: { url: "postgresql://test:test@localhost:5432/test" },
+        discord: { token: "test-token", clientId: "test-client-id" },
+        sounds: { storagePath: "./sounds" },
+        cache: { audioDownloadPath: "./cache/audio", ttlHours: 24, maxSizeMb: 1000 },
+        ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
+    };
+
     beforeEach(() => {
         // Clear the mock repository
         mockSoundRepository.sounds.clear();
@@ -72,6 +91,7 @@ describe("SoundService Integration Tests", () => {
             audioProcessor,
             fileManager,
             soundRepository: mockSoundRepository,
+            config: testConfig,
         });
     });
 

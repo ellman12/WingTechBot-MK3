@@ -163,6 +163,12 @@ export class OverlappingAudioPlayer extends AudioPlayer {
                 startTime: Date.now(),
             });
             console.log(`[OverlappingAudioPlayer] Successfully added audio source ${audioSource.id}, total playing: ${this.playingAudio.size}`);
+
+            // If the player is idle when adding new audio, restart the mixer output
+            if (this.state.status === AudioPlayerStatus.Idle) {
+                console.log(`[OverlappingAudioPlayer] Player is idle, restarting mixer output to resume playback`);
+                this.debouncedSetupMixer();
+            }
         } else {
             console.warn(`[OverlappingAudioPlayer] Failed to add audio source ${audioSource.id} to mixer`);
         }

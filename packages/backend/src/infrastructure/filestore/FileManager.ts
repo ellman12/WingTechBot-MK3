@@ -112,7 +112,6 @@ export const createFileManager = (): FileManager => {
                 });
             });
         },
-
         listFiles: async (directory: string) => {
             return new Promise((resolve, reject) => {
                 fs.readdir(directory, (err, files) => {
@@ -120,6 +119,17 @@ export const createFileManager = (): FileManager => {
                         reject(err);
                     } else {
                         resolve(files);
+                    }
+                });
+            });
+        },
+        getFileStats: async (path: string) => {
+            return new Promise((resolve, reject) => {
+                fs.stat(path, (err, stats) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(stats);
                     }
                 });
             });

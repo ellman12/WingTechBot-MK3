@@ -167,7 +167,7 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                 console.log(`[VoiceCommands] Audio playback started successfully with ID: ${audioId}`);
 
                 const activeCount = voiceService.getActiveAudioCount(interaction.guildId);
-                const responseMessage = `🎵 Added audio from: ${audioSource} (ID: ${audioId.substring(0, 8)}, Active: ${activeCount})`;
+                const responseMessage = `🎵 Added audio from: ${audioSource} (ID: ${audioId}, Active: ${activeCount})`;
                 console.log(`[VoiceCommands] Sending success response: ${responseMessage}`);
                 await interaction.editReply(responseMessage);
             } catch (error) {
@@ -195,7 +195,10 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
     };
 
     const stopCommand: Command = {
-        data: new SlashCommandBuilder().setName("stop").setDescription("Stop audio playback"),
+        data: new SlashCommandBuilder()
+            .setName("stop")
+            .setDescription("Stop audio playback (all or specific by ID)")
+            .addStringOption(option => option.setName("id").setDescription("Audio ID to stop (e.g., 1, 2, 3). Leave empty to stop all.").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             if (!interaction.guildId) {
                 await interaction.reply({ content: "This command can only be used in a server!", flags: MessageFlags.Ephemeral });
@@ -203,8 +206,43 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
             }
 
             try {
-                await voiceService.stopAudio(interaction.guildId);
-                await interaction.reply("⏹️ Stopped audio playback!");
+                if (!voiceService.isConnected(interaction.guildId)) {
+                    await interaction.reply({ content: "Bot is not connected to a voice channel.", flags: MessageFlags.Ephemeral });
+                    return;
+                }
+
+                const audioId = interaction.options.getString("id");
+
+                if (audioId) {
+                    // Stop specific audio by ID
+                    console.log(`[VoiceCommands] Stopping audio by partial ID: ${audioId}`);
+                    const activeIds = voiceService.getActiveAudioIds(interaction.guildId);
+                    const matchingId = activeIds.find(id => id.startsWith(audioId));
+
+                    if (!matchingId) {
+                        await interaction.reply({ content: `❌ No active audio found with ID starting with: ${audioId}`, flags: MessageFlags.Ephemeral });
+                        return;
+                    }
+
+                    const success = await voiceService.stopAudioById(interaction.guildId, matchingId);
+                    if (success) {
+                        const remainingCount = voiceService.getActiveAudioCount(interaction.guildId);
+                        await interaction.reply(`⏹️ Stopped audio ${audioId} (${remainingCount} remaining)`);
+                    } else {
+                        await interaction.reply({ content: `❌ Failed to stop audio ${audioId}`, flags: MessageFlags.Ephemeral });
+                    }
+                } else {
+                    // Stop all audio
+                    const activeCount = voiceService.getActiveAudioCount(interaction.guildId);
+                    if (activeCount === 0) {
+                        await interaction.reply("🔇 No audio currently playing.");
+                        return;
+                    }
+
+                    console.log(`[VoiceCommands] Stopping all audio for guild ${interaction.guildId}`);
+                    await voiceService.stopAudio(interaction.guildId);
+                    await interaction.reply(`⏹️ Stopped all ${activeCount} audio stream${activeCount > 1 ? "s" : ""}!`);
+                }
             } catch (error) {
                 console.error("Error stopping audio:", error);
                 await interaction.reply({ content: "Failed to stop audio. Please try again.", flags: MessageFlags.Ephemeral });
@@ -264,85 +302,12 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                     return;
                 }
 
-                const idList = activeIds.map(id => `• ${id.substring(0, 8)}...`).join("\n");
+                const idList = activeIds.map(id => `• ${id}`).join("\n");
                 const responseMessage = `🎵 **${activeCount} active audio stream${activeCount > 1 ? "s" : ""}:**\n\`\`\`\n${idList}\n\`\`\``;
                 await interaction.reply(responseMessage);
             } catch (error) {
                 console.error(`[VoiceCommands] Error listing active audio:`, error);
                 await interaction.reply({ content: "Failed to list active audio streams.", flags: MessageFlags.Ephemeral });
-            }
-        },
-    };
-
-    const stopByIdCommand = {
-        data: new SlashCommandBuilder()
-            .setName("stop-id")
-            .setDescription("Stop a specific audio stream by ID")
-            .addStringOption(option => option.setName("id").setDescription("The audio ID to stop (first 8 characters)").setRequired(true)),
-        execute: async (interaction: ChatInputCommandInteraction) => {
-            try {
-                if (!interaction.guildId) {
-                    await interaction.reply({ content: "This command can only be used in a server.", flags: MessageFlags.Ephemeral });
-                    return;
-                }
-
-                const partialId = interaction.options.getString("id", true);
-                console.log(`[VoiceCommands] Stopping audio by partial ID: ${partialId}`);
-
-                if (!voiceService.isConnected(interaction.guildId)) {
-                    await interaction.reply({ content: "Bot is not connected to a voice channel.", flags: MessageFlags.Ephemeral });
-                    return;
-                }
-
-                const activeIds = voiceService.getActiveAudioIds(interaction.guildId);
-                const matchingId = activeIds.find(id => id.startsWith(partialId));
-
-                if (!matchingId) {
-                    await interaction.reply({ content: `❌ No active audio found with ID starting with: ${partialId}`, flags: MessageFlags.Ephemeral });
-                    return;
-                }
-
-                const success = await voiceService.stopAudioById(interaction.guildId, matchingId);
-                if (success) {
-                    const remainingCount = voiceService.getActiveAudioCount(interaction.guildId);
-                    await interaction.reply(`🛑 Stopped audio ${partialId}... (${remainingCount} remaining)`);
-                } else {
-                    await interaction.reply({ content: `❌ Failed to stop audio ${partialId}`, flags: MessageFlags.Ephemeral });
-                }
-            } catch (error) {
-                console.error(`[VoiceCommands] Error stopping audio by ID:`, error);
-                await interaction.reply({ content: "Failed to stop audio.", flags: MessageFlags.Ephemeral });
-            }
-        },
-    };
-
-    const stopAllCommand = {
-        data: new SlashCommandBuilder().setName("stop-all").setDescription("Stop all currently playing audio streams"),
-        execute: async (interaction: ChatInputCommandInteraction) => {
-            try {
-                if (!interaction.guildId) {
-                    await interaction.reply({ content: "This command can only be used in a server.", flags: MessageFlags.Ephemeral });
-                    return;
-                }
-
-                console.log(`[VoiceCommands] Stopping all audio for guild ${interaction.guildId}`);
-
-                if (!voiceService.isConnected(interaction.guildId)) {
-                    await interaction.reply({ content: "Bot is not connected to a voice channel.", flags: MessageFlags.Ephemeral });
-                    return;
-                }
-
-                const activeCount = voiceService.getActiveAudioCount(interaction.guildId);
-                if (activeCount === 0) {
-                    await interaction.reply("🔇 No audio currently playing.");
-                    return;
-                }
-
-                await voiceService.stopAllAudio(interaction.guildId);
-                await interaction.reply(`🛑 Stopped all ${activeCount} audio stream${activeCount > 1 ? "s" : ""}.`);
-            } catch (error) {
-                console.error(`[VoiceCommands] Error stopping all audio:`, error);
-                await interaction.reply({ content: "Failed to stop audio.", flags: MessageFlags.Ephemeral });
             }
         },
     };
@@ -354,7 +319,5 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
         stop: stopCommand,
         volume: volumeCommand,
         "list-active": listActiveCommand,
-        "stop-id": stopByIdCommand,
-        "stop-all": stopAllCommand,
     };
 };

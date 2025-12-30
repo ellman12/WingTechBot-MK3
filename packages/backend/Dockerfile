@@ -97,6 +97,10 @@ RUN adduser -S nodejs -u 1001
 # Copy everything from build stage (includes all dependencies)
 COPY --from=build --chown=nodejs:nodejs /app ./
 
+# Create directories for sounds and cache with proper permissions
+RUN mkdir -p /app/sounds /app/cache/audio && \
+    chown -R nodejs:nodejs /app/sounds /app/cache
+
 # Set environment variables
 ENV NODE_ENV=production
 

@@ -33,31 +33,31 @@ describe("FfmpegAudioProcessingService", () => {
     describe("deepProcessAudio", () => {
         it("should normalize and convert audio to PCM", async () => {
             const inputAudio = new Uint8Array([1, 2, 3, 4]);
-            const normalizedAudio = new Uint8Array([5, 6, 7, 8]);
-            const finalAudio = new Uint8Array([9, 10, 11, 12]);
+            const finalAudio = new Uint8Array([13, 14, 15, 16]);
 
-            vi.mocked(mockFfmpegService.normalizeAudio).mockResolvedValue(normalizedAudio);
-            vi.mocked(mockFfmpegService.convertAudio).mockResolvedValue(finalAudio);
+            // Single-pass conversion with normalization
+            vi.mocked(mockFfmpegService.convertAudio).mockResolvedValueOnce(finalAudio);
 
             const result = await audioProcessingService.deepProcessAudio(inputAudio);
 
-            expect(mockFfmpegService.normalizeAudio).toHaveBeenCalledWith(inputAudio, {});
-            expect(mockFfmpegService.convertAudio).toHaveBeenCalledWith(normalizedAudio, {
-                inputFormat: "wav",
+            // Single conversion: input to PCM with normalization filter
+            expect(mockFfmpegService.convertAudio).toHaveBeenCalledWith(inputAudio, {
+                inputFormat: undefined,
                 outputFormat: "s16le",
                 codec: "pcm_s16le",
                 sampleRate: 48000,
                 channels: 2,
+                extraArgs: ["-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11:linear=true"],
             });
             expect(result).toBe(finalAudio);
         });
 
-        it("should handle normalization errors", async () => {
+        it("should handle conversion errors", async () => {
             const inputAudio = new Uint8Array([1, 2, 3, 4]);
 
-            vi.mocked(mockFfmpegService.normalizeAudio).mockRejectedValue(new Error("FFmpeg normalization failed"));
+            vi.mocked(mockFfmpegService.convertAudio).mockRejectedValue(new Error("FFmpeg conversion failed"));
 
-            await expect(audioProcessingService.deepProcessAudio(inputAudio)).rejects.toThrow("FFmpeg normalization failed");
+            await expect(audioProcessingService.deepProcessAudio(inputAudio)).rejects.toThrow("FFmpeg conversion failed");
         });
     });
 
@@ -68,9 +68,20 @@ describe("FfmpegAudioProcessingService", () => {
 
             vi.mocked(mockFfmpegService.convertStreamToStream).mockReturnValue(mockProcessedStream);
 
-            const result = audioProcessingService.processAudioStream(inputStream);
+            const result = audioProcessingService.processAudioStream({
+                stream: inputStream,
+                formatInfo: {
+                    format: "webm",
+                    container: "webm",
+                    codec: "opus",
+                    sampleRate: 48000,
+                    channels: 2,
+                    bitrate: 128000,
+                },
+            });
 
             expect(mockFfmpegService.convertStreamToStream).toHaveBeenCalledWith(inputStream, {
+                inputFormat: "webm",
                 outputFormat: "s16le",
                 codec: "pcm_s16le",
                 sampleRate: 48000,
@@ -86,7 +97,17 @@ describe("FfmpegAudioProcessingService", () => {
 
             vi.mocked(mockFfmpegService.convertStreamToStream).mockReturnValue(mockProcessedStream);
 
-            const result = audioProcessingService.processAudioStream(inputStream);
+            const result = audioProcessingService.processAudioStream({
+                stream: inputStream,
+                formatInfo: {
+                    format: "webm",
+                    container: "webm",
+                    codec: "opus",
+                    sampleRate: 48000,
+                    channels: 2,
+                    bitrate: 128000,
+                },
+            });
 
             // The result should be a buffered stream (PassThrough stream)
             expect(result).toBeInstanceOf(Readable);
@@ -105,7 +126,17 @@ describe("FfmpegAudioProcessingService", () => {
                 return errorStream;
             });
 
-            const result = audioProcessingService.processAudioStream(inputStream);
+            const result = audioProcessingService.processAudioStream({
+                stream: inputStream,
+                formatInfo: {
+                    format: "webm",
+                    container: "webm",
+                    codec: "opus",
+                    sampleRate: 48000,
+                    channels: 2,
+                    bitrate: 128000,
+                },
+            });
 
             expect(result).toBeInstanceOf(Readable);
 
@@ -132,16 +163,14 @@ describe("FfmpegAudioProcessingService", () => {
             const inputAudio = new Uint8Array([1, 2, 3, 4]);
 
             // Mock spawn failure
-            vi.mocked(mockFfmpegService.normalizeAudio).mockRejectedValue(new Error("ffmpeg not found"));
+            vi.mocked(mockFfmpegService.convertAudio).mockRejectedValue(new Error("ffmpeg not found"));
 
             await expect(audioProcessingService.deepProcessAudio(inputAudio)).rejects.toThrow("ffmpeg not found");
         });
 
         it("should handle conversion errors", async () => {
             const inputAudio = new Uint8Array([1, 2, 3, 4]);
-            const normalizedAudio = new Uint8Array([5, 6, 7, 8]);
 
-            vi.mocked(mockFfmpegService.normalizeAudio).mockResolvedValue(normalizedAudio);
             vi.mocked(mockFfmpegService.convertAudio).mockRejectedValue(new Error("ffmpeg conversion failed"));
 
             await expect(audioProcessingService.deepProcessAudio(inputAudio)).rejects.toThrow("ffmpeg conversion failed");
