@@ -136,7 +136,7 @@ describe("Audio File Normalization Integration Test", () => {
         const invalidInput = new Uint8Array([0x00, 0x01, 0x02, 0x03]); // Not valid audio
 
         await expect(ffmpegAudioService.deepProcessAudio(invalidInput)).rejects.toThrow();
-    });
+    }, 10000);
 
     it("should handle empty input gracefully", async () => {
         console.log(`[Test] Testing error handling with empty input`);

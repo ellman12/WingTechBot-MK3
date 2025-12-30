@@ -146,7 +146,7 @@ export const createFfmpegService = (): FfmpegService => {
      * Convert buffer input to stream output
      */
     const runAsyncStream = (input: Uint8Array, args: string[]): Readable => {
-        const inputStream = Readable.from(input);
+        const inputStream = Readable.from([input]);
         const outputStream = new PassThrough();
 
         ffmpeg(inputStream)
@@ -164,7 +164,7 @@ export const createFfmpegService = (): FfmpegService => {
      * Convert buffer input to buffer output
      */
     const runAsync = async (input: Uint8Array, args: string[]): Promise<Uint8Array> => {
-        const inputStream = Readable.from(input);
+        const inputStream = Readable.from([input]);
         return runStreamAsync(inputStream, args);
     };
 
@@ -172,7 +172,7 @@ export const createFfmpegService = (): FfmpegService => {
      * Run FFmpeg with stderr capture
      */
     const runAsyncWithStderr = async (input: Uint8Array, args: string[]): Promise<{ stdout: Uint8Array; stderr: string }> => {
-        const inputStream = Readable.from(input);
+        const inputStream = Readable.from([input]);
 
         return new Promise((resolve, reject) => {
             const stdoutChunks: Uint8Array[] = [];
@@ -204,7 +204,7 @@ export const createFfmpegService = (): FfmpegService => {
      * Convert audio buffer with specified options
      */
     const convertAudio = async (input: Uint8Array, options: FfmpegConvertOptions): Promise<Uint8Array> => {
-        const inputStream = Readable.from(input);
+        const inputStream = Readable.from([input]);
 
         return new Promise((resolve, reject) => {
             const chunks: Uint8Array[] = [];
@@ -275,7 +275,7 @@ export const createFfmpegService = (): FfmpegService => {
      * Convert audio buffer to stream
      */
     const convertAudioToStream = (input: Uint8Array, options: FfmpegConvertOptions): Readable => {
-        const inputStream = Readable.from(input);
+        const inputStream = Readable.from([input]);
         return convertStreamToStream(inputStream, options);
     };
 
@@ -318,7 +318,7 @@ export const createFfmpegService = (): FfmpegService => {
         console.log(`[FfmpegService] Normalization parameters:`, normalizationParams);
 
         // Second pass: apply normalization with measured parameters
-        const inputStream = Readable.from(input);
+        const inputStream = Readable.from([input]);
         const sampleRate = options.sampleRate || 48000;
         const channels = options.channels || 2;
 
