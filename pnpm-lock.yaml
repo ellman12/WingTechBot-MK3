@@ -7,6 +7,7 @@ settings:
 overrides:
     jws: ">=4.0.1"
     body-parser: ">=2.2.1"
+    qs: ">=6.14.1"
 
 importers:
     .:
@@ -146,6 +147,9 @@ importers:
             swagger-ui-express:
                 specifier: ^5.0.1
                 version: 5.0.1(express@5.1.0)
+            xxhash-wasm:
+                specifier: ^1.1.0
+                version: 1.1.0
             zod:
                 specifier: ^4.1.12
                 version: 4.1.12
@@ -2847,8 +2851,8 @@ packages:
         resolution: { integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg== }
         engines: { node: ">=6" }
 
-    qs@6.14.0:
-        resolution: { integrity: sha512-YWWTjgABSKcvs/nWBi9PycY/JiPJqOD4JA6o9Sej2AtvSGarXxKC3OQSk4pAarbdQlKAh5D4FCQkJNkW+GAn3w== }
+    qs@6.14.1:
+        resolution: { integrity: sha512-4EK3+xJl8Ts67nLYNwqw/dsFVnCf+qR7RgXSK9jEEm9unao3njwMDdmsdvoKBKHzxd7tCYz5e5M+SnMjdtXGQQ== }
         engines: { node: ">=0.6" }
 
     queue-lit@1.5.2:
@@ -3414,6 +3418,9 @@ packages:
     xtend@4.0.2:
         resolution: { integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ== }
         engines: { node: ">=0.4" }
+
+    xxhash-wasm@1.1.0:
+        resolution: { integrity: sha512-147y/6YNh+tlp6nd/2pWq38i9h6mz/EuQ6njIrmW8D1BS5nCqs0P6DG+m6zTGnNz5I+uhZ0SHxBs9BsPrwcKDA== }
 
     yallist@3.1.1:
         resolution: { integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g== }
@@ -4593,7 +4600,7 @@ snapshots:
             http-errors: 2.0.1
             iconv-lite: 0.7.0
             on-finished: 2.4.1
-            qs: 6.14.0
+            qs: 6.14.1
             raw-body: 3.0.2
             type-is: 2.0.1
         transitivePeerDependencies:
@@ -5045,7 +5052,7 @@ snapshots:
             once: 1.4.0
             parseurl: 1.3.3
             proxy-addr: 2.0.7
-            qs: 6.14.0
+            qs: 6.14.1
             range-parser: 1.2.1
             router: 2.2.0
             send: 1.2.0
@@ -5954,7 +5961,7 @@ snapshots:
 
     punycode@2.3.1: {}
 
-    qs@6.14.0:
+    qs@6.14.1:
         dependencies:
             side-channel: 1.1.0
 
@@ -6514,6 +6521,8 @@ snapshots:
     ws@8.18.3: {}
 
     xtend@4.0.2: {}
+
+    xxhash-wasm@1.1.0: {}
 
     yallist@3.1.1: {}
 
