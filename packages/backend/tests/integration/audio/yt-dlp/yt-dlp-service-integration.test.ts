@@ -16,7 +16,7 @@ const isYtDlpAvailable = async (): Promise<boolean> => {
     }
 };
 
-describe.concurrent("YtDlpService Integration Tests", () => {
+describe("YtDlpService Integration Tests", () => {
     const ytDlpService = createYtDlpService();
 
     // Note: These tests require yt-dlp to be installed and network access
