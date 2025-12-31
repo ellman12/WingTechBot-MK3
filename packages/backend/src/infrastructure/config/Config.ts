@@ -13,6 +13,7 @@ const discordConfigSchema = z.object({
     token: z.string().min(1, "Discord token is required"),
     clientId: z.string().min(1, "Discord client ID is required"),
     serverId: z.string().optional(),
+    botChannelId: z.string(),
     errorWebhookUrl: z
         .string()
         .refine(val => !val || val === "" || URL.canParse(val), "Must be a valid URL or empty string")
@@ -60,6 +61,7 @@ const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
             token: process.env[`${envPrefix}DISCORD_TOKEN`],
             clientId: process.env[`${envPrefix}DISCORD_CLIENT_ID`],
             serverId: process.env[`${envPrefix}DISCORD_GUILD_ID`],
+            botChannelId: process.env[`${envPrefix}DISCORD_BOT_CHANNEL_ID`],
             errorWebhookUrl: process.env.DISCORD_ERROR_WEBHOOK_URL,
         },
         sounds: {

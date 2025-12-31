@@ -47,27 +47,32 @@ jobs:
                       type=semver,pattern={{major}}.{{minor}}
                       type=sha,prefix={{branch}}-
 
+            - name: Normalize image name
+              run: |
+                  echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
             - name: Build and push Backend image
               uses: docker/build-push-action@v5
               with:
-                  context: ./packages/backend
+                  context: .
+                  file: packages/backend/Dockerfile
                   push: true
-                  tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ steps.meta.outputs.version }}
-                  labels: ${{ steps.meta.outputs.labels }}
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=max
+                  tags: |
+                      ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ steps.meta.outputs.version }}
+                      ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
                   platforms: linux/amd64,linux/arm64
 
-            - name: Build and push Frontend image
-              uses: docker/build-push-action@v5
-              with:
-                  context: ./packages/frontend
-                  push: true
-                  tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ steps.meta.outputs.version }}
-                  labels: ${{ steps.meta.outputs.labels }}
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=max
-                  platforms: linux/amd64,linux/arm64
+            # We don't use the frontend yet
+            # - name: Build and push Frontend image
+            # uses: docker/build-push-action@v5
+            # with:
+            # context: .
+            # file: packages/frontend/Dockerfile
+            # push: true
+            # tags:
+            #   ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ steps.meta.outputs.version }}
+            #   ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:latest
+            # platforms: linux/amd64,linux/arm64
 
             - name: Generate Docker Compose for production
               run: |
@@ -89,14 +94,6 @@ jobs:
                         - postgres
                       restart: unless-stopped
 
-                    frontend:
-                      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ steps.meta.outputs.version }}
-                      ports:
-                        - "80:80"
-                      depends_on:
-                        - backend
-                      restart: unless-stopped
-
                     postgres:
                       image: postgres:16-alpine
                       environment:
@@ -105,6 +102,13 @@ jobs:
                         - POSTGRES_PASSWORD=\${POSTGRES_PASSWORD}
                       volumes:
                         - postgres_data:/var/lib/postgresql/data
+                      restart: unless-stopped
+
+                    watchtower:
+                      image: nickfedor/watchtower
+                      volumes:
+                        - /var/run/docker.sock:/var/run/docker.sock
+                      command: --interval 120 --cleanup backend
                       restart: unless-stopped
 
                   volumes:
