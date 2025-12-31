@@ -15,7 +15,23 @@ export const createCommandChoicesService = ({ soundRepository, soundTagRepositor
     async function getAutocompleteChoices({ name: fieldName, value: focusedValue }: AutocompleteFocusedOption): Promise<ApplicationCommandOptionChoiceData[]> {
         const handlers: Record<string, () => Promise<{ name: string }[]>> = {
             "sound-name": () => (focusedValue === "" ? soundRepository.getAllSounds() : soundRepository.tryGetSoundsWithinDistance(focusedValue)),
-            "audio-source": () => (focusedValue === "" ? soundRepository.getAllSounds() : soundRepository.tryGetSoundsWithinDistance(focusedValue)),
+            "audio-source": async () => {
+                // Special handling for audio-source to support tags, random, and sounds
+                if (focusedValue.startsWith("#")) {
+                    // User is typing a tag - show tag suggestions with # prefix
+                    const tagSearch = focusedValue.substring(1);
+                    const tags = tagSearch === "" ? await soundTagRepository.getAllTags() : await soundTagRepository.tryGetTagsWithinDistance(tagSearch);
+                    return tags.map(tag => ({ name: `#${tag.name}` }));
+                } else if (focusedValue === "" || focusedValue.toLowerCase().startsWith("r")) {
+                    // Show "random" option along with sounds
+                    const sounds = focusedValue === "" ? await soundRepository.getAllSounds() : await soundRepository.tryGetSoundsWithinDistance(focusedValue);
+                    const results: { name: string }[] = [{ name: "random" }, ...sounds];
+                    return results;
+                } else {
+                    // Normal sound search
+                    return soundRepository.tryGetSoundsWithinDistance(focusedValue);
+                }
+            },
             "tag-name": () => (focusedValue === "" ? soundTagRepository.getAllTags() : soundTagRepository.tryGetTagsWithinDistance(focusedValue)),
         };
 

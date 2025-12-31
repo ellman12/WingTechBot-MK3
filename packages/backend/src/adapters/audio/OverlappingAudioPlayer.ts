@@ -1,8 +1,8 @@
+import { PcmMixer, type PcmStreamInfo } from "@core/utils/audio/PcmMixer.js";
 import { AudioPlayer, type AudioPlayerState, AudioPlayerStatus, type AudioResource, NoSubscriberBehavior, StreamType, createAudioResource } from "@discordjs/voice";
 import { Readable } from "stream";
 
 import type { PlayingSound } from "../../core/entities/PlayingSound.js";
-import { PcmMixer, type PcmStreamInfo } from "./PcmMixer.js";
 
 export type OverlappingAudioPlayerOptions = {
     readonly sampleRate?: number;

@@ -1,6 +1,6 @@
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
+import { createRepeatedPcmStream } from "@core/utils/audio/pcmRepeater.js";
 import { createPreBufferedStream, readStreamToBytes } from "@core/utils/streamUtils.js";
-import type { Config } from "@infrastructure/config/Config.js";
 import { Readable } from "stream";
 
 import { type AudioFetcherService, parseAudioSource } from "./AudioFetcherService.js";
@@ -10,6 +10,7 @@ import type { FileManager } from "./FileManager.js";
 export type SoundService = {
     readonly addSound: (name: string, source: string) => Promise<void>;
     readonly getSound: (nameOrSource: string, abortSignal?: AbortSignal) => Promise<Readable>;
+    readonly getRepeatedSound: (namesOrSources: string[], delaysMs: number[], abortSignal?: AbortSignal) => Promise<string>;
     readonly listSounds: (tagName?: string) => Promise<string[]>;
     readonly deleteSound: (name: string) => Promise<void>;
 };
@@ -19,12 +20,72 @@ export type SoundServiceDeps = {
     readonly audioProcessor: AudioProcessingService;
     readonly fileManager: FileManager;
     readonly soundRepository: SoundRepository;
-    readonly config: Config;
 };
 
-export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, soundRepository, config }: SoundServiceDeps): SoundService => {
-    const AUDIO_FILE_STORE_PATH = config.sounds.storagePath;
-    console.log(`[SoundService] Creating sound service with storage path: ${AUDIO_FILE_STORE_PATH}`);
+const AUDIO_FILE_STORE_PATH = "./sounds";
+
+export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, soundRepository }: SoundServiceDeps): SoundService => {
+    console.log("[SoundService] Creating sound service");
+
+    // Cache for temporary repeated sounds
+    const repeatedSoundCache = new Map<string, Readable>();
+
+    const getSoundInternal = async (nameOrSource: string, abortSignal?: AbortSignal): Promise<Readable> => {
+        // Check if this is a cached repeated sound
+        const cachedRepeated = repeatedSoundCache.get(nameOrSource);
+        if (cachedRepeated) {
+            console.log(`[SoundService] Returning cached repeated sound: ${nameOrSource}`);
+            repeatedSoundCache.delete(nameOrSource); // Remove after use
+            return cachedRepeated;
+        }
+        const startTime = Date.now();
+        console.log(`[SoundService] Getting sound: ${nameOrSource}`);
+
+        try {
+            const sourceType = parseAudioSource(nameOrSource);
+            console.log(`[SoundService] Detected source type: ${sourceType} for: ${nameOrSource}`);
+
+            switch (sourceType) {
+                case "soundboard": {
+                    console.log(`[SoundService] Fetching soundboard audio: ${nameOrSource}`);
+                    const sound = await soundRepository.getSoundByName(nameOrSource);
+                    if (!sound) {
+                        const error = new Error(`Sound with name ${nameOrSource} not found`);
+                        console.error(`[SoundService] ${error.message}`);
+                        throw error;
+                    }
+
+                    const soundPath = `${AUDIO_FILE_STORE_PATH}${sound.path}`;
+                    console.log(`[SoundService] Reading soundboard file: ${soundPath}`);
+
+                    const stream = fileManager.readStream(soundPath);
+                    const elapsedTime = Date.now() - startTime;
+                    console.log(`[SoundService] Successfully created direct soundboard stream for: ${nameOrSource} in ${elapsedTime}ms`);
+
+                    console.log(`[SoundService] Returning direct file stream to eliminate buffering overhead`);
+                    return stream;
+                }
+                case "url":
+                case "youtube": {
+                    console.log(`[SoundService] Fetching and processing URL/YouTube audio: ${nameOrSource}`);
+                    const audioStream = await audioFetcher.fetchUrlAudio(nameOrSource, abortSignal);
+                    console.log(`[SoundService] Got audio stream, processing for: ${nameOrSource}`);
+
+                    const processedStream = audioProcessor.processAudioStream(audioStream);
+                    console.log(`[SoundService] Pre-buffering processed stream for: ${nameOrSource}`);
+
+                    const preBufferedStream = await createPreBufferedStream(processedStream, `url:${nameOrSource}`, abortSignal);
+
+                    const elapsedTime = Date.now() - startTime;
+                    console.log(`[SoundService] Successfully pre-buffered audio stream for: ${nameOrSource} in ${elapsedTime}ms`);
+                    return preBufferedStream;
+                }
+            }
+        } catch (error) {
+            console.error(`[SoundService] Error getting sound ${nameOrSource}:`, error);
+            throw error;
+        }
+    };
 
     return {
         addSound: async (name: string, source: string): Promise<void> => {
@@ -37,20 +98,15 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                 const timeout = setTimeout(() => abortController.abort(), 60000); // 60 second timeout for downloads
 
                 try {
-                    const audioWithMetadata = await audioFetcher.fetchUrlAudio(source, abortController.signal);
+                    const audioStream = await audioFetcher.fetchUrlAudio(source, abortController.signal);
                     clearTimeout(timeout);
 
                     console.log(`[SoundService] Reading stream to bytes for: ${name}`);
-                    const audio: Uint8Array = await readStreamToBytes(audioWithMetadata.stream);
+                    const audio: Uint8Array = await readStreamToBytes(audioStream.stream);
                     console.log(`[SoundService] Read ${audio.length} bytes for: ${name}`);
 
-                    console.log(`[SoundService] Processing audio for: ${name}`, {
-                        originalFormat: audioWithMetadata.formatInfo?.format,
-                        originalContainer: audioWithMetadata.formatInfo?.container,
-                        targetFormat: "pcm_s16le",
-                        targetContainer: "s16le",
-                    });
-                    const processedAudio = await audioProcessor.deepProcessAudio(audio, audioWithMetadata.formatInfo?.format, audioWithMetadata.formatInfo?.container);
+                    console.log(`[SoundService] Processing audio for: ${name}`);
+                    const processedAudio = await audioProcessor.deepProcessAudio(audio);
                     console.log(`[SoundService] Processed audio result: ${processedAudio.length} bytes for: ${name}`);
 
                     const path = `/${name}.pcm`;
@@ -74,60 +130,39 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                 throw error;
             }
         },
-        getSound: async (nameOrSource: string, abortSignal?: AbortSignal): Promise<Readable> => {
+        getSound: getSoundInternal,
+        getRepeatedSound: async (namesOrSources: string[], delaysMs: number[], abortSignal?: AbortSignal): Promise<string> => {
             const startTime = Date.now();
-            console.log(`[SoundService] Getting sound: ${nameOrSource}`);
+            console.log(`[SoundService] Getting repeated sound with ${namesOrSources.length} sounds and ${delaysMs.length} repetitions`);
 
             try {
-                const sourceType = parseAudioSource(nameOrSource);
-                console.log(`[SoundService] Detected source type: ${sourceType} for: ${nameOrSource}`);
+                // Load PCM data for each unique sound
+                const uniqueSounds = [...new Set(namesOrSources)];
+                const pcmDataMap = new Map<string, Buffer>();
 
-                switch (sourceType) {
-                    case "soundboard": {
-                        console.log(`[SoundService] Fetching soundboard audio: ${nameOrSource}`);
-                        const sound = await soundRepository.getSoundByName(nameOrSource);
-                        if (!sound) {
-                            const error = new Error(`Sound with name ${nameOrSource} not found`);
-                            console.error(`[SoundService] ${error.message}`);
-                            throw error;
-                        }
-
-                        const soundPath = `${AUDIO_FILE_STORE_PATH}${sound.path}`;
-                        console.log(`[SoundService] Reading soundboard file: ${soundPath}`);
-
-                        const stream = fileManager.readStream(soundPath);
-                        console.log(`[SoundService] Pre-buffering soundboard stream for: ${nameOrSource}`);
-
-                        // Pre-buffer soundboard audio to ensure smooth playback
-                        const preBufferedStream = await createPreBufferedStream(stream, `soundboard:${nameOrSource}`, abortSignal);
-
-                        const elapsedTime = Date.now() - startTime;
-                        console.log(`[SoundService] Successfully pre-buffered soundboard stream for: ${nameOrSource} in ${elapsedTime}ms`);
-                        return preBufferedStream;
-                    }
-                    case "url":
-                    case "youtube": {
-                        console.log(`[SoundService] Fetching and processing URL/YouTube audio: ${nameOrSource}`);
-                        const audioWithMetadata = await audioFetcher.fetchUrlAudio(nameOrSource, abortSignal);
-                        console.log(`[SoundService] Processing URL/YouTube audio: ${nameOrSource}`, {
-                            detectedFormat: audioWithMetadata.formatInfo?.format,
-                            detectedContainer: audioWithMetadata.formatInfo?.container,
-                            willProcessTo: "pcm_s16le",
-                        });
-
-                        const processedStream = audioProcessor.processAudioStream(audioWithMetadata);
-                        console.log(`[SoundService] Pre-buffering processed stream for: ${nameOrSource}`);
-
-                        // Use pre-buffering for URL/YouTube content to ensure smooth playback
-                        const preBufferedStream = await createPreBufferedStream(processedStream, `url:${nameOrSource}`, abortSignal);
-
-                        const elapsedTime = Date.now() - startTime;
-                        console.log(`[SoundService] Successfully pre-buffered audio stream for: ${nameOrSource} in ${elapsedTime}ms`);
-                        return preBufferedStream;
-                    }
+                for (const nameOrSource of uniqueSounds) {
+                    console.log(`[SoundService] Loading sound: ${nameOrSource}`);
+                    const soundStream = await getSoundInternal(nameOrSource, abortSignal);
+                    const pcmData = await readStreamToBytes(soundStream);
+                    pcmDataMap.set(nameOrSource, Buffer.from(pcmData));
+                    console.log(`[SoundService] Loaded ${pcmData.length} bytes for: ${nameOrSource}`);
                 }
+
+                // Create array of PCM buffers in the order specified
+                const pcmBuffers = namesOrSources.map(name => pcmDataMap.get(name)!);
+
+                console.log(`[SoundService] Creating repeated stream with ${pcmBuffers.length} sound buffers`);
+                const repeatedStream = createRepeatedPcmStream(pcmBuffers, delaysMs);
+
+                const tempName = `temp-repeated-${Date.now()}`;
+                repeatedSoundCache.set(tempName, repeatedStream);
+
+                const elapsedTime = Date.now() - startTime;
+                console.log(`[SoundService] Successfully created repeated stream in ${elapsedTime}ms, cached as: ${tempName}`);
+
+                return tempName;
             } catch (error) {
-                console.error(`[SoundService] Error getting sound ${nameOrSource}:`, error);
+                console.error(`[SoundService] Error getting repeated sound:`, error);
                 throw error;
             }
         },

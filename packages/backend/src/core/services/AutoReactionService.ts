@@ -1,6 +1,6 @@
-import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
+import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
-import { oneIn } from "@core/utils/probabilityUtils.js";
+import { oneIn, randomArrayItem } from "@core/utils/probabilityUtils.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import type { Message, MessageReaction, PartialMessageReaction, PartialUser, TextChannel, User } from "discord.js";
 
@@ -10,8 +10,8 @@ export type AutoReactionService = {
 };
 
 export type AutoReactionServiceDeps = {
-    discordChatService: DiscordChatService;
-    geminiLlmService: GeminiLlmService;
+    readonly discordChatService: DiscordChatService;
+    readonly geminiLlmService: GeminiLlmService;
     readonly llmInstructionRepo: LlmInstructionRepository;
 };
 
@@ -123,8 +123,7 @@ export const createAutoReactionService = ({ discordChatService, geminiLlmService
                 const scoldMessages = reactionScoldMessages[reaction.emoji.name!];
                 if (!scoldMessages) return;
 
-                const index = Math.floor(Math.random() * scoldMessages.length);
-                await message.channel.send(`${scoldMessages[index]} <@${user.id}>`);
+                await message.channel.send(`${randomArrayItem(scoldMessages)} <@${user.id}>`);
             } catch (e: unknown) {
                 console.error("Error checking if added reaction needs to be scolded", e);
             }

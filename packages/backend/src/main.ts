@@ -68,6 +68,10 @@ export const createApplication = async (): Promise<App> => {
     const emoteRepository = createReactionEmoteRepository(db);
     const llmInstructionRepo = createLlmInstructionRepository(fileManager);
 
+    if (!process.env.CI) {
+        await llmInstructionRepo.validateInstructions();
+    }
+
     const commandChoicesService = createCommandChoicesService({ soundRepository, soundTagRepository });
     const audioProcessingService = createFfmpegAudioProcessingService({ ffmpeg });
     const audioCacheService = createAudioCacheService({ fileManager, config });
@@ -86,7 +90,6 @@ export const createApplication = async (): Promise<App> => {
         audioProcessor: audioProcessingService,
         fileManager,
         soundRepository,
-        config,
     });
     const soundTagService = createSoundTagService({ soundRepository, soundTagRepository });
     const reactionArchiveService = createReactionArchiveService({ reactionRepository, emoteRepository });
