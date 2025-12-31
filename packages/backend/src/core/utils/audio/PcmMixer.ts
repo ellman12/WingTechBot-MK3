@@ -1,5 +1,7 @@
 import { Transform, type TransformCallback } from "stream";
 
+import { getSampleByteIndex, mixSamples, readPcmSample, writePcmSample } from "./pcmUtils.js";
+
 export type PcmStreamInfo = {
     readonly id: string;
     readonly stream: NodeJS.ReadableStream;
@@ -281,23 +283,21 @@ export class PcmMixer extends Transform {
         // Mix samples
         for (let sampleIndex = 0; sampleIndex < samplesCount; sampleIndex++) {
             for (let channel = 0; channel < this.channels; channel++) {
-                const byteIndex = sampleIndex * this.bytesPerSample + channel * 2; // 2 bytes per 16-bit sample
-                let mixedSample = 0;
+                const byteIndex = getSampleByteIndex(sampleIndex, channel, this.bytesPerSample);
 
-                // Add samples from all chunks with volume applied
+                // Collect samples from all chunks
+                const samples: number[] = [];
                 for (let i = 0; i < chunks.length; i++) {
                     const chunk = chunks[i];
-                    const volume = volumes[i] ?? 1.0;
-
                     if (!chunk || chunk.length <= byteIndex + 1) continue;
 
-                    const sample = chunk.readInt16LE(byteIndex);
-                    mixedSample += sample * volume;
+                    const sample = readPcmSample(chunk, byteIndex);
+                    samples.push(sample);
                 }
 
-                // Clamp to prevent clipping
-                mixedSample = Math.max(-32768, Math.min(32767, Math.round(mixedSample)));
-                mixedBuffer.writeInt16LE(mixedSample, byteIndex);
+                // Mix and write the result
+                const mixedSample = mixSamples(samples, volumes);
+                writePcmSample(mixedBuffer, byteIndex, mixedSample);
             }
         }
 
@@ -312,11 +312,10 @@ export class PcmMixer extends Transform {
 
         for (let sampleIndex = 0; sampleIndex < samplesCount; sampleIndex++) {
             for (let channel = 0; channel < this.channels; channel++) {
-                const byteIndex = sampleIndex * this.bytesPerSample + channel * 2;
-                const sample = buffer.readInt16LE(byteIndex);
-                const volumeSample = Math.round(sample * volume);
-                const clampedSample = Math.max(-32768, Math.min(32767, volumeSample));
-                volumeBuffer.writeInt16LE(clampedSample, byteIndex);
+                const byteIndex = getSampleByteIndex(sampleIndex, channel, this.bytesPerSample);
+                const sample = readPcmSample(buffer, byteIndex);
+                const volumeSample = sample * volume;
+                writePcmSample(volumeBuffer, byteIndex, volumeSample);
             }
         }
 

@@ -5,7 +5,6 @@ import type { Sound } from "@core/entities/Sound";
 import type { SoundRepository } from "@core/repositories/SoundRepository";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService";
 import { createSoundService } from "@core/services/SoundService";
-import type { Config } from "@infrastructure/config/Config";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService";
 import { createFileManager } from "@infrastructure/filestore/FileManager";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "fs";
@@ -73,6 +72,7 @@ describe.concurrent("SoundService Integration Tests", () => {
             },
         };
 
+<<<<<<< HEAD
         // Create test config with unique temp directory
         const testConfig: Config = {
             server: { port: 3000, environment: "test" },
@@ -82,6 +82,15 @@ describe.concurrent("SoundService Integration Tests", () => {
             cache: { audioDownloadPath: join(tempDir, "cache"), ttlHours: 24, maxSizeMb: 1000 },
             ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
         };
+=======
+describe("SoundService Integration Tests", () => {
+    let soundService: ReturnType<typeof createSoundService>;
+    let tempFiles: string[] = [];
+
+    beforeEach(() => {
+        // Clear the mock repository
+        mockSoundRepository.sounds.clear();
+>>>>>>> bca84cd (Add repeating sounds)
 
         // Create services
         const ffmpegService = createFfmpegService();
@@ -93,7 +102,6 @@ describe.concurrent("SoundService Integration Tests", () => {
             audioProcessor,
             fileManager,
             soundRepository: mockSoundRepository,
-            config: testConfig,
         });
 
         return { soundService, tempDir, mockSoundRepository, mockAudioFetcher, testConfig };
