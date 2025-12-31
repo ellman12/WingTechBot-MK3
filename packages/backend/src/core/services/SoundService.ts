@@ -10,7 +10,7 @@ import type { FileManager } from "./FileManager.js";
 export type SoundService = {
     readonly addSound: (name: string, source: string) => Promise<void>;
     readonly getSound: (nameOrSource: string, abortSignal?: AbortSignal) => Promise<Readable>;
-    readonly getRepeatedSound: (nameOrSource: string, delaysMs: number[], abortSignal?: AbortSignal) => Promise<string>;
+    readonly getRepeatedSound: (namesOrSources: string[], delaysMs: number[], abortSignal?: AbortSignal) => Promise<string>;
     readonly listSounds: (tagName?: string) => Promise<string[]>;
     readonly deleteSound: (name: string) => Promise<void>;
 };
@@ -131,28 +131,38 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
             }
         },
         getSound: getSoundInternal,
-        getRepeatedSound: async (nameOrSource: string, delaysMs: number[], abortSignal?: AbortSignal): Promise<string> => {
+        getRepeatedSound: async (namesOrSources: string[], delaysMs: number[], abortSignal?: AbortSignal): Promise<string> => {
             const startTime = Date.now();
-            console.log(`[SoundService] Getting repeated sound: ${nameOrSource} with ${delaysMs.length} repetitions`);
+            console.log(`[SoundService] Getting repeated sound with ${namesOrSources.length} sounds and ${delaysMs.length} repetitions`);
 
             try {
-                const soundStream = await getSoundInternal(nameOrSource, abortSignal);
+                // Load PCM data for each unique sound
+                const uniqueSounds = [...new Set(namesOrSources)];
+                const pcmDataMap = new Map<string, Buffer>();
 
-                console.log(`[SoundService] Reading PCM data for repetition`);
-                const pcmData = await readStreamToBytes(soundStream);
-                console.log(`[SoundService] Read ${pcmData.length} bytes of PCM data`);
+                for (const nameOrSource of uniqueSounds) {
+                    console.log(`[SoundService] Loading sound: ${nameOrSource}`);
+                    const soundStream = await getSoundInternal(nameOrSource, abortSignal);
+                    const pcmData = await readStreamToBytes(soundStream);
+                    pcmDataMap.set(nameOrSource, Buffer.from(pcmData));
+                    console.log(`[SoundService] Loaded ${pcmData.length} bytes for: ${nameOrSource}`);
+                }
 
-                const repeatedStream = createRepeatedPcmStream(pcmData, delaysMs);
+                // Create array of PCM buffers in the order specified
+                const pcmBuffers = namesOrSources.map(name => pcmDataMap.get(name)!);
+
+                console.log(`[SoundService] Creating repeated stream with ${pcmBuffers.length} sound buffers`);
+                const repeatedStream = createRepeatedPcmStream(pcmBuffers, delaysMs);
 
                 const tempName = `temp-repeated-${Date.now()}`;
                 repeatedSoundCache.set(tempName, repeatedStream);
 
                 const elapsedTime = Date.now() - startTime;
-                console.log(`[SoundService] Successfully created repeated stream for: ${nameOrSource} in ${elapsedTime}ms, cached as: ${tempName}`);
+                console.log(`[SoundService] Successfully created repeated stream in ${elapsedTime}ms, cached as: ${tempName}`);
 
                 return tempName;
             } catch (error) {
-                console.error(`[SoundService] Error getting repeated sound ${nameOrSource}:`, error);
+                console.error(`[SoundService] Error getting repeated sound:`, error);
                 throw error;
             }
         },

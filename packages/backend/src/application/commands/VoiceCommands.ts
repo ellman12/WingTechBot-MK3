@@ -2,7 +2,7 @@ import { parseAudioSource } from "@core/services/AudioFetcherService.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
-import { randomInt } from "@core/utils/probabilityUtils.js";
+import { randomArrayItem, randomInt } from "@core/utils/probabilityUtils.js";
 import { parseTimeSpan } from "@core/utils/timeUtils.js";
 import { ChannelType, ChatInputCommandInteraction, GuildMember, MessageFlags, SlashCommandBuilder } from "discord.js";
 
@@ -105,11 +105,12 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
         data: new SlashCommandBuilder()
             .setName("play")
             .setDescription("Play audio in the voice channel")
-            .addStringOption(option => option.setName("audio-source").setDescription("Audio source (URL, file path, or YouTube URL)").setRequired(true).setAutocomplete(true))
+            .addStringOption(option => option.setName("audio-source").setDescription("Audio source (URL, sound name, 'random', '#tag', or comma-separated sounds)").setRequired(true).setAutocomplete(true))
             .addIntegerOption(option => option.setName("volume").setDescription("Volume level (0-100)").setRequired(false).setMinValue(0).setMaxValue(100))
             .addBooleanOption(option => option.setName("preload").setDescription("If we should download fully first (for URLs").setRequired(false))
             .addIntegerOption(option => option.setName("repeat-amount").setDescription("How many times to repeat the sound").setRequired(false).setMinValue(1))
-            .addStringOption(option => option.setName("repeat-delay").setDescription("Delay between each sound. Can be a number or a range.").setRequired(false)),
+            .addStringOption(option => option.setName("repeat-delay").setDescription("Delay between each sound. Can be a number or a range.").setRequired(false))
+            .addBooleanOption(option => option.setName("shuffle").setDescription("Randomize which sound plays on each repeat (requires repeat-amount > 1)").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             console.log(`[VoiceCommands] Play command received from user ${interaction.user.username} in guild ${interaction.guildId}`);
 
@@ -126,10 +127,41 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                 const shouldPreload = options.getBoolean("preload") ?? false;
                 const repeatAmount = options.getInteger("repeat-amount") ?? 1;
                 const unparsedRepeatDelay = options.getString("repeat-delay") ?? "1 s";
+                const shuffle = options.getBoolean("shuffle") ?? false;
                 const { minDelay, maxDelay } = parsePlayCommandRepeatDelay(unparsedRepeatDelay);
 
-                const isPreloading = shouldPreload && parseAudioSource(audioSource) !== "soundboard";
-                const soundToPlay = isPreloading ? "currently-playing" : audioSource;
+                console.log(`[VoiceCommands] Parsing audio source: ${audioSource}`);
+                const soundsToChooseFrom = await parseAudioSourceToSounds(audioSource);
+
+                if (soundsToChooseFrom.length === 0) {
+                    await interaction.reply({ content: "No sounds found from the specified sources", flags: MessageFlags.Ephemeral });
+                    return;
+                }
+
+                console.log(`[VoiceCommands] Parsed into ${soundsToChooseFrom.length} sound(s)`);
+
+                let soundsToPlay: string[];
+                if (shuffle && repeatAmount > 1 && soundsToChooseFrom.length > 1) {
+                    soundsToPlay = Array.from({ length: repeatAmount }, () => randomArrayItem(soundsToChooseFrom)!);
+                    console.log(`[VoiceCommands] Shuffle mode: selected ${soundsToPlay.length} sounds for repetitions`);
+                } else {
+                    soundsToPlay = soundsToChooseFrom;
+                }
+
+                if (soundsToPlay.length === 0) {
+                    await interaction.reply({ content: "No sounds found from the specified sources", flags: MessageFlags.Ephemeral });
+                    return;
+                }
+
+                // Handle preloading - only works with single sounds
+                const isSingleSound = soundsToPlay.length === 1;
+                const isPreloading = isSingleSound && shouldPreload && parseAudioSource(soundsToPlay[0]!) !== "soundboard";
+
+                if (isPreloading) {
+                    await soundService.addSound("currently-playing", soundsToPlay[0]!);
+                }
+
+                const soundsForPlayback = isPreloading ? ["currently-playing"] : soundsToPlay;
 
                 console.log(`[VoiceCommands] Play command parameters:`, { guildId: interaction.guildId, audioSource, volume, userId: interaction.user.id, username: interaction.user.username });
 
@@ -152,10 +184,6 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                 console.log(`[VoiceCommands] Deferring reply to avoid timeout`);
                 await interaction.deferReply();
 
-                if (isPreloading) {
-                    await soundService.addSound("currently-playing", audioSource);
-                }
-
                 if (volume !== null) {
                     console.log(`[VoiceCommands] Setting volume to ${volume}% for guild ${interaction.guildId}`);
                     await voiceService.setVolume(interaction.guildId, volume);
@@ -165,30 +193,24 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                 const normalizedVolume = volume !== null ? volume / 100 : undefined;
                 const activeCount = voiceService.getActiveAudioCount(interaction.guildId);
 
-                const responseMessage = `🎵 Added audio from: ${audioSource} (Active: ${activeCount})`;
+                const displayName = soundsToPlay.length > 1 ? `${soundsToPlay.length} shuffled sounds` : soundsToPlay[0];
+                const responseMessage = `🎵 Added audio from: ${displayName} (Active: ${activeCount})`;
                 console.log(`[VoiceCommands] Sending success response: ${responseMessage}`);
                 await interaction.editReply(responseMessage);
 
                 if (repeatAmount > 1) {
                     console.log(`[VoiceCommands] Creating premixed repeated sound with ${repeatAmount} repetitions`);
 
-                    const delaysMs: number[] = [0];
-                    let currentDelay = 0;
-
-                    for (let i = 1; i < repeatAmount; i++) {
-                        const delay = randomInt(minDelay, maxDelay);
-                        currentDelay += delay;
-                        delaysMs.push(currentDelay);
-                    }
+                    const delaysMs: number[] = [0, ...Array.from({ length: repeatAmount - 1 }, () => randomInt(minDelay, maxDelay))];
 
                     console.log(`[VoiceCommands] Generated delays: [${delaysMs.join(", ")}]ms`);
 
-                    const repeatedSoundName = await soundService.getRepeatedSound(soundToPlay, delaysMs);
+                    const repeatedSoundName = await soundService.getRepeatedSound(soundsForPlayback, delaysMs);
 
                     console.log(`[VoiceCommands] Playing premixed repeated sound: ${repeatedSoundName}`);
                     await voiceService.playAudio(interaction.guildId, repeatedSoundName, normalizedVolume);
                 } else {
-                    await voiceService.playAudio(interaction.guildId, soundToPlay, normalizedVolume);
+                    await voiceService.playAudio(interaction.guildId, randomArrayItem(soundsForPlayback)!, normalizedVolume);
                 }
             } catch (error) {
                 console.error(`[VoiceCommands] Error playing audio in guild ${interaction.guildId}:`, error);
@@ -209,7 +231,7 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
         getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
     };
 
-    //Converts input like "1 second" or "2 min - 10 min" into millisecond values.
+    // Converts input like "1 second" or "2 min - 10 min" into millisecond values.
     const parsePlayCommandRepeatDelay = (unparsedRepeatDelay: string | null): { minDelay: number; maxDelay: number } => {
         if (!unparsedRepeatDelay) return { minDelay: 0, maxDelay: 0 };
 
@@ -221,6 +243,28 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
         const minDelay = parseTimeSpan(matches[1]!);
         const maxDelay = matches[2] ? parseTimeSpan(matches[2]) : minDelay;
         return { minDelay, maxDelay };
+    };
+
+    // Parses audio source input (may include "random", "#tag", or comma-separated values) into a list of sound names
+    // TODO: URLs with commas in query params will be incorrectly split (rare edge case)
+    const parseAudioSourceToSounds = async (audioSource: string): Promise<string[]> => {
+        const items = audioSource.split(",").map(s => s.trim());
+        const allSounds = new Set<string>();
+
+        for (const item of items) {
+            if (item === "random") {
+                const sounds = await soundService.listSounds();
+                sounds.forEach(s => allSounds.add(s));
+            } else if (item.startsWith("#")) {
+                const tagName = item.substring(1);
+                const sounds = await soundService.listSounds(tagName);
+                sounds.forEach(s => allSounds.add(s));
+            } else {
+                allSounds.add(item);
+            }
+        }
+
+        return Array.from(allSounds);
     };
 
     const stopCommand: Command = {

@@ -11,6 +11,28 @@ export type AudioCommandDeps = {
     readonly commandChoicesService: CommandChoicesService;
 };
 
+// Validates a sound name against reserved names and special characters
+// Returns error message if invalid, undefined if valid
+const validateSoundName = (name: string): string | undefined => {
+    if (name === "random") {
+        return `Cannot use reserved name "random" for a sound.`;
+    }
+
+    if (name.startsWith("#")) {
+        return `Cannot use names starting with "#" (reserved for tags).`;
+    }
+
+    if (name.includes(",")) {
+        return `Cannot use commas in sound names (reserved for multi-sound selection).`;
+    }
+
+    if (name === "currently-playing") {
+        return `Cannot use reserved name "currently-playing" for a sound.`;
+    }
+
+    return undefined;
+};
+
 export const createAudioCommands = ({ soundService, discordChatService, commandChoicesService }: AudioCommandDeps): Record<string, Command> => {
     const addSound: Command = {
         data: new SlashCommandBuilder()
@@ -52,6 +74,12 @@ export const createAudioCommands = ({ soundService, discordChatService, commandC
 
             try {
                 const formattedSoundName = soundName.toLowerCase();
+
+                const validationError = validateSoundName(formattedSoundName);
+                if (validationError) {
+                    await interaction.editReply({ content: validationError });
+                    return;
+                }
 
                 console.log(`[AudioCommands] Adding sound "${formattedSoundName}" from URL: ${url}`);
                 await soundService.addSound(formattedSoundName, url);

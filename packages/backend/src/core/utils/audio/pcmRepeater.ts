@@ -15,14 +15,14 @@ type RepetitionSchedule = {
 
 /**
  * Creates a PCM stream that plays a sound clip at specified delay times.
- * Properly mixes overlapping audio samples.
+ * Properly mixes overlapping audio samples. Pre-computes chunks asynchronously to avoid blocking.
  *
- * @param pcmData - The PCM audio data to repeat (must be signed 16-bit PCM)
- * @param delaysMs - Array of delays in milliseconds when to play the sound (e.g., [0, 1000, 2500] plays at 0ms, 1s, and 2.5s)
+ * @param pcmData - The PCM audio data to repeat (must be signed 16-bit PCM), each element is a separate clip
+ * @param delaysMs - Array of additive delays in milliseconds (e.g., [0, 1000, 1500] plays at 0ms, 1s, and 2.5s)
  * @param options - PCM format options
  * @returns A Readable stream of mixed PCM audio
  */
-export function createRepeatedPcmStream(pcmData: Uint8Array | Buffer, delaysMs: number[], options?: PcmStreamOptions): Readable {
+export function createRepeatedPcmStream(pcmData: (Uint8Array | Buffer)[], delaysMs: number[], options?: PcmStreamOptions): Readable {
     const sampleRate = options?.sampleRate ?? 48000;
     const channels = options?.channels ?? 2;
     const bitDepth = options?.bitDepth ?? 16;
@@ -30,43 +30,56 @@ export function createRepeatedPcmStream(pcmData: Uint8Array | Buffer, delaysMs: 
 
     console.log(`[PcmRepeater] Creating repeated PCM stream: ${delaysMs.length} repetitions at delays: [${delaysMs.join(", ")}]ms`);
 
-    const clipBuffer = Buffer.from(pcmData);
-    const clipLengthSamples = Math.floor(clipBuffer.length / bytesPerSample);
+    const clipBuffers = pcmData.map(clip => Buffer.from(clip));
 
     // Generate schedule of when each repetition should start
-    const schedule = generateRepetitionSchedule(clipBuffer, delaysMs, sampleRate);
+    const schedule = generateRepetitionSchedule(clipBuffers, delaysMs, sampleRate);
 
     // Calculate total length needed
     const lastRepetition = schedule[schedule.length - 1]!;
-    const totalSamples = lastRepetition.startSample + clipLengthSamples;
+    const totalSamples = lastRepetition.startSample + Math.floor(lastRepetition.clipData.length / bytesPerSample);
     const totalBytes = totalSamples * bytesPerSample;
 
     console.log(`[PcmRepeater] Total duration: ${totalSamples / sampleRate}s (${totalBytes} bytes)`);
 
-    // Track current read position
-    let currentSample = 0;
     const chunkSizeSamples = 960; // 20ms at 48kHz (standard Discord chunk)
+    const chunkQueue: Buffer[] = [];
+    let currentSample = 0;
+    let isGenerating = false;
+    let generationComplete = false;
+
+    const generateNextChunk = (): void => {
+        if (currentSample >= totalSamples) {
+            generationComplete = true;
+            isGenerating = false;
+            return;
+        }
+
+        const samplesToGenerate = Math.min(chunkSizeSamples, totalSamples - currentSample);
+        const outputBuffer = mixRepeatedChunk(currentSample, samplesToGenerate, schedule, bytesPerSample, channels);
+
+        chunkQueue.push(outputBuffer);
+        currentSample += samplesToGenerate;
+
+        setImmediate(generateNextChunk);
+    };
 
     return new Readable({
         read() {
-            // If we've read everything, end the stream
-            if (currentSample >= totalSamples) {
+            if (chunkQueue.length > 0) {
+                this.push(chunkQueue.shift());
+                return;
+            }
+
+            if (generationComplete) {
                 this.push(null);
                 return;
             }
 
-            // Determine how many samples to generate in this chunk
-            const samplesToGenerate = Math.min(chunkSizeSamples, totalSamples - currentSample);
-            const bytesToGenerate = samplesToGenerate * bytesPerSample;
-
-            // Create output buffer for this chunk
-            const outputBuffer = Buffer.alloc(bytesToGenerate);
-
-            // Mix all active repetitions into this chunk
-            mixRepeatedChunk(outputBuffer, currentSample, samplesToGenerate, schedule, bytesPerSample, channels);
-
-            currentSample += samplesToGenerate;
-            this.push(outputBuffer);
+            if (!isGenerating) {
+                isGenerating = true;
+                setImmediate(generateNextChunk);
+            }
         },
     });
 }
@@ -74,48 +87,60 @@ export function createRepeatedPcmStream(pcmData: Uint8Array | Buffer, delaysMs: 
 /**
  * Generates a schedule of when each repetition should start
  */
-function generateRepetitionSchedule(clipBuffer: Buffer, delaysMs: number[], sampleRate: number): RepetitionSchedule[] {
-    const schedule: RepetitionSchedule[] = [];
+function generateRepetitionSchedule(clipBuffers: Buffer[], delaysMs: number[], sampleRate: number): RepetitionSchedule[] {
+    const schedule = delaysMs.reduce<{ schedule: RepetitionSchedule[]; cumulativeMs: number }>(
+        (acc, delayMs, delayIndex) => {
+            const clipIndex = delayIndex % clipBuffers.length;
+            const cumulativeMs = acc.cumulativeMs + delayMs;
+            const startSample = Math.floor((cumulativeMs / 1000) * sampleRate);
 
-    for (const delayMs of delaysMs) {
-        const startSample = Math.floor((delayMs / 1000) * sampleRate);
-        schedule.push({
-            startSample,
-            clipData: clipBuffer,
-        });
-    }
+            return {
+                schedule: [...acc.schedule, { startSample, clipData: clipBuffers[clipIndex]! }],
+                cumulativeMs,
+            };
+        },
+        { schedule: [], cumulativeMs: 0 }
+    ).schedule;
 
-    console.log(`[PcmRepeater] Generated schedule with ${schedule.length} repetitions`);
+    console.log(`[PcmRepeater] Generated schedule with ${schedule.length} repetitions (additive delays)`);
     return schedule;
 }
 
 /**
- * Mixes all active repetitions into the output buffer for a specific chunk
+ * Gets all active sample values from repetitions at a specific absolute sample and channel
  */
-function mixRepeatedChunk(outputBuffer: Buffer, startSample: number, sampleCount: number, schedule: RepetitionSchedule[], bytesPerSample: number, channels: number): void {
-    // For each sample in this chunk
+function getActiveSamples(absoluteSample: number, channel: number, schedule: RepetitionSchedule[], bytesPerSample: number): number[] {
+    return schedule
+        .map(repetition => {
+            const repetitionOffset = absoluteSample - repetition.startSample;
+            const isActive = repetitionOffset >= 0 && repetitionOffset < repetition.clipData.length / bytesPerSample;
+
+            if (!isActive) return null;
+
+            const byteIndex = getSampleByteIndex(repetitionOffset, channel, bytesPerSample);
+            return readPcmSample(repetition.clipData, byteIndex);
+        })
+        .filter((sample): sample is number => sample !== null);
+}
+
+/**
+ * Mixes all active repetitions into a new buffer for a specific chunk
+ */
+function mixRepeatedChunk(startSample: number, sampleCount: number, schedule: RepetitionSchedule[], bytesPerSample: number, channels: number): Buffer {
+    const bytesToGenerate = sampleCount * bytesPerSample;
+    const outputBuffer = Buffer.alloc(bytesToGenerate);
+
     for (let sampleOffset = 0; sampleOffset < sampleCount; sampleOffset++) {
         const absoluteSample = startSample + sampleOffset;
 
-        // Mix all active repetitions at this sample
-        for (let ch = 0; ch < channels; ch++) {
-            let mixedValue = 0;
+        for (let channel = 0; channel < channels; channel++) {
+            const activeSamples = getActiveSamples(absoluteSample, channel, schedule, bytesPerSample);
+            const mixedValue = activeSamples.reduce((sum, sample) => sum + sample, 0);
 
-            // Check each repetition to see if it's active at this sample
-            for (const repetition of schedule) {
-                const repetitionOffset = absoluteSample - repetition.startSample;
-
-                // Is this repetition active at this sample?
-                if (repetitionOffset >= 0 && repetitionOffset < repetition.clipData.length / bytesPerSample) {
-                    const byteIndex = getSampleByteIndex(repetitionOffset, ch, bytesPerSample);
-                    const sample = readPcmSample(repetition.clipData, byteIndex);
-                    mixedValue += sample;
-                }
-            }
-
-            // Write mixed sample to output buffer
-            const outputByteIndex = getSampleByteIndex(sampleOffset, ch, bytesPerSample);
+            const outputByteIndex = getSampleByteIndex(sampleOffset, channel, bytesPerSample);
             writePcmSample(outputBuffer, outputByteIndex, mixedValue);
         }
     }
+
+    return outputBuffer;
 }

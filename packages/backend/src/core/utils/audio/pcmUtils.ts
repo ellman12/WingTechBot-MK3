@@ -42,13 +42,10 @@ export function getSampleByteIndex(sampleIndex: number, channel: number, bytesPe
  * @returns The mixed sample value (clamped to 16-bit range)
  */
 export function mixSamples(samples: number[], volumes?: number[]): number {
-    let mixed = 0;
-
-    for (let i = 0; i < samples.length; i++) {
-        const sample = samples[i]!;
+    const mixed = samples.reduce((sum, sample, i) => {
         const volume = volumes?.[i] ?? 1.0;
-        mixed += sample * volume;
-    }
+        return sum + sample * volume;
+    }, 0);
 
     return clampSample(Math.round(mixed));
 }
