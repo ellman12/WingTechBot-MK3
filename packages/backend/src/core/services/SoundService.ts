@@ -1,6 +1,7 @@
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import { createRepeatedPcmStream } from "@core/utils/audio/pcmRepeater.js";
 import { createPreBufferedStream, readStreamToBytes } from "@core/utils/streamUtils.js";
+import type { Config } from "@infrastructure/config/Config.js";
 import { Readable } from "stream";
 
 import { type AudioFetcherService, parseAudioSource } from "./AudioFetcherService.js";
@@ -20,12 +21,12 @@ export type SoundServiceDeps = {
     readonly audioProcessor: AudioProcessingService;
     readonly fileManager: FileManager;
     readonly soundRepository: SoundRepository;
+    readonly config: Config;
 };
 
-const AUDIO_FILE_STORE_PATH = "./sounds";
-
-export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, soundRepository }: SoundServiceDeps): SoundService => {
-    console.log("[SoundService] Creating sound service");
+export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, soundRepository, config }: SoundServiceDeps): SoundService => {
+    const AUDIO_FILE_STORE_PATH = config.sounds.storagePath;
+    console.log(`[SoundService] Creating sound service with storage path: ${AUDIO_FILE_STORE_PATH}`);
 
     // Cache for temporary repeated sounds
     const repeatedSoundCache = new Map<string, Readable>();

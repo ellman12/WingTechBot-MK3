@@ -92,6 +92,7 @@ export const createApplication = async (): Promise<App> => {
         audioProcessor: audioProcessingService,
         fileManager,
         soundRepository,
+        config,
     });
     const soundTagService = createSoundTagService({ soundRepository, soundTagRepository });
     const reactionArchiveService = createReactionArchiveService({ reactionRepository, emoteRepository });

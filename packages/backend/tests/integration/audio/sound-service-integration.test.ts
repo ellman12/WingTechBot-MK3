@@ -103,6 +103,7 @@ describe.concurrent("SoundService Integration Tests", () => {
             audioProcessor,
             fileManager,
             soundRepository: mockSoundRepository,
+            config: testConfig,
         });
 
         return { soundService, tempDir, mockSoundRepository, mockAudioFetcher, testConfig };
