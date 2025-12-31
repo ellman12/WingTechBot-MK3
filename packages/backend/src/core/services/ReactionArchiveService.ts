@@ -14,22 +14,28 @@ export type ReactionArchiveServiceDeps = {
     emoteRepository: ReactionEmoteRepository;
 };
 
+// Helper to check if error is due to Discord client being destroyed/token missing
+// This is a safety net for race conditions during bot shutdown
+const isClientDestroyedError = (error: unknown): boolean => {
+    return error instanceof Error && error.message.includes("Expected token to be set for this request");
+};
+
 //Archives all reactions added to all messages.
 export const createReactionArchiveService = ({ reactionRepository, emoteRepository }: ReactionArchiveServiceDeps): ReactionArchiveService => {
     console.log("[ReactionArchiveService] Creating reaction archive service");
 
     return {
         addReaction: async (reaction, user): Promise<void> => {
-            const message = await reaction.message.fetch();
-            const channel = message.channel;
-            const year = message.createdAt.getUTCFullYear();
-
-            if (year < new Date().getUTCFullYear()) {
-                console.warn("🚫 Ignoring added reaction older than this year.");
-                return;
-            }
-
             try {
+                const message = await reaction.message.fetch();
+                const channel = message.channel;
+                const year = message.createdAt.getUTCFullYear();
+
+                if (year < new Date().getUTCFullYear()) {
+                    console.warn("🚫 Ignoring added reaction older than this year.");
+                    return;
+                }
+
                 const emoteName = reaction.emoji.name;
 
                 if (!emoteName) {
@@ -41,21 +47,24 @@ export const createReactionArchiveService = ({ reactionRepository, emoteReposito
                 const data = { giverId: user.id, receiverId: message.author.id, channelId: channel.id, messageId: message.id, emoteId: reactionEmote.id };
                 await reactionRepository.create(data);
             } catch (e: unknown) {
-                console.error("Error adding reaction to message", e);
+                // Ignore errors when bot is being destroyed (token no longer available)
+                if (!isClientDestroyedError(e)) {
+                    console.error("Error adding reaction to message", e);
+                }
             }
         },
 
         removeReaction: async (reaction, user): Promise<void> => {
-            const message = await reaction.message.fetch();
-            const channel = message.channel;
-            const year = message.createdAt.getUTCFullYear();
-
-            if (year < new Date().getUTCFullYear()) {
-                console.warn("🚫 Ignoring removed reaction older than this year.");
-                return;
-            }
-
             try {
+                const message = await reaction.message.fetch();
+                const channel = message.channel;
+                const year = message.createdAt.getUTCFullYear();
+
+                if (year < new Date().getUTCFullYear()) {
+                    console.warn("🚫 Ignoring removed reaction older than this year.");
+                    return;
+                }
+
                 const emoteName = reaction.emoji.name;
 
                 if (!emoteName) {
@@ -72,37 +81,43 @@ export const createReactionArchiveService = ({ reactionRepository, emoteReposito
                 const data = { giverId: user.id, receiverId: message.author.id, channelId: channel.id, messageId: message.id, emoteId: reactionEmote.id };
                 await reactionRepository.delete(data);
             } catch (e: unknown) {
-                console.error("Error removing reaction from message", e);
+                // Ignore errors when bot is being destroyed (token no longer available)
+                if (!isClientDestroyedError(e)) {
+                    console.error("Error removing reaction from message", e);
+                }
             }
         },
 
         removeReactionsForMessage: async (message): Promise<void> => {
-            await message.fetch();
-            const year = message.createdAt.getUTCFullYear();
-
-            if (year < new Date().getUTCFullYear()) {
-                console.warn("🚫 Ignoring removed reactions from message older than this year.");
-                return;
-            }
-
             try {
+                await message.fetch();
+                const year = message.createdAt.getUTCFullYear();
+
+                if (year < new Date().getUTCFullYear()) {
+                    console.warn("🚫 Ignoring removed reactions from message older than this year.");
+                    return;
+                }
+
                 await reactionRepository.deleteReactionsForMessage(message.id);
             } catch (e: unknown) {
-                console.error("Error removing reaction from message", e);
+                // Ignore errors when bot is being destroyed (token no longer available)
+                if (!isClientDestroyedError(e)) {
+                    console.error("Error removing reaction from message", e);
+                }
             }
         },
 
         removeReactionsForEmote: async (reaction): Promise<void> => {
-            await reaction.fetch();
-            const year = reaction.message.createdAt.getUTCFullYear();
-            const name = reaction.emoji.name;
-
-            if (year < new Date().getUTCFullYear()) {
-                console.warn(`🚫 Ignoring removed reaction for emote ${name} older than this year.`);
-                return;
-            }
-
             try {
+                await reaction.fetch();
+                const year = reaction.message.createdAt.getUTCFullYear();
+                const name = reaction.emoji.name;
+
+                if (year < new Date().getUTCFullYear()) {
+                    console.warn(`🚫 Ignoring removed reaction for emote ${name} older than this year.`);
+                    return;
+                }
+
                 if (!name) {
                     throw new Error("Missing emoji name in removeReactionsForEmote");
                 }
@@ -115,7 +130,10 @@ export const createReactionArchiveService = ({ reactionRepository, emoteReposito
 
                 await reactionRepository.deleteReactionsForEmote(reaction.message.id, emote.id);
             } catch (e: unknown) {
-                console.error("Error removing reactions for emote", e);
+                // Ignore errors when bot is being destroyed (token no longer available)
+                if (!isClientDestroyedError(e)) {
+                    console.error("Error removing reactions for emote", e);
+                }
             }
         },
     };

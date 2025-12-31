@@ -68,6 +68,9 @@ async function processMessage(discordMessage: Message, existingMessages: Map<str
     //Build a set of "current reactions" from Discord.
     const discordReactions: typeof existingReactions = [];
 
+    // First pass: create all emotes and collect reaction data
+    const reactionDataToCreate: Array<{ giverId: string; receiverId: string; channelId: string; messageId: string; emoteId: number }> = [];
+
     for (const reaction of discordMessage.reactions.cache.values()) {
         const name = reaction.emoji.name!;
         const emote = await emoteRepository.create(name, reaction.emoji.id ?? "");
@@ -77,12 +80,17 @@ async function processMessage(discordMessage: Message, existingMessages: Map<str
             const reactionData = { giverId: user.id, receiverId: authorId, channelId, messageId, emoteId: emote.id };
             discordReactions.push(reactionData);
 
-            //Add new reaction if missing in DB
+            //Check if reaction needs to be added
             const existingReaction = existingReactions.find(r => equal(r, reactionData));
             if (!existingReaction) {
-                await reactionRepository.create(reactionData);
+                reactionDataToCreate.push(reactionData);
             }
         }
+    }
+
+    // Second pass: create all reactions (after all emotes are guaranteed to exist)
+    for (const reactionData of reactionDataToCreate) {
+        await reactionRepository.create(reactionData);
     }
 
     //Remove reactions that exist in DB but not on Discord

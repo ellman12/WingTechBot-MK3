@@ -52,9 +52,19 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
             .execute();
 
         if (!emote) {
-            const existing = await findByNameAndDiscordId(parsedName, discordId);
-            if (existing) return existing;
-            throw new Error("Failed to insert or find existing emote");
+            // Race condition: another process created this emote concurrently
+            // Retry a few times to find the newly created emote
+            for (let attempt = 0; attempt < 3; attempt++) {
+                const existing = await findByNameAndDiscordId(parsedName, discordId);
+                if (existing) return existing;
+
+                // Small delay before retry to allow concurrent transaction to commit
+                if (attempt < 2) {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
+            }
+
+            throw new Error(`Failed to insert or find existing emote: ${parsedName} (${discordId})`);
         }
 
         return transformReactionEmote(emote);
