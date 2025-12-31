@@ -3,27 +3,27 @@ import type { FfmpegService } from "@infrastructure/ffmpeg/FfmpegService";
 import { Readable } from "stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock FFmpeg service
-const mockFfmpegService: FfmpegService = {
-    run: vi.fn(),
-    runStreamAsync: vi.fn(),
-    runAsyncStream: vi.fn(),
-    runAsync: vi.fn(),
-    runAsyncWithStderr: vi.fn(),
-    convertAudio: vi.fn(),
-    convertStreamToAudio: vi.fn(),
-    convertStreamToStream: vi.fn(),
-    convertAudioToStream: vi.fn(),
-    normalizeAudioStreamRealtime: vi.fn(),
-    normalizeAudio: vi.fn(),
-};
-
 describe.concurrent("FfmpegAudioProcessingService", () => {
     let audioProcessingService: ReturnType<typeof createFfmpegAudioProcessingService>;
+    let mockFfmpegService: FfmpegService;
     let deps: FfmpegAudioServiceDeps;
 
     beforeEach(() => {
-        vi.clearAllMocks();
+        // Create fresh mocks for each test to avoid interference when running concurrently
+        mockFfmpegService = {
+            run: vi.fn(),
+            runStreamAsync: vi.fn(),
+            runAsyncStream: vi.fn(),
+            runAsync: vi.fn(),
+            runAsyncWithStderr: vi.fn(),
+            convertAudio: vi.fn(),
+            convertStreamToAudio: vi.fn(),
+            convertStreamToStream: vi.fn(),
+            convertAudioToStream: vi.fn(),
+            normalizeAudioStreamRealtime: vi.fn(),
+            normalizeAudio: vi.fn(),
+        };
+
         deps = {
             ffmpeg: mockFfmpegService,
         };

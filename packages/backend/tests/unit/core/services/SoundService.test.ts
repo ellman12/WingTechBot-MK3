@@ -17,52 +17,55 @@ vi.mock("@core/services/AudioFetcherService", async () => {
     };
 });
 
-// Mock dependencies
-
-const mockAudioFetcher: AudioFetcherService = {
-    fetchUrlAudio: vi.fn(),
-    fetchSoundboardAudio: vi.fn(),
-};
-
-const mockAudioProcessor: AudioProcessingService = {
-    deepProcessAudio: vi.fn(),
-    processAudioStream: vi.fn(),
-};
-
-const mockFileManager: FileManager = {
-    readStream: vi.fn(),
-    writeStream: vi.fn(),
-    deleteFile: vi.fn(),
-    fileExists: vi.fn(),
-    readFile: vi.fn(),
-    writeFile: vi.fn(),
-    listFiles: vi.fn(),
-    getFileStats: vi.fn(),
-};
-
-const mockSoundRepository: SoundRepository = {
-    addSound: vi.fn(),
-    getSoundByName: vi.fn(),
-    getAllSounds: vi.fn(),
-    deleteSound: vi.fn(),
-    getAllSoundsWithTagName: vi.fn(),
-    tryGetSoundsWithinDistance: vi.fn(),
-};
-
-const mockConfig: Config = {
-    server: { port: 3000, environment: "test" },
-    database: { url: "postgresql://test:test@localhost:5432/test" },
-    discord: { token: "test-token", clientId: "test-client-id" },
-    sounds: { storagePath: "./sounds" },
-    cache: { audioDownloadPath: "./cache/audio", ttlHours: 24, maxSizeMb: 1000 },
-    ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
-};
-
 describe.concurrent("SoundService", () => {
     let soundService: ReturnType<typeof createSoundService>;
+    let mockAudioFetcher: AudioFetcherService;
+    let mockAudioProcessor: AudioProcessingService;
+    let mockFileManager: FileManager;
+    let mockSoundRepository: SoundRepository;
+    let mockConfig: Config;
 
     beforeEach(() => {
-        vi.clearAllMocks();
+        // Create fresh mocks for each test to avoid interference when running concurrently
+        mockAudioFetcher = {
+            fetchUrlAudio: vi.fn(),
+            fetchSoundboardAudio: vi.fn(),
+        };
+
+        mockAudioProcessor = {
+            deepProcessAudio: vi.fn(),
+            processAudioStream: vi.fn(),
+        };
+
+        mockFileManager = {
+            readStream: vi.fn(),
+            writeStream: vi.fn(),
+            deleteFile: vi.fn(),
+            fileExists: vi.fn(),
+            readFile: vi.fn(),
+            writeFile: vi.fn(),
+            listFiles: vi.fn(),
+            getFileStats: vi.fn(),
+        };
+
+        mockSoundRepository = {
+            addSound: vi.fn(),
+            getSoundByName: vi.fn(),
+            getAllSounds: vi.fn(),
+            deleteSound: vi.fn(),
+            getAllSoundsWithTagName: vi.fn(),
+            tryGetSoundsWithinDistance: vi.fn(),
+        };
+
+        mockConfig = {
+            server: { port: 3000, environment: "test" },
+            database: { url: "postgresql://test:test@localhost:5432/test" },
+            discord: { token: "test-token", clientId: "test-client-id" },
+            sounds: { storagePath: "./sounds" },
+            cache: { audioDownloadPath: "./cache/audio", ttlHours: 24, maxSizeMb: 1000 },
+            ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
+        };
+
         const deps = {
             audioFetcher: mockAudioFetcher,
             audioProcessor: mockAudioProcessor,
