@@ -15,7 +15,7 @@ const isFfmpegAvailable = async (): Promise<boolean> => {
     }
 };
 
-describe("FfmpegService Integration Tests", () => {
+describe.concurrent("FfmpegService Integration Tests", () => {
     const ffmpegService = createFfmpegService();
 
     // Note: These tests require ffmpeg to be installed

@@ -7,7 +7,8 @@ import { createSoundService } from "@core/services/SoundService";
 import type { Config } from "@infrastructure/config/Config";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService";
 import { createFileManager } from "@infrastructure/filestore/FileManager";
-import { existsSync, readFileSync, unlinkSync } from "fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "fs";
+import { tmpdir } from "os";
 import { join } from "path";
 import { Readable } from "stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -64,22 +65,27 @@ const mockSoundRepository = {
     },
 };
 
-describe("SoundService Integration Tests", () => {
+describe.concurrent("SoundService Integration Tests", () => {
     let soundService: ReturnType<typeof createSoundService>;
-    let tempFiles: string[] = [];
-
-    const testConfig: Config = {
-        server: { port: 3000, environment: "test" },
-        database: { url: "postgresql://test:test@localhost:5432/test" },
-        discord: { token: "test-token", clientId: "test-client-id" },
-        sounds: { storagePath: "./sounds" },
-        cache: { audioDownloadPath: "./cache/audio", ttlHours: 24, maxSizeMb: 1000 },
-        ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
-    };
+    let tempDir: string;
+    let testConfig: Config;
 
     beforeEach(() => {
+        // Create unique temp directory for this test
+        tempDir = mkdtempSync(join(tmpdir(), "sound-service-test-"));
+
         // Clear the mock repository
         mockSoundRepository.sounds.clear();
+
+        // Create test config with unique temp directory
+        testConfig = {
+            server: { port: 3000, environment: "test" },
+            database: { url: "postgresql://test:test@localhost:5432/test" },
+            discord: { token: "test-token", clientId: "test-client-id" },
+            sounds: { storagePath: tempDir },
+            cache: { audioDownloadPath: join(tempDir, "cache"), ttlHours: 24, maxSizeMb: 1000 },
+            ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
+        };
 
         // Create services
         const ffmpegService = createFfmpegService();
@@ -96,17 +102,14 @@ describe("SoundService Integration Tests", () => {
     });
 
     afterEach(() => {
-        // Clean up temporary files
-        tempFiles.forEach(file => {
-            if (existsSync(file)) {
-                try {
-                    unlinkSync(file);
-                } catch (error) {
-                    console.warn(`Failed to delete temp file ${file}:`, error);
-                }
+        // Clean up entire temp directory
+        try {
+            if (existsSync(tempDir)) {
+                rmSync(tempDir, { recursive: true, force: true });
             }
-        });
-        tempFiles = [];
+        } catch (error) {
+            console.warn(`Failed to delete temp directory ${tempDir}:`, error);
+        }
     });
 
     it("should successfully add and retrieve a sound from URL", async () => {
@@ -117,8 +120,7 @@ describe("SoundService Integration Tests", () => {
         await soundService.addSound(soundName, testUrl);
 
         // Track the created file for cleanup
-        const expectedPath = `./sounds/${soundName}.pcm`;
-        tempFiles.push(expectedPath);
+        const expectedPath = `${tempDir}/soundName}.pcm`;
 
         // Verify the sound was added to repository
         const savedSound = await mockSoundRepository.getSoundByName(soundName);
@@ -154,14 +156,12 @@ describe("SoundService Integration Tests", () => {
 
         // Add first sound
         await soundService.addSound(soundName1, testUrl);
-        tempFiles.push(`./sounds/${soundName1}.pcm`);
 
         sounds = await soundService.listSounds();
         expect(sounds).toEqual([soundName1]);
 
         // Add second sound
         await soundService.addSound(soundName2, testUrl);
-        tempFiles.push(`./sounds/${soundName2}.pcm`);
 
         sounds = await soundService.listSounds();
         expect(sounds).toHaveLength(2);
@@ -175,7 +175,7 @@ describe("SoundService Integration Tests", () => {
 
         // Add the sound
         await soundService.addSound(soundName, testUrl);
-        const filePath = `./sounds/${soundName}.pcm`;
+        const filePath = `${tempDir}/soundName}.pcm`;
 
         // Verify it exists
         expect(existsSync(filePath)).toBe(true);

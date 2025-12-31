@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const execAsync = promisify(exec);
 
-describe("Audio Environment Prerequisites", () => {
+describe.concurrent("Audio Environment Prerequisites", () => {
     it("should have FFmpeg installed", async () => {
         try {
             const { stdout } = await execAsync("ffmpeg -version");
