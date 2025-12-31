@@ -72,25 +72,60 @@ async function processMessage(discordMessage: Message, existingMessages: Map<str
     const reactionDataToCreate: Array<{ giverId: string; receiverId: string; channelId: string; messageId: string; emoteId: number }> = [];
 
     for (const reaction of discordMessage.reactions.cache.values()) {
-        const name = reaction.emoji.name!;
-        const emote = await emoteRepository.create(name, reaction.emoji.id ?? "");
+        try {
+            const name = reaction.emoji.name!;
+            const emote = await emoteRepository.create(name, reaction.emoji.id ?? "");
 
-        await reaction.users.fetch();
-        for (const user of reaction.users.cache.values()) {
-            const reactionData = { giverId: user.id, receiverId: authorId, channelId, messageId, emoteId: emote.id };
-            discordReactions.push(reactionData);
+            await reaction.users.fetch();
+            for (const user of reaction.users.cache.values()) {
+                const reactionData = { giverId: user.id, receiverId: authorId, channelId, messageId, emoteId: emote.id };
+                discordReactions.push(reactionData);
 
-            //Check if reaction needs to be added
-            const existingReaction = existingReactions.find(r => equal(r, reactionData));
-            if (!existingReaction) {
-                reactionDataToCreate.push(reactionData);
+                //Check if reaction needs to be added
+                const existingReaction = existingReactions.find(r => equal(r, reactionData));
+                if (!existingReaction) {
+                    reactionDataToCreate.push(reactionData);
+                }
             }
+        } catch (error: unknown) {
+            // Skip reactions for deleted messages or other API errors
+            if (error && typeof error === "object" && "code" in error) {
+                const apiError = error as { code: number };
+                if (apiError.code === 10008) {
+                    console.log(`[MessageArchiveService] Skipping reactions for deleted message: ${messageId}`);
+                    continue;
+                }
+            }
+            // Re-throw unexpected errors
+            throw error;
         }
     }
 
     // Second pass: create all reactions (after all emotes are guaranteed to exist)
     for (const reactionData of reactionDataToCreate) {
-        await reactionRepository.create(reactionData);
+        // Retry reaction creation to handle race conditions with emote creation
+        let retries = 3;
+        while (retries > 0) {
+            try {
+                await reactionRepository.create(reactionData);
+                break; // Success, exit retry loop
+            } catch (error: unknown) {
+                // Check if it's a foreign key violation for emote_id
+                if (error && typeof error === "object" && "code" in error && "constraint" in error) {
+                    const dbError = error as { code: string; constraint: string };
+                    if (dbError.code === "23503" && dbError.constraint === "reactions_emote_id_fkey") {
+                        retries--;
+                        if (retries > 0) {
+                            // Wait briefly for emote transaction to commit, then retry
+                            await new Promise(resolve => setTimeout(resolve, 50));
+                            continue;
+                        }
+                    }
+                }
+                // Re-throw if not a retriable error or out of retries
+                throw error;
+            }
+        }
     }
 
     //Remove reactions that exist in DB but not on Discord
@@ -241,6 +276,10 @@ export const createMessageArchiveService = ({ messageRepository, reactionReposit
         try {
             await messageRepository.delete({ id: message.id });
         } catch (e: unknown) {
+            // Ignore "Message does not exist" errors - the message is already not in the DB
+            if (e instanceof Error && e.message === "Message does not exist") {
+                return;
+            }
             console.error("Error removing message from database", e, message.content);
         }
     }

@@ -169,13 +169,10 @@ export const createDiscordBot = async ({
             // Set ready state to false first so event handlers can check and bail out
             isReadyState = false;
 
-            // Give any in-flight event handlers a moment to complete
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Give any in-flight event handlers a brief moment to check isReady and bail out
+            await new Promise(resolve => setTimeout(resolve, 50));
 
-            // Remove all event listeners to prevent new events from being processed
-            client.removeAllListeners();
-
-            // Now destroy the client
+            // Destroy the client (this will clean up listeners internally)
             await client.destroy();
             console.log("✅ Discord bot stopped");
         } catch (error) {

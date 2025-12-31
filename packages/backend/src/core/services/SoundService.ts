@@ -107,7 +107,7 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                     console.log(`[SoundService] Read ${audio.length} bytes for: ${name}`);
 
                     console.log(`[SoundService] Processing audio for: ${name}`);
-                    const processedAudio = await audioProcessor.deepProcessAudio(audio);
+                    const processedAudio = await audioProcessor.deepProcessAudio(audio, audioStream.formatInfo?.format, audioStream.formatInfo?.container);
                     console.log(`[SoundService] Processed audio result: ${processedAudio.length} bytes for: ${name}`);
 
                     const path = `/${name}.pcm`;
