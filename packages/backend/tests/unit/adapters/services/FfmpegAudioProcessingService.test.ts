@@ -18,7 +18,7 @@ const mockFfmpegService: FfmpegService = {
     normalizeAudio: vi.fn(),
 };
 
-describe("FfmpegAudioProcessingService", () => {
+describe.concurrent("FfmpegAudioProcessingService", () => {
     let audioProcessingService: ReturnType<typeof createFfmpegAudioProcessingService>;
     let deps: FfmpegAudioServiceDeps;
 

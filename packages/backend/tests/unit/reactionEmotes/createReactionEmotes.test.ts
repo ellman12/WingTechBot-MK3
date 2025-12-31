@@ -4,7 +4,7 @@ import { expect } from "vitest";
 import { invalidEmotes, validEmotes } from "../../testData/reactionEmotes";
 import { createTestDb } from "../../utils/testUtils";
 
-describe("Create ReactionEmote, valid data", () => {
+describe.concurrent("Create ReactionEmote, valid data", () => {
     test.each(validEmotes)("%s, %s", async (name, discordId) => {
         const db = await createTestDb();
         const emotes = createReactionEmoteRepository(db);
@@ -15,7 +15,7 @@ describe("Create ReactionEmote, valid data", () => {
     });
 });
 
-describe("Create ReactionEmote, returns input when emote exists", () => {
+describe.concurrent("Create ReactionEmote, returns input when emote exists", () => {
     test.each(validEmotes)("%s %s", async (name, discordId) => {
         const db = await createTestDb();
         const emotes = createReactionEmoteRepository(db);
@@ -27,7 +27,7 @@ describe("Create ReactionEmote, returns input when emote exists", () => {
     });
 });
 
-describe("Create ReactionEmote, throws for invalid emotes", () => {
+describe.concurrent("Create ReactionEmote, throws for invalid emotes", () => {
     test.each(invalidEmotes)("%s %s", async (name, discordId) => {
         const db = await createTestDb();
         const emotes = createReactionEmoteRepository(db);

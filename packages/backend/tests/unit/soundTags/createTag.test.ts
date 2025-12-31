@@ -9,7 +9,7 @@ export async function createTag(tagsRepo: SoundTagRepository, name: string) {
     return tag;
 }
 
-describe("createTag", async () => {
+describe.concurrent("createTag", async () => {
     it("should create a tag successfully", async () => {
         const db = await createTestDb();
         const repo = createSoundTagRepository(db);

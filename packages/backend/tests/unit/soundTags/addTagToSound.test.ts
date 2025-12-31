@@ -14,7 +14,7 @@ export async function createSound(soundRepo: SoundRepository) {
     return sound;
 }
 
-describe("addTagToSound", async () => {
+describe.concurrent("addTagToSound", async () => {
     it("should add a tag successfully", async () => {
         const db = await createTestDb();
         const sounds = createSoundRepository(db);

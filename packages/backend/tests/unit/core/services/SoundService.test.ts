@@ -58,7 +58,7 @@ const mockConfig: Config = {
     ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
 };
 
-describe("SoundService", () => {
+describe.concurrent("SoundService", () => {
     let soundService: ReturnType<typeof createSoundService>;
 
     beforeEach(() => {

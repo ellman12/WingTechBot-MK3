@@ -4,7 +4,7 @@ import { createReactionRepository } from "@adapters/repositories/ReactionReposit
 
 import { createTestDb } from "../../utils/testUtils";
 
-describe("deleteMessage", () => {
+describe.concurrent("deleteMessage", () => {
     it("should delete a message successfully", async () => {
         const db = await createTestDb();
         const repo = createMessageRepository(db);

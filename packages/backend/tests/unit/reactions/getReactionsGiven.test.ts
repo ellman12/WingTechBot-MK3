@@ -4,7 +4,7 @@ import { expect } from "vitest";
 import { validEmotes } from "../../testData/reactionEmotes";
 import { createFakeMessagesAndReactions, createTestDb } from "../../utils/testUtils";
 
-describe("getReactionsGiven", () => {
+describe.concurrent("getReactionsGiven", () => {
     const year = new Date().getUTCFullYear();
     const messages = 5;
     const reactionsPerMessage = 6;

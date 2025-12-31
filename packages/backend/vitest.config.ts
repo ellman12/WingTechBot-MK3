@@ -6,11 +6,18 @@ export default defineConfig({
     test: {
         globals: true,
         environment: "node",
-        maxWorkers: 1,
         setupFiles: ["./tests/setup.ts"],
         coverage: { provider: "v8", reporter: ["text", "json", "html"], exclude: ["node_modules/", "dist/", "coverage/", "src/generated/", "**/*.d.ts", "**/*.config.ts", "**/index.ts"] },
         include: ["tests/**/*.{test,spec}.{js,ts}"],
         exclude: ["node_modules/", "dist/", "coverage/"],
+        poolOptions: {
+            threads: {
+                singleThread: false,
+            },
+            forks: {
+                singleFork: false,
+            },
+        },
     },
     resolve: {
         alias: {

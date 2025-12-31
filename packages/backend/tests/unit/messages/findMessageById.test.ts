@@ -5,7 +5,7 @@ import { createTestDb } from "../../utils/testUtils";
 
 const sharedMessage: Message = { id: "m1", authorId: "a1", channelId: "c1", content: "hello", referencedMessageId: undefined, createdAt: new Date(), editedAt: null, reactions: [] };
 
-describe("findMessageById", () => {
+describe.concurrent("findMessageById", () => {
     it("should return null when id not found", async () => {
         const db = await createTestDb();
         const repo = createMessageRepository(db);

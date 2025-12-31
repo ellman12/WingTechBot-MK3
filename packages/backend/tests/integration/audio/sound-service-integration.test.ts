@@ -64,7 +64,7 @@ const mockSoundRepository = {
     },
 };
 
-describe("SoundService Integration Tests", () => {
+describe.concurrent("SoundService Integration Tests", () => {
     let soundService: ReturnType<typeof createSoundService>;
     let tempFiles: string[] = [];
 

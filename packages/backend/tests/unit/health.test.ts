@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-describe("Health Endpoint", () => {
+describe.concurrent("Health Endpoint", () => {
     it("should return health status", () => {
         // This is a simple test to verify our test setup works
         // In a real implementation, you'd test the actual health endpoint
