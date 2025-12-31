@@ -2,7 +2,7 @@ import { createMessageRepository } from "@adapters/repositories/MessageRepositor
 
 import { createTestDb } from "../../utils/testUtils";
 
-describe("editMessage", () => {
+describe.concurrent("editMessage", () => {
     it("should update message content successfully", async () => {
         const db = await createTestDb();
         const repo = createMessageRepository(db);

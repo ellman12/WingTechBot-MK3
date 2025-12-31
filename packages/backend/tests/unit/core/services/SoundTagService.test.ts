@@ -6,7 +6,7 @@ import { createTestDb } from "../../../utils/testUtils";
 import { createSound } from "../../soundTags/addTagToSound.test";
 import { createTag } from "../../soundTags/createTag.test";
 
-describe("SoundTagService", async () => {
+describe.concurrent("SoundTagService", async () => {
     it("should add sound tags when they exist", async () => {
         const db = await createTestDb();
         const soundRepository = createSoundRepository(db);

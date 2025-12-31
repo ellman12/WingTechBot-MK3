@@ -6,7 +6,7 @@ import { expect } from "vitest";
 import { invalidReactions, validReactions } from "../../testData/reactions";
 import { createTestDb } from "../../utils/testUtils";
 
-describe("Create Reaction, valid data", () => {
+describe.concurrent("Create Reaction, valid data", () => {
     test.each(validReactions)("%s, %s, %s, %s, %s, %s", async (giverId, receiverId, channelId, messageId, emoteName, emoteId) => {
         const db = await createTestDb();
         const messages = createMessageRepository(db);
@@ -30,7 +30,7 @@ describe("Create Reaction, valid data", () => {
     });
 });
 
-describe("Create Reaction, throws for invalid reactions", () => {
+describe.concurrent("Create Reaction, throws for invalid reactions", () => {
     test.each(invalidReactions)("%s, %s, %s, %s, %s, %s", async (giverId, receiverId, channelId, messageId, emoteName, emoteId) => {
         const db = await createTestDb();
         const reactions = createReactionRepository(db);

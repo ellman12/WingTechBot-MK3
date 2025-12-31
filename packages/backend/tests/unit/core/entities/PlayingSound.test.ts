@@ -2,7 +2,7 @@ import { createPlayingSound } from "@core/entities/PlayingSound";
 import { Readable } from "stream";
 import { describe, expect, it } from "vitest";
 
-describe("PlayingSound", () => {
+describe.concurrent("PlayingSound", () => {
     describe("createPlayingSound", () => {
         it("should create PlayingSound with format metadata", () => {
             const stream = Readable.from(["test audio data"]);

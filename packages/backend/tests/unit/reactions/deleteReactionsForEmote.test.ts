@@ -15,7 +15,7 @@ const data: MessageTestData[] = [
     [4, 1],
 ];
 
-describe("Delete Reactions for Emote, valid data", () => {
+describe.concurrent("Delete Reactions for Emote, valid data", () => {
     test.each(data)("%s %s", async (messageCount, reactionsPerMessage) => {
         const db = await createTestDb();
         const reactions = createReactionRepository(db);
@@ -31,7 +31,7 @@ describe("Delete Reactions for Emote, valid data", () => {
     });
 });
 
-describe("Delete Reactions for Emote, throws for nonexistent reactions", () => {
+describe.concurrent("Delete Reactions for Emote, throws for nonexistent reactions", () => {
     test.each(data)("%s %s", async (messageCount, reactionsPerMessage) => {
         const db = await createTestDb();
         const reactions = createReactionRepository(db);

@@ -3,7 +3,7 @@ import { createReactionRepository } from "@adapters/repositories/ReactionReposit
 import { validEmotes } from "../../testData/reactionEmotes";
 import { createFakeMessagesAndReactions, createTestDb } from "../../utils/testUtils";
 
-describe("getKarmaAndAwards", () => {
+describe.concurrent("getKarmaAndAwards", () => {
     it("returns the correct karma and awards", async () => {
         const db = await createTestDb();
         const reactions = createReactionRepository(db);

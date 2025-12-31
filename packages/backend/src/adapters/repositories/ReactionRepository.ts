@@ -40,7 +40,8 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
 
         const existing = await findReaction(data);
         if (existing) {
-            console.error(`Reaction exists, ignoring`, existing);
+            // Reaction already exists, return it instead of attempting duplicate insert
+            return existing;
         }
 
         const { giverId, receiverId, channelId, messageId, emoteId } = data;

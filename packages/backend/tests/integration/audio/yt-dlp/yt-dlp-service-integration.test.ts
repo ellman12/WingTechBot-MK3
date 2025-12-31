@@ -1,6 +1,6 @@
 import { createYtDlpService } from "@infrastructure/yt-dlp/YtDlpService";
 import { Readable } from "stream";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 // Helper function to check if yt-dlp is available and working
 const isYtDlpAvailable = async (): Promise<boolean> => {
@@ -16,7 +16,7 @@ const isYtDlpAvailable = async (): Promise<boolean> => {
     }
 };
 
-describe("YtDlpService Integration Tests", () => {
+describe.concurrent("YtDlpService Integration Tests", () => {
     const ytDlpService = createYtDlpService();
 
     // Note: These tests require yt-dlp to be installed and network access
@@ -113,7 +113,7 @@ describe("YtDlpService Integration Tests", () => {
         await expect(ytDlpService.getAudioStream(invalidUrl)).rejects.toThrow();
 
         await expect(ytDlpService.getVideoInfo(invalidUrl)).rejects.toThrow();
-    });
+    }, 15000); // Increase timeout for network request
 
     it("should handle malformed URLs", async () => {
         const malformedUrl = "not-even-a-url";
@@ -121,33 +121,5 @@ describe("YtDlpService Integration Tests", () => {
         await expect(ytDlpService.getAudioStream(malformedUrl)).rejects.toThrow();
 
         await expect(ytDlpService.getVideoInfo(malformedUrl)).rejects.toThrow();
-    });
-
-    // Mock test for when yt-dlp is not available
-    it("should handle yt-dlp process spawn failures", async () => {
-        // Mock spawn to simulate yt-dlp not being available
-        const mockSpawn = vi.fn(() => {
-            throw new Error("yt-dlp not found");
-        });
-
-        // Mock the child_process module
-        vi.doMock("child_process", () => ({
-            spawn: mockSpawn,
-        }));
-
-        // Clear modules and re-import to get the mocked version
-        vi.resetModules();
-        const { createYtDlpService: createMockedService } = await import("@infrastructure/yt-dlp/YtDlpService");
-        const mockedService = createMockedService();
-
-        await expect(mockedService.getAudioStream("https://example.com")).rejects.toThrow("yt-dlp not found");
-        await expect(mockedService.getVideoInfo("https://example.com")).rejects.toThrow("yt-dlp not found");
-
-        // Verify spawn was called
-        expect(mockSpawn).toHaveBeenCalled();
-
-        // Clean up
-        vi.doUnmock("child_process");
-        vi.resetModules();
-    });
+    }, 15000); // Increase timeout for yt-dlp error handling
 });

@@ -3,7 +3,7 @@ import { expect } from "vitest";
 
 import { createTestDb } from "../../utils/testUtils";
 
-describe("Update ReactionEmote", () => {
+describe.concurrent("Update ReactionEmote", () => {
     it("Set karmaValue of ReactionEmote", async () => {
         const db = await createTestDb();
         const emotes = createReactionEmoteRepository(db);

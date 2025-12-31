@@ -5,7 +5,7 @@ import { createTestDb } from "../../utils/testUtils";
 import { createSound } from "./addTagToSound.test";
 import { createTag } from "./createTag.test";
 
-describe("removeTagFromSound", async () => {
+describe.concurrent("removeTagFromSound", async () => {
     it("should remove a tag successfully", async () => {
         const db = await createTestDb();
         const sounds = createSoundRepository(db);

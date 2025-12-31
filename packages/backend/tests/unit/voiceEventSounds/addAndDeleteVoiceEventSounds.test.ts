@@ -3,7 +3,7 @@ import { createVoiceEventsSoundsRepository } from "@adapters/repositories/VoiceE
 
 import { createTestDb } from "../../utils/testUtils";
 
-describe("Add and Delete VoiceEventSounds", async () => {
+describe.concurrent("Add and Delete VoiceEventSounds", async () => {
     const userId = "1234";
     const type = "UserJoin";
 
