@@ -16,7 +16,7 @@
         "test:integration": "vitest run tests/integration",
         "test:integration:audio": "vitest run tests/integration/audio",
         "test:integration:discord": "vitest run tests/integration/messagesAndReactions --no-file-parallelism",
-        "test:ci": "CI=true vitest run tests/unit && CI=true vitest run tests/integration/audio & CI=true vitest run tests/integration/messagesAndReactions --no-file-parallelism && wait",
+        "test:ci": "CI=true vitest run tests/unit & CI=true vitest run tests/integration/audio & CI=true vitest run tests/integration/messagesAndReactions --no-file-parallelism & wait",
         "typecheck": "tsc --noEmit",
         "db:setup": "tsx -r @dotenvx/dotenvx/config scripts/setup-database.ts",
         "db:generate": "tsx -r @dotenvx/dotenvx/config scripts/generate-types.ts",
