@@ -29,6 +29,7 @@ import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/Disco
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { createFileManager } from "@infrastructure/filestore/FileManager.js";
 import { type ServerConfig, createExpressApp } from "@infrastructure/http/ExpressApp.js";
+import { type ErrorReportingService, createErrorReportingService } from "@infrastructure/services/ErrorReportingService.js";
 import { createGeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 
 export type App = {
@@ -36,10 +37,13 @@ export type App = {
     readonly stop: () => Promise<void>;
     readonly discordBot: DiscordBot;
     readonly isReady: () => boolean;
+    readonly errorReportingService: ErrorReportingService;
 };
 
 export const createApplication = async (): Promise<App> => {
     const config = getConfig();
+
+    const errorReportingService = await createErrorReportingService({ config });
 
     await connect();
 
@@ -145,6 +149,8 @@ export const createApplication = async (): Promise<App> => {
 
             await discordBot.stop();
 
+            errorReportingService.shutdown();
+
             await disconnect();
 
             console.log("✅ Application shut down gracefully");
@@ -161,6 +167,7 @@ export const createApplication = async (): Promise<App> => {
         stop,
         discordBot,
         isReady,
+        errorReportingService,
     };
 };
 
@@ -186,11 +193,14 @@ const setupGracefulShutdown = (app: App): void => {
 
     process.on("uncaughtException", error => {
         console.error("❌ Uncaught Exception:", error);
+        void app.errorReportingService.reportError(error, { source: "uncaughtException", willShutdown: true });
         void shutdown(1);
     });
 
     process.on("unhandledRejection", (reason, promise) => {
         console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+        const error = reason instanceof Error ? reason : new Error(String(reason));
+        void app.errorReportingService.reportError(error, { source: "unhandledRejection", promise: String(promise), willShutdown: true });
         void shutdown(1);
     });
 };

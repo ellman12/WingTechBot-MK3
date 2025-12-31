@@ -146,6 +146,9 @@ importers:
             swagger-ui-express:
                 specifier: ^5.0.1
                 version: 5.0.1(express@5.1.0)
+            xxhash-wasm:
+                specifier: ^1.1.0
+                version: 1.1.0
             zod:
                 specifier: ^4.1.12
                 version: 4.1.12
@@ -3415,6 +3418,9 @@ packages:
         resolution: { integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ== }
         engines: { node: ">=0.4" }
 
+    xxhash-wasm@1.1.0:
+        resolution: { integrity: sha512-147y/6YNh+tlp6nd/2pWq38i9h6mz/EuQ6njIrmW8D1BS5nCqs0P6DG+m6zTGnNz5I+uhZ0SHxBs9BsPrwcKDA== }
+
     yallist@3.1.1:
         resolution: { integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g== }
 
@@ -6514,6 +6520,8 @@ snapshots:
     ws@8.18.3: {}
 
     xtend@4.0.2: {}
+
+    xxhash-wasm@1.1.0: {}
 
     yallist@3.1.1: {}
 
