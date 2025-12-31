@@ -5,8 +5,8 @@ import { registerVoiceServiceEventHandlers } from "@application/eventHandlers/Di
 import { registerLlmConversationServiceEventHandlers } from "@application/eventHandlers/LlmConversation.js";
 import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive.js";
 import { registerReactionArchiveEvents } from "@application/eventHandlers/ReactionArchive.js";
-import { registerVoiceEventSoundsEventHandlers } from "@application/eventHandlers/VoiceEventSounds.js";
 import { registerSoundboardThreadEventHandlers } from "@application/eventHandlers/SoundboardThreadService.js";
+import { registerVoiceEventSoundsEventHandlers } from "@application/eventHandlers/VoiceEventSounds.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository";
@@ -18,10 +18,10 @@ import type { MessageArchiveService } from "@core/services/MessageArchiveService
 import type { ReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
-import type { VoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
 import type { SoundboardThreadService } from "@core/services/SoundboardThreadService.js";
+import type { VoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
-import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, RESTEvents } from "discord.js";
+import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, RESTEvents, type TextChannel } from "discord.js";
 
 import type { Config } from "../config/Config.js";
 
@@ -143,6 +143,8 @@ export const createDiscordBot = async ({
 
             const guild = await client.guilds.fetch(config.discord.serverId!);
             await guild.fetch();
+            const botChannel = (await guild.channels.fetch(config.discord.botChannelId)) as TextChannel;
+
             await emoteRepository.createKarmaEmotes(guild);
 
             //If first boot, pull in all messages from all time. Otherwise, just get this year's.
@@ -153,6 +155,8 @@ export const createDiscordBot = async ({
             await messageArchiveService.removeDeletedMessages(guild, year);
 
             await soundboardThreadService.findOrCreateSoundboardThread(guild);
+
+            await botChannel.send("WTB3 online and ready");
         } catch (error) {
             console.error("❌ Failed to start Discord bot:", error);
             throw error;
