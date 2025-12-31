@@ -2,6 +2,7 @@ import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAud
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream";
 import { createAudioStreamWithFormat } from "@core/entities/AudioStream";
 import type { Sound } from "@core/entities/Sound";
+import type { SoundRepository } from "@core/repositories/SoundRepository";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService";
 import { createSoundService } from "@core/services/SoundService";
 import type { Config } from "@infrastructure/config/Config";
@@ -35,47 +36,45 @@ const mockAudioFetcher: AudioFetcherService = {
     },
 };
 
-const mockSoundRepository = {
-    sounds: new Map<string, { name: string; path: string }>(),
-
-    async addSound(sound: { name: string; path: string }): Promise<Sound> {
-        this.sounds.set(sound.name, sound);
-
-        return sound;
-    },
-
-    async getSoundByName(name: string): Promise<{ name: string; path: string } | null> {
-        return this.sounds.get(name) || null;
-    },
-
-    async getAllSounds(): Promise<{ name: string; path: string }[]> {
-        return Array.from(this.sounds.values());
-    },
-
-    async deleteSound(name: string): Promise<void> {
-        this.sounds.delete(name);
-    },
-
-    async getAllSoundsWithTagName(_name: string): Promise<Sound[]> {
-        return [];
-    },
-
-    async tryGetSoundsWithinDistance(): Promise<(Sound & { distance: number })[]> {
-        return [];
-    },
-};
-
-describe.concurrent("SoundService Integration Tests", () => {
+describe("SoundService Integration Tests", () => {
     let soundService: ReturnType<typeof createSoundService>;
     let tempDir: string;
     let testConfig: Config;
+    let mockSoundRepository: { sounds: Map<string, { name: string; path: string }> } & SoundRepository;
 
     beforeEach(() => {
         // Create unique temp directory for this test
         tempDir = mkdtempSync(join(tmpdir(), "sound-service-test-"));
 
-        // Clear the mock repository
-        mockSoundRepository.sounds.clear();
+        // Create fresh repository for this test to avoid concurrent interference
+        mockSoundRepository = {
+            sounds: new Map<string, { name: string; path: string }>(),
+
+            async addSound(sound: { name: string; path: string }): Promise<Sound> {
+                this.sounds.set(sound.name, sound);
+                return sound;
+            },
+
+            async getSoundByName(name: string): Promise<{ name: string; path: string } | null> {
+                return this.sounds.get(name) || null;
+            },
+
+            async getAllSounds(): Promise<{ name: string; path: string }[]> {
+                return Array.from(this.sounds.values());
+            },
+
+            async deleteSound(name: string): Promise<void> {
+                this.sounds.delete(name);
+            },
+
+            async getAllSoundsWithTagName(_name: string): Promise<Sound[]> {
+                return [];
+            },
+
+            async tryGetSoundsWithinDistance(): Promise<(Sound & { distance: number })[]> {
+                return [];
+            },
+        } satisfies { sounds: Map<string, { name: string; path: string }> } & SoundRepository;
 
         // Create test config with unique temp directory
         testConfig = {
@@ -120,7 +119,7 @@ describe.concurrent("SoundService Integration Tests", () => {
         await soundService.addSound(soundName, testUrl);
 
         // Track the created file for cleanup
-        const expectedPath = `${tempDir}/soundName}.pcm`;
+        const expectedPath = `${tempDir}/${soundName}.pcm`;
 
         // Verify the sound was added to repository
         const savedSound = await mockSoundRepository.getSoundByName(soundName);
@@ -175,7 +174,7 @@ describe.concurrent("SoundService Integration Tests", () => {
 
         // Add the sound
         await soundService.addSound(soundName, testUrl);
-        const filePath = `${tempDir}/soundName}.pcm`;
+        const filePath = `${tempDir}/${soundName}.pcm`;
 
         // Verify it exists
         expect(existsSync(filePath)).toBe(true);
