@@ -61,7 +61,8 @@
     "pnpm": {
         "overrides": {
             "jws": ">=4.0.1",
-            "body-parser": ">=2.2.1"
+            "body-parser": ">=2.2.1",
+            "qs": ">=6.14.1"
         }
     }
 }
