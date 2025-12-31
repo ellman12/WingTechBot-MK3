@@ -113,7 +113,7 @@ describe.concurrent("YtDlpService Integration Tests", () => {
         await expect(ytDlpService.getAudioStream(invalidUrl)).rejects.toThrow();
 
         await expect(ytDlpService.getVideoInfo(invalidUrl)).rejects.toThrow();
-    });
+    }, 15000); // Increase timeout for network request
 
     it("should handle malformed URLs", async () => {
         const malformedUrl = "not-even-a-url";
@@ -121,5 +121,5 @@ describe.concurrent("YtDlpService Integration Tests", () => {
         await expect(ytDlpService.getAudioStream(malformedUrl)).rejects.toThrow();
 
         await expect(ytDlpService.getVideoInfo(malformedUrl)).rejects.toThrow();
-    });
+    }, 15000); // Increase timeout for yt-dlp error handling
 });

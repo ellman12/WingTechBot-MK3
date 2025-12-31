@@ -12,59 +12,56 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { Readable } from "stream";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-// Mock implementations for integration testing
-const mockAudioFetcher: AudioFetcherService = {
-    fetchSoundboardAudio: vi.fn(),
-    fetchUrlAudio: async (url: string): Promise<AudioStreamWithMetadata> => {
-        // Return the test MP3 file as a stream for URL requests
-        if (url.startsWith("http")) {
-            const testDir = "./tests/integration/audio";
-            const testFilePath = join(testDir, "test.mp3");
-            const fileBuffer = readFileSync(testFilePath);
-            return createAudioStreamWithFormat(Readable.from([fileBuffer]), {
-                format: "mp3",
-                container: "mp3",
-                codec: "mp3",
-                sampleRate: 44100,
-                channels: 2,
-                bitrate: 128000,
-            });
-        }
-        throw new Error("Invalid URL");
-    },
-};
+describe.concurrent("SoundService Integration Tests", () => {
+    // Use a factory function to create isolated test context for each test
+    const createTestContext = () => {
+        const tempDir = mkdtempSync(join(tmpdir(), "sound-service-test-"));
 
-describe("SoundService Integration Tests", () => {
-    let soundService: ReturnType<typeof createSoundService>;
-    let tempDir: string;
-    let testConfig: Config;
-    let mockSoundRepository: { sounds: Map<string, { name: string; path: string }> } & SoundRepository;
-
-    beforeEach(() => {
-        // Create unique temp directory for this test
-        tempDir = mkdtempSync(join(tmpdir(), "sound-service-test-"));
+        // Create fresh audio fetcher for this test to avoid shared state
+        const mockAudioFetcher: AudioFetcherService = {
+            fetchSoundboardAudio: vi.fn(),
+            fetchUrlAudio: async (url: string): Promise<AudioStreamWithMetadata> => {
+                // Return the test MP3 file as a stream for URL requests
+                if (url.startsWith("http")) {
+                    const testDir = "./tests/integration/audio";
+                    const testFilePath = join(testDir, "test.mp3");
+                    const fileBuffer = readFileSync(testFilePath);
+                    // Clone buffer to avoid sharing between concurrent tests
+                    return createAudioStreamWithFormat(Readable.from([Buffer.from(fileBuffer)]), {
+                        format: "mp3",
+                        container: "mp3",
+                        codec: "mp3",
+                        sampleRate: 44100,
+                        channels: 2,
+                        bitrate: 128000,
+                    });
+                }
+                throw new Error("Invalid URL");
+            },
+        };
 
         // Create fresh repository for this test to avoid concurrent interference
-        mockSoundRepository = {
-            sounds: new Map<string, { name: string; path: string }>(),
+        const soundsMap = new Map<string, { name: string; path: string }>();
+        const mockSoundRepository: { sounds: Map<string, { name: string; path: string }> } & SoundRepository = {
+            sounds: soundsMap,
 
             async addSound(sound: { name: string; path: string }): Promise<Sound> {
-                this.sounds.set(sound.name, sound);
+                soundsMap.set(sound.name, sound);
                 return sound;
             },
 
             async getSoundByName(name: string): Promise<{ name: string; path: string } | null> {
-                return this.sounds.get(name) || null;
+                return soundsMap.get(name) || null;
             },
 
             async getAllSounds(): Promise<{ name: string; path: string }[]> {
-                return Array.from(this.sounds.values());
+                return Array.from(soundsMap.values());
             },
 
             async deleteSound(name: string): Promise<void> {
-                this.sounds.delete(name);
+                soundsMap.delete(name);
             },
 
             async getAllSoundsWithTagName(_name: string): Promise<Sound[]> {
@@ -74,10 +71,10 @@ describe("SoundService Integration Tests", () => {
             async tryGetSoundsWithinDistance(): Promise<(Sound & { distance: number })[]> {
                 return [];
             },
-        } satisfies { sounds: Map<string, { name: string; path: string }> } & SoundRepository;
+        };
 
         // Create test config with unique temp directory
-        testConfig = {
+        const testConfig: Config = {
             server: { port: 3000, environment: "test" },
             database: { url: "postgresql://test:test@localhost:5432/test" },
             discord: { token: "test-token", clientId: "test-client-id" },
@@ -91,16 +88,21 @@ describe("SoundService Integration Tests", () => {
         const audioProcessor = createFfmpegAudioProcessingService({ ffmpeg: ffmpegService });
         const fileManager = createFileManager();
 
-        soundService = createSoundService({
+        const soundService = createSoundService({
             audioFetcher: mockAudioFetcher,
             audioProcessor,
             fileManager,
             soundRepository: mockSoundRepository,
             config: testConfig,
         });
-    });
 
-    afterEach(() => {
+        return { soundService, tempDir, mockSoundRepository, mockAudioFetcher, testConfig };
+    };
+
+    const cleanupTestContext = async (tempDir: string) => {
+        // Give async operations a moment to complete
+        await new Promise(resolve => setTimeout(resolve, 50));
+
         // Clean up entire temp directory
         try {
             if (existsSync(tempDir)) {
@@ -109,110 +111,135 @@ describe("SoundService Integration Tests", () => {
         } catch (error) {
             console.warn(`Failed to delete temp directory ${tempDir}:`, error);
         }
-    });
+    };
 
     it("should successfully add and retrieve a sound from URL", async () => {
-        const testUrl = "https://example.com/test-audio.mp3";
-        const soundName = "integration-test-sound";
+        const ctx = createTestContext();
+        try {
+            const testUrl = "https://example.com/test-audio.mp3";
+            const soundName = "integration-test-sound";
 
-        // Add the sound
-        await soundService.addSound(soundName, testUrl);
+            // Add the sound
+            await ctx.soundService.addSound(soundName, testUrl);
 
-        // Track the created file for cleanup
-        const expectedPath = `${tempDir}/${soundName}.pcm`;
+            // Track the created file for cleanup
+            const expectedPath = `${ctx.tempDir}/${soundName}.pcm`;
 
-        // Verify the sound was added to repository
-        const savedSound = await mockSoundRepository.getSoundByName(soundName);
-        expect(savedSound).not.toBeNull();
-        expect(savedSound?.name).toBe(soundName);
-        expect(savedSound?.path).toBe(`/${soundName}.pcm`);
+            // Verify the sound was added to repository
+            const savedSound = await ctx.mockSoundRepository.getSoundByName(soundName);
+            expect(savedSound).not.toBeNull();
+            expect(savedSound?.name).toBe(soundName);
+            expect(savedSound?.path).toBe(`/${soundName}.pcm`);
 
-        // Verify the file was created
-        expect(existsSync(expectedPath)).toBe(true);
+            // Verify the file was created
+            expect(existsSync(expectedPath)).toBe(true);
 
-        // Retrieve the sound
-        const audioStream = await soundService.getSound(soundName);
-        expect(audioStream).toBeInstanceOf(Readable);
+            // Retrieve the sound
+            const audioStream = await ctx.soundService.getSound(soundName);
+            expect(audioStream).toBeInstanceOf(Readable);
 
-        // Verify we can read data from the stream
-        const chunks: Buffer[] = [];
-        for await (const chunk of audioStream) {
-            chunks.push(chunk);
+            // Verify we can read data from the stream
+            const chunks: Buffer[] = [];
+            for await (const chunk of audioStream) {
+                chunks.push(chunk);
+            }
+
+            const audioData = Buffer.concat(chunks);
+            expect(audioData.length).toBeGreaterThan(0);
+        } finally {
+            await cleanupTestContext(ctx.tempDir);
         }
-
-        const audioData = Buffer.concat(chunks);
-        expect(audioData.length).toBeGreaterThan(0);
     }, 30000); // Increase timeout for FFmpeg processing
 
     it("should list sounds correctly", async () => {
-        const soundName1 = "test-sound-1";
-        const soundName2 = "test-sound-2";
-        const testUrl = "https://example.com/test-audio.mp3";
+        const ctx = createTestContext();
+        try {
+            const soundName1 = "test-sound-1";
+            const soundName2 = "test-sound-2";
+            const testUrl = "https://example.com/test-audio.mp3";
 
-        // Initially should be empty
-        let sounds = await soundService.listSounds();
-        expect(sounds).toEqual([]);
+            // Initially should be empty
+            let sounds = await ctx.soundService.listSounds();
+            expect(sounds).toEqual([]);
 
-        // Add first sound
-        await soundService.addSound(soundName1, testUrl);
+            // Add first sound
+            await ctx.soundService.addSound(soundName1, testUrl);
 
-        sounds = await soundService.listSounds();
-        expect(sounds).toEqual([soundName1]);
+            sounds = await ctx.soundService.listSounds();
+            expect(sounds).toEqual([soundName1]);
 
-        // Add second sound
-        await soundService.addSound(soundName2, testUrl);
+            // Add second sound
+            await ctx.soundService.addSound(soundName2, testUrl);
 
-        sounds = await soundService.listSounds();
-        expect(sounds).toHaveLength(2);
-        expect(sounds).toContain(soundName1);
-        expect(sounds).toContain(soundName2);
+            sounds = await ctx.soundService.listSounds();
+            expect(sounds).toHaveLength(2);
+            expect(sounds).toContain(soundName1);
+            expect(sounds).toContain(soundName2);
+        } finally {
+            await cleanupTestContext(ctx.tempDir);
+        }
     }, 45000);
 
     it("should delete sounds correctly", async () => {
-        const soundName = "test-delete-sound";
-        const testUrl = "https://example.com/test-audio.mp3";
+        const ctx = createTestContext();
+        try {
+            const soundName = "test-delete-sound";
+            const testUrl = "https://example.com/test-audio.mp3";
 
-        // Add the sound
-        await soundService.addSound(soundName, testUrl);
-        const filePath = `${tempDir}/${soundName}.pcm`;
+            // Add the sound
+            await ctx.soundService.addSound(soundName, testUrl);
+            const filePath = `${ctx.tempDir}/${soundName}.pcm`;
 
-        // Verify it exists
-        expect(existsSync(filePath)).toBe(true);
-        expect(await mockSoundRepository.getSoundByName(soundName)).not.toBeNull();
+            // Verify it exists
+            expect(existsSync(filePath)).toBe(true);
+            expect(await ctx.mockSoundRepository.getSoundByName(soundName)).not.toBeNull();
 
-        // Delete the sound
-        await soundService.deleteSound(soundName);
+            // Delete the sound
+            await ctx.soundService.deleteSound(soundName);
 
-        // Verify it's gone
-        expect(existsSync(filePath)).toBe(false);
-        expect(await mockSoundRepository.getSoundByName(soundName)).toBeNull();
+            // Verify it's gone
+            expect(existsSync(filePath)).toBe(false);
+            expect(await ctx.mockSoundRepository.getSoundByName(soundName)).toBeNull();
+        } finally {
+            await cleanupTestContext(ctx.tempDir);
+        }
     }, 30000);
 
     it("should handle URL audio streams with processing", async () => {
-        const testUrl = "https://example.com/streaming-audio.mp3";
+        const ctx = createTestContext();
+        try {
+            const testUrl = "https://example.com/streaming-audio.mp3";
 
-        // Get audio stream (should be processed through FFmpeg)
-        const audioStream = await soundService.getSound(testUrl);
-        expect(audioStream).toBeInstanceOf(Readable);
+            // Get audio stream (should be processed through FFmpeg)
+            const audioStream = await ctx.soundService.getSound(testUrl);
+            expect(audioStream).toBeInstanceOf(Readable);
 
-        // Verify we can read processed data
-        const chunks: Buffer[] = [];
-        for await (const chunk of audioStream) {
-            chunks.push(chunk);
+            // Verify we can read processed data
+            const chunks: Buffer[] = [];
+            for await (const chunk of audioStream) {
+                chunks.push(chunk);
+            }
+
+            const processedData = Buffer.concat(chunks);
+            expect(processedData.length).toBeGreaterThan(0);
+        } finally {
+            await cleanupTestContext(ctx.tempDir);
         }
-
-        const processedData = Buffer.concat(chunks);
-        expect(processedData.length).toBeGreaterThan(0);
     }, 30000);
 
     it("should handle errors gracefully", async () => {
-        // Test with invalid URL
-        await expect(soundService.addSound("bad-sound", "not-a-url")).rejects.toThrow();
+        const ctx = createTestContext();
+        try {
+            // Test with invalid URL
+            await expect(ctx.soundService.addSound("bad-sound", "not-a-url")).rejects.toThrow();
 
-        // Test getting non-existent soundboard sound
-        await expect(soundService.getSound("non-existent-sound")).rejects.toThrow("Sound with name non-existent-sound not found");
+            // Test getting non-existent soundboard sound
+            await expect(ctx.soundService.getSound("non-existent-sound")).rejects.toThrow("Sound with name non-existent-sound not found");
 
-        // Test deleting non-existent sound
-        await expect(soundService.deleteSound("non-existent-sound")).rejects.toThrow("Sound with name non-existent-sound not found");
+            // Test deleting non-existent sound
+            await expect(ctx.soundService.deleteSound("non-existent-sound")).rejects.toThrow("Sound with name non-existent-sound not found");
+        } finally {
+            await cleanupTestContext(ctx.tempDir);
+        }
     });
 });
