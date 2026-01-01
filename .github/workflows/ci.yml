@@ -285,6 +285,7 @@ jobs:
                   DATABASE_URL: postgresql://wingtechbot:wingtechbot_password@localhost:5432/wingtechbot_test
                   NODE_ENV: CICD
                   CI: true
+                  SKIP_CHANNEL_PROCESSING_ON_STARTUP: true
 
                   DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
                   DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
