@@ -21,6 +21,8 @@ export type MessageArchiveService = {
     readonly getAllDBMessages: (year?: number) => Promise<DBMessage[]>;
 
     readonly getNewestDBMessages: (channelId: string, limit: number) => Promise<DBMessage[]>;
+
+    readonly hasAnyMessages: () => Promise<boolean>;
 };
 
 export type MessageArchiveServiceDeps = {
@@ -440,12 +442,22 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
 
     async function getNewestDBMessages(channelId: string, limit: number) {
         try {
-            return await messageRepository.getNewestMessages(channelId, limit);
+            return await messageRepository.getNewestMessages(limit, channelId);
         } catch (e: unknown) {
             console.error("Error getting newest DB messages", e);
         }
 
         return [];
+    }
+
+    async function hasAnyMessages(): Promise<boolean> {
+        try {
+            const messages = await messageRepository.getNewestMessages(1);
+            return messages.length > 0;
+        } catch (e: unknown) {
+            console.error("Error checking if any messages exist", e);
+            return false;
+        }
     }
 
     return {
@@ -457,5 +469,6 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
         messageEdited,
         getAllDBMessages,
         getNewestDBMessages,
+        hasAnyMessages,
     };
 };

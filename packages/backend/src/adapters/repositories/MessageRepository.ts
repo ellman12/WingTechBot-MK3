@@ -122,15 +122,18 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         return result.map(m => transformMessage(m, m.reactions));
     };
 
-    const getNewestMessages = async (channelId: string, limit: number): Promise<Message[]> => {
-        const query = db
+    const getNewestMessages = async (limit: number, channelId?: string): Promise<Message[]> => {
+        let query = db
             .selectFrom("messages as m")
-            .where("m.channel_id", "=", channelId)
             .leftJoin("reactions", "reactions.message_id", "m.id")
             .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.giver_id IS NOT NULL), '[]')`.as("reactions")])
             .groupBy("m.id")
             .orderBy("m.created_at", "desc")
             .limit(limit);
+
+        if (channelId) {
+            query = query.where("m.channel_id", "=", channelId);
+        }
 
         const result = await query.execute();
         return result.map(m => transformMessage(m, m.reactions));

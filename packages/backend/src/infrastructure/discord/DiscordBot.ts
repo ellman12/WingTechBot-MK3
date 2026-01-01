@@ -188,11 +188,22 @@ export const createDiscordBot = async ({
 
             // Skip channel processing if configured (useful for tests)
             if (!config.discord.skipChannelProcessingOnStartup) {
-                //Process all channels without year filtering to avoid missing messages near year boundaries
-                await messageArchiveService.processAllChannels(guild);
+                // Check if this is the first run by seeing if we have any messages in the DB
+                const isFirstRun = !(await messageArchiveService.hasAnyMessages());
+                const currentYear = new Date().getUTCFullYear();
+
+                if (isFirstRun) {
+                    // First run: process all channels without year filtering to get complete history
+                    console.log("🔄 First run detected - performing full message sync (all years)");
+                    await messageArchiveService.processAllChannels(guild);
+                } else {
+                    // Subsequent runs: only process current year for efficiency
+                    console.log(`🔄 Processing messages for ${currentYear} only`);
+                    await messageArchiveService.processAllChannels(guild, currentYear);
+                }
 
                 //Remove any messages that were deleted while bot offline
-                await messageArchiveService.removeDeletedMessages(guild);
+                await messageArchiveService.removeDeletedMessages(guild, isFirstRun ? undefined : currentYear);
             }
 
             await soundboardThreadService.findOrCreateSoundboardThread(guild);
