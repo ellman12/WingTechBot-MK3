@@ -58,6 +58,19 @@
         "typescript-eslint": "^8.47.0",
         "vite": "^7.2.4"
     },
+    "lint-staged": {
+        "packages/backend/**/*.{ts,tsx}": [
+            "eslint --fix",
+            "prettier --write"
+        ],
+        "packages/frontend/**/*.{ts,tsx}": [
+            "eslint --fix",
+            "prettier --write"
+        ],
+        "**/*.{json,md}": [
+            "prettier --write"
+        ]
+    },
     "pnpm": {
         "overrides": {
             "jws": ">=4.0.1",
