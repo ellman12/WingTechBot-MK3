@@ -20,7 +20,7 @@ describe("Messages and Reactions integration tests", async () => {
     });
 
     beforeEach(async () => {
-        await sleep(5000); // Increased delay to allow bot async operations to complete
+        await sleep(5000);
         await recreateDatabase();
     });
 
@@ -28,7 +28,7 @@ describe("Messages and Reactions integration tests", async () => {
         if (testChannel) {
             await deleteTestChannel(testChannel);
             testChannel = null;
-            await sleep(3000); // Allow bot operations to complete after channel deletion
+            await sleep(3000);
         }
     });
 
@@ -49,13 +49,13 @@ describe("Messages and Reactions integration tests", async () => {
         const channel = testChannel;
 
         const messages = await createMessagesAndReactions(channel, testerChannel, totalMessages, reactionsPerMessage, emotes);
-        await sleep(5000); // Reduced from 30s
+        await sleep(5000); 
         await verifyTesterReactions(db, totalMessages * reactionsPerMessage);
 
         //Delete message, verify reactions cascade delete
         let message = messages[0]!;
         await message.delete();
-        await sleep(3000); // Reduced from 10s
+        await sleep(3000); 
         let foundMessages = await db.selectFrom("messages").where("id", "=", message.id).selectAll().execute();
         let foundReactions = await db.selectFrom("reactions").where("message_id", "=", message.id).selectAll().execute();
         expect(foundMessages).toHaveLength(0);
@@ -64,12 +64,12 @@ describe("Messages and Reactions integration tests", async () => {
         //Remove reactions first, then delete message
         message = messages[1]!;
         await message.reactions.removeAll();
-        await sleep(3000); // Reduced from 10s
+        await sleep(3000); 
         foundReactions = await db.selectFrom("reactions").where("message_id", "=", message.id).selectAll().execute();
         expect(foundReactions).toHaveLength(0);
 
         await message.delete();
-        await sleep(3000); // Reduced from 10s
+        await sleep(3000); 
         foundMessages = await db.selectFrom("messages").where("id", "=", message.id).selectAll().execute();
         expect(foundMessages).toHaveLength(0);
 

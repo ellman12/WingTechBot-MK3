@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createUnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
 import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
@@ -26,7 +27,6 @@ import { runMigrations } from "@db/migrations.js";
 import "@dotenvx/dotenvx/config";
 import { getConfig } from "@infrastructure/config/Config.js";
 import { connect, disconnect, getKysely } from "@infrastructure/database/DatabaseConnection.js";
-import { createUnitOfWork } from "@infrastructure/database/KyselyUnitOfWork.js";
 import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { FfprobeService } from "@infrastructure/ffmpeg/FfprobeService.js";
@@ -202,15 +202,23 @@ const setupGracefulShutdown = (app: App): void => {
 
     process.on("uncaughtException", error => {
         console.error("❌ Uncaught Exception:", error);
-        void app.errorReportingService.reportError(error, { source: "uncaughtException", willShutdown: true });
-        void shutdown(1);
+        const isProduction = process.env.NODE_ENV === "production";
+        void app.errorReportingService.reportError(error, { source: "uncaughtException", willShutdown: !isProduction });
+
+        // In production, log and continue (with caution - app may be in inconsistent state)
+        // In dev/test, crash immediately to surface issues
+        if (!isProduction) {
+            void shutdown(1);
+        }
     });
 
     process.on("unhandledRejection", (reason, promise) => {
         console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
         const error = reason instanceof Error ? reason : new Error(String(reason));
-        void app.errorReportingService.reportError(error, { source: "unhandledRejection", promise: String(promise), willShutdown: true });
-        void shutdown(1);
+        void app.errorReportingService.reportError(error, { source: "unhandledRejection", promise: String(promise), willShutdown: false });
+
+        // Unhandled rejections are usually less critical - just log and continue
+        // In dev/test environments, we could optionally crash for stricter error handling
     });
 };
 

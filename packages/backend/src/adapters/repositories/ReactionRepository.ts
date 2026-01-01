@@ -180,7 +180,7 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
             }
         }
 
-        // Batch insert - no ON CONFLICT needed since we delete reactions before inserting
+        // Batch insert
         const values = reactions.map(r => ({
             giver_id: r.giverId,
             receiver_id: r.receiverId,
@@ -189,7 +189,11 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
             emote_id: r.emoteId,
         }));
 
-        await db.insertInto("reactions").values(values).execute();
+        await db
+            .insertInto("reactions")
+            .values(values)
+            .onConflict(oc => oc.columns(["giver_id", "receiver_id", "channel_id", "message_id", "emote_id"]).doNothing())
+            .execute();
     };
 
     const batchDeleteReactions = async (reactions: DeleteReactionData[]): Promise<void> => {

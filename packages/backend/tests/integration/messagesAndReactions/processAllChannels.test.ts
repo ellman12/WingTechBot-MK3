@@ -74,7 +74,7 @@ describe("processAllChannels", async () => {
         await stopBot();
 
         const newMessages: Message[] = [];
-        for (let i = 1; i <= 2; i++) { // Reduced from 3 to 2 messages
+        for (let i = 1; i <= 2; i++) { 
             const message = await testerChannel.send(`Message to process later #${i}`);
             newMessages.push(message);
             await message.react("👍");

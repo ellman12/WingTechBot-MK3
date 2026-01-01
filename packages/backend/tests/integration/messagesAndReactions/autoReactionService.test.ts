@@ -21,7 +21,7 @@ describe("Messages and Reactions integration tests", async () => {
     });
 
     beforeEach(async () => {
-        await sleep(5000); // Increased delay to allow bot async operations to complete
+        await sleep(5000);
         await recreateDatabase();
     });
 
@@ -50,7 +50,7 @@ describe("Messages and Reactions integration tests", async () => {
         // Test just one self-reaction instead of all three
         const [emoteName, emoteId] = emotes[2]!; // Just test one emote
         await message.react(emoteId!);
-        await sleep(3000); // Reduced from 5s
+        await sleep(3000); 
         const fetchedMessage = (await testerChannel.messages.fetch({ limit: 1 }))!.first()!;
 
         const possibleMessages = reactionScoldMessages[emoteName!]!;
@@ -71,7 +71,7 @@ describe("Messages and Reactions integration tests", async () => {
 
         const message = await testerChannel.send("This number is 69420 lol");
 
-        await sleep(2000); // Reduced from 3s
+        await sleep(2000); 
 
         const fetchedMessages = await testerChannel.messages.fetch({ limit: 2 });
         const reply = fetchedMessages.find(m => m.reference?.messageId === message.id);
@@ -94,7 +94,7 @@ describe("Messages and Reactions integration tests", async () => {
 
         const message = await testerChannel.send("This message is from WingTech Bot Tester");
 
-        await sleep(2000); // Reduced from 3s
+        await sleep(2000); 
 
         const fetchedMessage = (await testerChannel.messages.fetch({ limit: 1 }))!.first()!;
         expect(fetchedMessage.content).toEqual("\"Tester\"? I hardly know her!");

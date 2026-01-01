@@ -242,11 +242,11 @@ export async function createMessagesAndReactions(botChannel: TextChannel, tester
         const message = await botChannel.send(`Message ${i}: ${totalMessages} messages, ${reactionsPerMessage} reactions per message`);
         messages.push(message);
 
+        // Fetch the specific message once for the tester bot
+        const foundMessage = await testerBotChannel.messages.fetch(message.id);
+
         for (let j = 0; j < reactionsPerMessage; j++) {
             const [name, discordId] = emotes[j]!;
-
-            await testerBotChannel.messages.fetch();
-            const foundMessage = testerBotChannel.messages.cache.get(message.id)!;
             await foundMessage.react(discordId || name);
         }
     }
