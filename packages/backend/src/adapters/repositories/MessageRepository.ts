@@ -84,18 +84,15 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
 
     //Gets all messages (optionally filtered by year) and their reactions as an array.
     const getAllMessages = async (year?: number): Promise<Message[]> => {
-        let query = db
+        const result = await db
             .selectFrom("messages as m")
             .leftJoin("reactions", "reactions.message_id", "m.id")
             .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.giver_id IS NOT NULL), '[]')`.as("reactions")])
             .groupBy("m.id")
-            .orderBy("m.created_at");
+            .orderBy("m.created_at")
+            .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year!))
+            .execute();
 
-        if (year !== undefined) {
-            query = query.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year);
-        }
-
-        const result = await query.execute();
         return result.map(m => transformMessage(m, m.reactions));
     };
 
@@ -106,36 +103,30 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
 
     //Gets all messages for a specific channel (optionally filtered by year) with their reactions
     const getMessagesForChannel = async (channelId: string, year?: number): Promise<Message[]> => {
-        let query = db
+        const result = await db
             .selectFrom("messages as m")
             .where("m.channel_id", "=", channelId)
             .leftJoin("reactions", "reactions.message_id", "m.id")
             .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.giver_id IS NOT NULL), '[]')`.as("reactions")])
             .groupBy("m.id")
-            .orderBy("m.created_at");
+            .orderBy("m.created_at")
+            .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year!))
+            .execute();
 
-        if (year !== undefined) {
-            query = query.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year);
-        }
-
-        const result = await query.execute();
         return result.map(m => transformMessage(m, m.reactions));
     };
 
     const getNewestMessages = async (limit: number, channelId?: string): Promise<Message[]> => {
-        let query = db
+        const result = await db
             .selectFrom("messages as m")
             .leftJoin("reactions", "reactions.message_id", "m.id")
             .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.giver_id IS NOT NULL), '[]')`.as("reactions")])
             .groupBy("m.id")
             .orderBy("m.created_at", "desc")
-            .limit(limit);
+            .limit(limit)
+            .$if(channelId !== undefined, qb => qb.where("m.channel_id", "=", channelId!))
+            .execute();
 
-        if (channelId) {
-            query = query.where("m.channel_id", "=", channelId);
-        }
-
-        const result = await query.execute();
         return result.map(m => transformMessage(m, m.reactions));
     };
 
