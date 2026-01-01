@@ -24,7 +24,7 @@ import type { VoiceService } from "@core/services/VoiceService.js";
 import { sleep } from "@core/utils/timeUtils.js";
 import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, RESTEvents, type TextChannel } from "discord.js";
 
-import type { Config } from "../config/Config.js";
+import { type Config, getConfig } from "../config/Config.js";
 
 export type DiscordBotDeps = {
     readonly config: Config;
@@ -209,7 +209,9 @@ export const createDiscordBot = async ({
 
             await soundboardThreadService.findOrCreateSoundboardThread(guild);
 
-            await botChannel.send("WTB3 online and ready");
+            if (getConfig().server.environment === "production") {
+                await botChannel.send("WTB3 online and ready");
+            }
         } catch (error) {
             console.error("❌ Failed to start Discord bot:", error);
             throw error;
