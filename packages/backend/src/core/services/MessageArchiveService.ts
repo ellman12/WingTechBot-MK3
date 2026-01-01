@@ -203,27 +203,63 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                 const reactionsToRemove = existingReactions.filter(r => !targetSet.has(makeKey(r)));
 
                 // Step 6: Execute batch operations in a transaction
+                console.log(`[DEBUG] Channel ${name}: About to start transaction`);
+                console.log(`[DEBUG] Channel ${name}: messagesToCreate=${messagesToCreate.length}, messagesToUpdate=${messagesToUpdate.length}`);
+                console.log(`[DEBUG] Channel ${name}: reactionsToAdd=${reactionsToAdd.length}, reactionsToRemove=${reactionsToRemove.length}`);
+                console.log(`[DEBUG] Channel ${name}: existingMessages count=${existingMessages.size}`);
+
+                // Log message IDs being created
+                if (messagesToCreate.length > 0) {
+                    console.log(`[DEBUG] Channel ${name}: Message IDs to create: ${messagesToCreate.map(m => m.id).join(", ")}`);
+                }
+
+                // Log reaction message IDs
+                if (reactionsToAdd.length > 0) {
+                    const uniqueMessageIds = [...new Set(reactionsToAdd.map(r => r.messageId))];
+                    console.log(`[DEBUG] Channel ${name}: Reactions for message IDs: ${uniqueMessageIds.join(", ")}`);
+
+                    // Check if all reaction message IDs are in messagesToCreate or existingMessages
+                    for (const msgId of uniqueMessageIds) {
+                        const isInCreate = messagesToCreate.some(m => m.id === msgId);
+                        const isInExisting = existingMessages.has(msgId);
+                        console.log(`[DEBUG] Channel ${name}: Message ${msgId} - inCreate=${isInCreate}, inExisting=${isInExisting}`);
+                        if (!isInCreate && !isInExisting) {
+                            console.error(`[ERROR] Channel ${name}: Message ${msgId} is NOT in messagesToCreate and NOT in existingMessages!`);
+                        }
+                    }
+                }
+
                 await unitOfWork.execute(async repos => {
                     // Batch create new messages
                     if (messagesToCreate.length > 0) {
+                        console.log(`[DEBUG] Channel ${name}: Creating ${messagesToCreate.length} messages`);
                         await repos.messageRepository.batchCreate(messagesToCreate);
+                        console.log(`[DEBUG] Channel ${name}: Successfully created messages`);
                     }
 
                     // Batch update edited messages
                     if (messagesToUpdate.length > 0) {
+                        console.log(`[DEBUG] Channel ${name}: Updating ${messagesToUpdate.length} messages`);
                         await repos.messageRepository.batchUpdate(messagesToUpdate);
+                        console.log(`[DEBUG] Channel ${name}: Successfully updated messages`);
                     }
 
                     // Batch delete removed reactions
                     if (reactionsToRemove.length > 0) {
+                        console.log(`[DEBUG] Channel ${name}: Deleting ${reactionsToRemove.length} reactions`);
                         await repos.reactionRepository.batchDelete(reactionsToRemove);
+                        console.log(`[DEBUG] Channel ${name}: Successfully deleted reactions`);
                     }
 
                     // Batch create new reactions
                     if (reactionsToAdd.length > 0) {
+                        console.log(`[DEBUG] Channel ${name}: Creating ${reactionsToAdd.length} reactions`);
                         await repos.reactionRepository.batchCreate(reactionsToAdd);
+                        console.log(`[DEBUG] Channel ${name}: Successfully created reactions`);
                     }
                 });
+
+                console.log(`[DEBUG] Channel ${name}: Transaction completed successfully`);
 
                 if (newMessageCount > 0) {
                     console.log(`💾 Added ${newMessageCount} messages to #${name}`);

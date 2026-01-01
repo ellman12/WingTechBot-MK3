@@ -146,11 +146,21 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
             edited_at: data.editedAt,
         }));
 
-        await db
-            .insertInto("messages")
-            .values(values)
-            .onConflict(oc => oc.column("id").doNothing())
-            .execute();
+        console.log(`[DEBUG] MessageRepository.batchCreate: Inserting ${values.length} messages`);
+        console.log(`[DEBUG] MessageRepository.batchCreate: Message IDs: ${values.map(v => v.id).join(", ")}`);
+
+        try {
+            const _result = await db
+                .insertInto("messages")
+                .values(values)
+                .onConflict(oc => oc.column("id").doNothing())
+                .execute();
+            console.log(`[DEBUG] MessageRepository.batchCreate: Successfully inserted messages (some may have been skipped due to conflict)`);
+        } catch (error) {
+            console.error(`[ERROR] MessageRepository.batchCreate: Failed to insert messages:`, error);
+            console.error(`[ERROR] Message IDs involved: ${values.map(v => v.id).join(", ")}`);
+            throw error;
+        }
     };
 
     const batchUpdateMessages = async (messages: Array<{ id: string; content: string }>): Promise<void> => {

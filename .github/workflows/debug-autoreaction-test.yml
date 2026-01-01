@@ -1,0 +1,136 @@
+name: Debug AutoReaction Test
+
+on:
+    push:
+        branches: [fix-tests]
+    pull_request:
+        branches: [fix-tests]
+    workflow_dispatch:
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+env:
+    NODE_VERSION: "20"
+    PNPM_VERSION: "10"
+
+jobs:
+    debug-autoreaction:
+        runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:15
+                env:
+                    POSTGRES_USER: wingtechbot
+                    POSTGRES_PASSWORD: wingtechbot_password
+                    POSTGRES_DB: wingtechbot_test
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+                ports:
+                    - 5432:5432
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: ${{ env.PNPM_VERSION }}
+
+            - name: Setup FFmpeg
+              uses: FedericoCarboni/setup-ffmpeg@v3
+              with:
+                  ffmpeg-version: release
+                  github-token: ${{ github.server_url == 'https://github.com' && github.token || '' }}
+
+            - name: Get pip cache dir
+              id: pip-cache
+              run: echo "dir=$(pip3 cache dir)" >> $GITHUB_OUTPUT
+
+            - name: Cache pip packages
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ${{ steps.pip-cache.outputs.dir }}
+                      ~/.local/lib/python*/site-packages
+                      ~/.local/bin
+                  key: ${{ runner.os }}-pip-yt-dlp-${{ hashFiles('.github/workflows/debug-autoreaction-test.yml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pip-yt-dlp-
+
+            - name: Install yt-dlp
+              run: pip3 install --user yt-dlp
+
+            - name: Add yt-dlp to PATH
+              run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+            - name: Verify audio tools installation
+              run: |
+                  ffmpeg -version
+                  yt-dlp --version
+
+            - name: Get pnpm store directory
+              shell: bash
+              run: |
+                  echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+            - name: Setup pnpm cache
+              uses: actions/cache@v4
+              with:
+                  path: ${{ env.STORE_PATH }}
+                  key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pnpm-store-
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Build types
+              run: pnpm build:types
+
+            - name: Check PostgreSQL status
+              run: |
+                  pg_isready -h localhost -p 5432 -U wingtechbot
+                  psql -h localhost -p 5432 -U wingtechbot -d wingtechbot_test -c '\l'
+              env:
+                  PGPASSWORD: wingtechbot_password
+
+            - name: Run ONLY the autoReactionService test with verbose logging
+              run: pnpm --filter backend vitest run tests/integration/messagesAndReactions/autoReactionService.test.ts --no-file-parallelism --reporter=verbose
+              env:
+                  DATABASE_URL: postgresql://wingtechbot:wingtechbot_password@localhost:5432/wingtechbot_test
+                  NODE_ENV: CICD
+                  CI: true
+
+                  DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+                  DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+                  DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+                  DISCORD_BOT_CHANNEL_ID: ${{ secrets.DISCORD_BOT_CHANNEL_ID }}
+
+                  TESTER_DISCORD_TOKEN: ${{ secrets.TESTER_DISCORD_TOKEN }}
+                  TESTER_DISCORD_CLIENT_ID: ${{ secrets.TESTER_DISCORD_CLIENT_ID }}
+                  TESTER_DISCORD_GUILD_ID: ${{ secrets.TESTER_DISCORD_GUILD_ID }}
+                  TESTER_DISCORD_BOT_CHANNEL_ID: ${{ secrets.TESTER_DISCORD_BOT_CHANNEL_ID }}
+
+                  LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+
+            - name: Show database state on failure
+              if: failure()
+              run: |
+                  echo "=== Checking database tables ==="
+                  psql -h localhost -p 5432 -U wingtechbot -d wingtechbot_test -c '\dt'
+                  echo "=== Checking messages table ==="
+                  psql -h localhost -p 5432 -U wingtechbot -d wingtechbot_test -c 'SELECT COUNT(*) FROM messages;' || echo "Messages table doesn't exist or is empty"
+                  echo "=== Checking reactions table ==="
+                  psql -h localhost -p 5432 -U wingtechbot -d wingtechbot_test -c 'SELECT COUNT(*) FROM reactions;' || echo "Reactions table doesn't exist or is empty"
+              env:
+                  PGPASSWORD: wingtechbot_password
