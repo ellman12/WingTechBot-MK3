@@ -26,6 +26,7 @@ import { runMigrations } from "@db/migrations.js";
 import "@dotenvx/dotenvx/config";
 import { getConfig } from "@infrastructure/config/Config.js";
 import { connect, disconnect, getKysely } from "@infrastructure/database/DatabaseConnection.js";
+import { createUnitOfWork } from "@infrastructure/database/KyselyUnitOfWork.js";
 import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { FfprobeService } from "@infrastructure/ffmpeg/FfprobeService.js";
@@ -96,7 +97,9 @@ export const createApplication = async (): Promise<App> => {
     });
     const soundTagService = createSoundTagService({ soundRepository, soundTagRepository });
     const reactionArchiveService = createReactionArchiveService({ reactionRepository, emoteRepository });
+    const unitOfWork = createUnitOfWork(db);
     const messageArchiveService = createMessageArchiveService({
+        unitOfWork,
         messageRepository,
         reactionRepository,
         emoteRepository,

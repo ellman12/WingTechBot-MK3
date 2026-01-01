@@ -107,7 +107,6 @@ describe.concurrent("Audio File Normalization Integration Test", () => {
         for await (const chunk of outputStream) {
             outputChunks.push(chunk);
             totalBytes += chunk.length;
-            console.log(`[Test] Received chunk: ${chunk.length} bytes, total: ${totalBytes} bytes`);
         }
 
         const processingTime = Date.now() - startTime;
