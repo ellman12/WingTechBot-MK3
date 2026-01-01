@@ -14,8 +14,8 @@ const discordConfigSchema = z.object({
     clientId: z.string().min(1, "Discord client ID is required"),
     serverId: z.string(),
     botChannelId: z.string(),
-    defaultVoiceChannelId: z.string(),
-    roleId: z.string(),
+    defaultVoiceChannelId: z.string().default(""),
+    roleId: z.string().default(""),
     errorWebhookUrl: z
         .string()
         .refine(val => !val || val === "" || URL.canParse(val), "Must be a valid URL or empty string")

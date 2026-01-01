@@ -44,26 +44,20 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
             throw new Error("Invalid data");
         }
 
+        // Use DO UPDATE with a no-op to always return the row (whether inserted or already exists)
+        // This avoids race conditions and retry loops
         const [emote] = await db
             .insertInto("reaction_emotes")
             .values({ name: parsedName, discord_id: discordId, karma_value: karmaValue })
-            .onConflict(oc => oc.columns(["name", "discord_id"]).doNothing())
+            .onConflict(oc =>
+                oc.columns(["name", "discord_id"]).doUpdateSet({
+                    updated_at: eb => eb.ref("reaction_emotes.updated_at"),
+                })
+            )
             .returningAll()
             .execute();
 
         if (!emote) {
-            // Race condition: another process created this emote concurrently
-            // Retry a few times to find the newly created emote
-            for (let attempt = 0; attempt < 3; attempt++) {
-                const existing = await findByNameAndDiscordId(parsedName, discordId);
-                if (existing) return existing;
-
-                // Small delay before retry to allow concurrent transaction to commit
-                if (attempt < 2) {
-                    await new Promise(resolve => setTimeout(resolve, 10));
-                }
-            }
-
             throw new Error(`Failed to insert or find existing emote: ${parsedName} (${discordId})`);
         }
 

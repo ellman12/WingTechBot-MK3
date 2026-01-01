@@ -158,13 +158,23 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
             return;
         }
 
-        // Update each message individually (Kysely doesn't support batch updates easily)
-        // This is still more efficient than using the edit() method which does a findById first
-        await Promise.all(
-            messages.map(async ({ id, content }) => {
-                await db.updateTable("messages").set({ content, edited_at: new Date() }).where("id", "=", id).execute();
+        // Use Kysely's query builder with a CTE to batch update all messages in a single query
+        const editedAt = new Date();
+
+        // Build the VALUES clause for the CTE
+        const values = messages.map(m => sql`(${m.id}, ${m.content})`);
+        const valuesClause = sql.join(values, sql`, `);
+
+        await db
+            .with("updates(id, content)", () => sql`VALUES ${valuesClause}`)
+            .updateTable("messages")
+            .from("updates")
+            .set({
+                content: sql.ref("updates.content"),
+                edited_at: editedAt,
             })
-        );
+            .whereRef("messages.id", "=", "updates.id")
+            .execute();
     };
 
     return {
