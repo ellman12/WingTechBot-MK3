@@ -123,6 +123,7 @@ export const createApplication = async (): Promise<App> => {
         reactionArchiveService,
         messageArchiveService,
         discordChatService,
+        geminiLlmService,
         llmConversationService,
         soundboardThreadService,
         autoReactionService,

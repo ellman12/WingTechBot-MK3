@@ -22,6 +22,7 @@ import type { SoundboardThreadService } from "@core/services/SoundboardThreadSer
 import type { VoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { sleep } from "@core/utils/timeUtils.js";
+import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, PresenceUpdateStatus, RESTEvents, type TextChannel } from "discord.js";
 
 import { type Config, getConfig } from "../config/Config.js";
@@ -37,6 +38,7 @@ export type DiscordBotDeps = {
     readonly reactionArchiveService: ReactionArchiveService;
     readonly messageArchiveService: MessageArchiveService;
     readonly discordChatService: DiscordChatService;
+    readonly geminiLlmService: GeminiLlmService;
     readonly llmConversationService: LlmConversationService;
     readonly soundboardThreadService: SoundboardThreadService;
     readonly autoReactionService: AutoReactionService;
@@ -64,6 +66,7 @@ export const createDiscordBot = async ({
     reactionArchiveService,
     messageArchiveService,
     discordChatService,
+    geminiLlmService,
     llmConversationService,
     soundboardThreadService,
     autoReactionService,
@@ -213,6 +216,10 @@ export const createDiscordBot = async ({
             client.user!.setStatus(PresenceUpdateStatus.Online);
 
             if (getConfig().server.environment === "production") {
+                const status = await geminiLlmService.generateMessage("", [], "discordStatus");
+                console.log(`✏ Setting Discord status to: "${status}"`);
+                client.user!.setActivity(status);
+
                 await botChannel.send("WTB3 online and ready");
             }
         } catch (error) {

@@ -1,6 +1,6 @@
 import type { FileManager } from "@core/services/FileManager.js";
 
-export const instructionTypes = ["generalChat", "nekoize"] as const;
+export const instructionTypes = ["generalChat", "nekoize", "discordStatus"] as const;
 export type InstructionType = (typeof instructionTypes)[number];
 
 export type LlmInstructionRepository = {
