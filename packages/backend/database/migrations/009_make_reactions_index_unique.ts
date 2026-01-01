@@ -7,12 +7,25 @@ export async function up(db: Kysely<any>): Promise<void> {
 
     // Remove duplicate reactions before creating the unique index
     // This is necessary in case there are existing duplicates that would cause the unique index creation to fail
+    // Uses a CTE approach that works with both PostgreSQL and pg-mem
     await sql`
         DELETE FROM reactions
-        WHERE ctid NOT IN (
-            SELECT MIN(ctid)
-            FROM reactions
-            GROUP BY giver_id, receiver_id, channel_id, message_id, emote_id
+        WHERE (giver_id, receiver_id, channel_id, message_id, emote_id) IN (
+            SELECT giver_id, receiver_id, channel_id, message_id, emote_id
+            FROM (
+                SELECT
+                    giver_id,
+                    receiver_id,
+                    channel_id,
+                    message_id,
+                    emote_id,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY giver_id, receiver_id, channel_id, message_id, emote_id
+                        ORDER BY giver_id
+                    ) as rn
+                FROM reactions
+            ) duplicates
+            WHERE rn > 1
         )
     `.execute(db);
 
