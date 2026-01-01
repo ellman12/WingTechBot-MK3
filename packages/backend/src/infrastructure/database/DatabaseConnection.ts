@@ -32,12 +32,26 @@ export const disconnect = async (): Promise<void> => {
         const kysely = getKysely();
         await kysely.destroy();
 
+        kyselyInstance = null;
         isConnected = false;
         console.log("✅ Database disconnected successfully");
     } catch (error) {
         console.error("❌ Database disconnection failed:", error);
         throw error;
     }
+};
+
+// Reset connection pool (useful for tests that recreate the database)
+export const resetConnection = async (): Promise<void> => {
+    if (kyselyInstance) {
+        try {
+            await kyselyInstance.destroy();
+        } catch (error) {
+            console.warn("⚠️ Error destroying kysely instance during reset:", error);
+        }
+    }
+    kyselyInstance = null;
+    isConnected = false;
 };
 
 export const healthCheck = async (): Promise<boolean> => {

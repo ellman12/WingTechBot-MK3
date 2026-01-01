@@ -96,6 +96,10 @@ export const recreateDatabase = async (): Promise<void> => {
     const db = getKyselyForMigrations();
     await sql`DROP SCHEMA public CASCADE; CREATE SCHEMA public;`.execute(db);
     await runMigrations();
+
+    const { resetConnection } = await import("@infrastructure/database/DatabaseConnection.js");
+    await resetConnection();
+    console.log("[TEST] Database connection pool reset after schema recreation");
 };
 
 // Track all created test channels for cleanup
