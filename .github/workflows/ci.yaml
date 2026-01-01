@@ -232,7 +232,7 @@ jobs:
                       ${{ steps.pip-cache.outputs.dir }}
                       ~/.local/lib/python*/site-packages
                       ~/.local/bin
-                  key: ${{ runner.os }}-pip-yt-dlp-${{ hashFiles('.github/workflows/ci.yml') }}
+                  key: ${{ runner.os }}-pip-yt-dlp-${{ hashFiles('.github/workflows/ci.yaml') }}
                   restore-keys: |
                       ${{ runner.os }}-pip-yt-dlp-
 

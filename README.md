@@ -1,9 +1,9 @@
 # WingTechBot MK3 - Monorepo
 
-[![CI/CD Pipeline](https://github.com/ellman12/WingTechBot-MK3/workflows/CI%3ACD%20Pipeline/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/ci.yml)
-[![Release](https://github.com/ellman12/WingTechBot-MK3/workflows/Release/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/release.yml)
-[![Docker Build](https://github.com/ellman12/WingTechBot-MK3/workflows/Docker%20Build%20and%20Push/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/docker.yml)
-[![Dependency Updates](https://github.com/ellman12/WingTechBot-MK3/workflows/Update%20Dependencies/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/dependencies.yml)
+[![CI/CD Pipeline](https://github.com/ellman12/WingTechBot-MK3/workflows/CI%3ACD%20Pipeline/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/ci.yaml)
+[![Release](https://github.com/ellman12/WingTechBot-MK3/workflows/Release/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/release.yaml)
+[![Docker Build](https://github.com/ellman12/WingTechBot-MK3/workflows/Docker%20Build%20and%20Push/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/docker.yaml)
+[![Dependency Updates](https://github.com/ellman12/WingTechBot-MK3/workflows/Update%20Dependencies/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/dependencies.yaml)
 
 A modern full-stack Discord bot application built with TypeScript, featuring a robust backend API and a sleek React frontend.
 
