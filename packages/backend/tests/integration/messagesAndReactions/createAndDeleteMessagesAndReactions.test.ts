@@ -1,9 +1,9 @@
-import { sleep } from "@core/utils/timeUtils";
+import { sleep } from "@core/utils/timeUtils.js";
 import type { TextChannel } from "discord.js";
 
 import { getApp } from "@/main";
 
-import { cleanupAllTestChannels, createMessagesAndReactions, createTemporaryTestChannel, deleteTestChannel, getTestingChannel, recreateDatabase, setUpIntegrationTest, verifyTesterReactions } from "../../utils/testUtils";
+import { cleanupAllTestChannels, createMessagesAndReactions, createTemporaryTestChannel, deleteTestChannel, getTestingChannel, recreateDatabase, setUpIntegrationTest, verifyTesterReactions } from "../../utils/testUtils.js";
 
 const timeout = 360 * 1000;
 

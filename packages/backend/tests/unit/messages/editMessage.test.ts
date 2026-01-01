@@ -1,6 +1,6 @@
-import { createMessageRepository } from "@adapters/repositories/MessageRepository";
+import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
 
-import { createTestDb } from "../../utils/testUtils";
+import { createTestDb } from "../../utils/testUtils.js";
 
 describe.concurrent("editMessage", () => {
     it("should update message content successfully", async () => {

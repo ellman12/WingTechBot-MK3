@@ -1,6 +1,6 @@
-import type { Message } from "@core/entities/Message";
+import type { Message } from "@core/entities/Message.js";
 import { type GenerateContentConfig, GoogleGenAI } from "@google/genai";
-import { getConfig } from "@infrastructure/config/Config";
+import { getConfig } from "@infrastructure/config/Config.js";
 
 //gemini-2.5-pro is another option but is much slower.
 const model = "gemini-2.5-flash";

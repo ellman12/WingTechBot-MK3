@@ -1,4 +1,4 @@
-import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository";
+import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
 import { registerAutoReactionEvents } from "@application/eventHandlers/AutoReaction.js";
 import { registerVoiceServiceEventHandlers } from "@application/eventHandlers/DiscordVoiceService.js";
@@ -9,11 +9,11 @@ import { registerSoundboardThreadEventHandlers } from "@application/eventHandler
 import { registerVoiceEventSoundsEventHandlers } from "@application/eventHandlers/VoiceEventSounds.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
-import type { SoundRepository } from "@core/repositories/SoundRepository";
+import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { AutoReactionService } from "@core/services/AutoReactionService.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
-import type { LlmConversationService } from "@core/services/LlmConversationService";
+import type { LlmConversationService } from "@core/services/LlmConversationService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { ReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import type { SoundService } from "@core/services/SoundService.js";

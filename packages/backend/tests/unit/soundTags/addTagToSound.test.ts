@@ -1,9 +1,9 @@
-import { createSoundRepository } from "@adapters/repositories/SoundRepository";
-import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository";
-import type { Sound } from "@core/entities/Sound";
-import type { SoundRepository } from "@core/repositories/SoundRepository";
+import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
+import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
+import type { Sound } from "@core/entities/Sound.js";
+import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 
-import { createTestDb } from "../../utils/testUtils";
+import { createTestDb } from "../../utils/testUtils.js";
 import { createTag } from "./createTag.test";
 
 export const sharedSound: Sound = { id: 1, name: "sound1", path: "path/to/sound1", soundtags: [] };

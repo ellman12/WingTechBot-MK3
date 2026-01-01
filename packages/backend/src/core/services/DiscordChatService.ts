@@ -1,4 +1,4 @@
-import { getConfig } from "@infrastructure/config/Config";
+import { getConfig } from "@infrastructure/config/Config.js";
 import { type ChatInputCommandInteraction, type InteractionReplyOptions, type Message, type MessageCreateOptions, MessageFlags, type TextChannel } from "discord.js";
 
 export const MESSAGE_LENGTH_LIMIT = 2000;

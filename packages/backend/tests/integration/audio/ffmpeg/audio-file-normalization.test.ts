@@ -1,5 +1,5 @@
-import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService";
-import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService";
+import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
+import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { access, readFile, unlink, writeFile } from "fs/promises";
 import { join } from "path";
 import { Readable } from "stream";

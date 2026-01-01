@@ -1,4 +1,4 @@
-import { createPlayingSound } from "@core/entities/PlayingSound";
+import { createPlayingSound } from "@core/entities/PlayingSound.js";
 import { Readable } from "stream";
 import { describe, expect, it } from "vitest";
 

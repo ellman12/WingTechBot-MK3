@@ -1,4 +1,4 @@
-import { createYtDlpService } from "@infrastructure/yt-dlp/YtDlpService";
+import { createYtDlpService } from "@infrastructure/yt-dlp/YtDlpService.js";
 import { Readable } from "stream";
 import { describe, expect, it } from "vitest";
 

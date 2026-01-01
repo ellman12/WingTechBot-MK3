@@ -1,4 +1,4 @@
-import type { FileManager } from "@core/services/FileManager";
+import type { FileManager } from "@core/services/FileManager.js";
 
 export const instructionTypes = ["generalChat", "nekoize"] as const;
 export type InstructionType = (typeof instructionTypes)[number];

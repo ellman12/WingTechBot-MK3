@@ -1,7 +1,7 @@
 import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import { oneIn, randomArrayItem } from "@core/utils/probabilityUtils.js";
-import { getConfig } from "@infrastructure/config/Config";
+import { getConfig } from "@infrastructure/config/Config.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import type { Message, MessageReaction, PartialMessageReaction, PartialUser, TextChannel, User } from "discord.js";
 

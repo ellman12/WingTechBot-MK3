@@ -1,8 +1,8 @@
-import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
+import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 import { expect } from "vitest";
 
-import { validEmotes } from "../../testData/reactionEmotes";
-import { createFakeMessagesAndReactions, createTestDb } from "../../utils/testUtils";
+import { validEmotes } from "../../testData/reactionEmotes.js";
+import { createFakeMessagesAndReactions, createTestDb } from "../../utils/testUtils.js";
 
 describe.concurrent("getKarmaLeaderboard", () => {
     const year = new Date().getUTCFullYear();

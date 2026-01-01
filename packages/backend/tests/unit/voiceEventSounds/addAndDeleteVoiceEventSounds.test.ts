@@ -1,7 +1,7 @@
-import { createSoundRepository } from "@adapters/repositories/SoundRepository";
-import { createVoiceEventsSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository";
+import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
+import { createVoiceEventsSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 
-import { createTestDb } from "../../utils/testUtils";
+import { createTestDb } from "../../utils/testUtils.js";
 
 describe.concurrent("Add and Delete VoiceEventSounds", async () => {
     const userId = "1234";

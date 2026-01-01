@@ -1,4 +1,4 @@
-import type { VoiceEventSoundType } from "@db/types";
+import type { VoiceEventSoundType } from "@db/types.js";
 
 export type VoiceEventSound = {
     readonly userId: string;
