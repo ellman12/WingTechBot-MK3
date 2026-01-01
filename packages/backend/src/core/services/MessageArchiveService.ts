@@ -302,7 +302,10 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                         if (fetched.size < 100) break;
 
                         // Safety limit: stop after 10,000 messages
-                        if (fetchedCount >= 10000) break;
+                        if (fetchedCount >= 10000) {
+                            console.warn(`⚠️ Reached 10,000-message fetch limit for channel ${channel.id}. Some older messages may not be checked for deletion.`);
+                            break;
+                        }
                     } catch {
                         break;
                     }

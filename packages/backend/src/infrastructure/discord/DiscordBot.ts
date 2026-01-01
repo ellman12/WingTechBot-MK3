@@ -90,6 +90,14 @@ export const createDiscordBot = async ({
     };
 
     const registerEventHandler = <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>): void => {
+        if (!client) {
+            throw new Error("Discord client is not initialized. Call start() before registering event handlers.");
+        }
+
+        if (isClientDestroyed) {
+            throw new Error("Discord client has been destroyed. Cannot register new event handlers.");
+        }
+
         client.on(event, handler);
     };
 

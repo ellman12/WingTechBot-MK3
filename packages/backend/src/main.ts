@@ -202,14 +202,10 @@ const setupGracefulShutdown = (app: App): void => {
 
     process.on("uncaughtException", error => {
         console.error("❌ Uncaught Exception:", error);
-        const isProduction = process.env.NODE_ENV === "production";
-        void app.errorReportingService.reportError(error, { source: "uncaughtException", willShutdown: !isProduction });
+        void app.errorReportingService.reportError(error, { source: "uncaughtException", willShutdown: true });
 
-        // In production, log and continue (with caution - app may be in inconsistent state)
-        // In dev/test, crash immediately to surface issues
-        if (!isProduction) {
-            void shutdown(1);
-        }
+        // After an uncaught exception, always perform a graceful shutdown to avoid running in an inconsistent state
+        void shutdown(1);
     });
 
     process.on("unhandledRejection", (reason, promise) => {

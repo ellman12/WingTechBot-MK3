@@ -46,6 +46,8 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
 
         // Use DO UPDATE with a no-op to always return the row (whether inserted or already exists)
         // This avoids race conditions and retry loops
+        // NOTE: If an emote already exists, the karmaValue parameter is IGNORED and the existing
+        // karma_value is kept. To update karma_value, use the update() method instead.
         const [emote] = await db
             .insertInto("reaction_emotes")
             .values({ name: parsedName, discord_id: discordId, karma_value: karmaValue })

@@ -201,14 +201,21 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
             return;
         }
 
-        // Build a query with OR conditions for each reaction to delete
-        await db
-            .deleteFrom("reactions")
-            .where(eb => {
-                const conditions = reactions.map(r => eb.and([eb("giver_id", "=", r.giverId), eb("receiver_id", "=", r.receiverId), eb("channel_id", "=", r.channelId), eb("message_id", "=", r.messageId), eb("emote_id", "=", r.emoteId)]));
-                return eb.or(conditions);
-            })
-            .execute();
+        // Delete in chunks to avoid generating extremely large WHERE clauses
+        // which could exceed database query size limits
+        const CHUNK_SIZE = 200;
+
+        for (let i = 0; i < reactions.length; i += CHUNK_SIZE) {
+            const chunk = reactions.slice(i, i + CHUNK_SIZE);
+
+            await db
+                .deleteFrom("reactions")
+                .where(eb => {
+                    const conditions = chunk.map(r => eb.and([eb("giver_id", "=", r.giverId), eb("receiver_id", "=", r.receiverId), eb("channel_id", "=", r.channelId), eb("message_id", "=", r.messageId), eb("emote_id", "=", r.emoteId)]));
+                    return eb.or(conditions);
+                })
+                .execute();
+        }
     };
 
     return {
