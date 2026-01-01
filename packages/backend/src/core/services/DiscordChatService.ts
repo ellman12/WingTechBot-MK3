@@ -1,3 +1,4 @@
+import { getConfig } from "@infrastructure/config/Config";
 import { type ChatInputCommandInteraction, type InteractionReplyOptions, type Message, type MessageCreateOptions, MessageFlags, type TextChannel } from "discord.js";
 
 export const MESSAGE_LENGTH_LIMIT = 2000;
@@ -16,8 +17,8 @@ export type DiscordChatService = {
 
 //Helpers and utilities for sending/receiving Discord messages.
 export const createDiscordChatService = (): DiscordChatService => {
-    const botId = process.env.DISCORD_CLIENT_ID!;
-    const botRoleId = process.env.DISCORD_BOT_ROLE_ID!;
+    const botId = getConfig().discord.clientId;
+    const botRoleId = getConfig().discord.roleId;
 
     function hasBeenPinged(latestMessage: Message): boolean {
         const mentionedByUser = latestMessage.mentions.users.has(botId);

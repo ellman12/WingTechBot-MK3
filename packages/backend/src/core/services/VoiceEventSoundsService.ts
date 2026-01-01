@@ -2,6 +2,7 @@ import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEve
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { randomArrayItem } from "@core/utils/probabilityUtils.js";
 import type { VoiceEventSoundType } from "@db/types";
+import { getConfig } from "@infrastructure/config/Config";
 import { VoiceState } from "discord.js";
 
 export type VoiceEventSoundsService = {
@@ -36,7 +37,7 @@ export const createVoiceEventSoundsService = ({ voiceEventSoundsRepository, voic
         }
 
         if (!voiceService.isConnected(guild.id)) {
-            await voiceService.connect(guild, process.env.DEFAULT_VOICE_CHANNEL_ID!);
+            await voiceService.connect(guild, getConfig().discord.defaultVoiceChannelId);
         }
 
         await voiceService.playAudio(guild.id, sound.soundName!);

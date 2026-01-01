@@ -1,5 +1,6 @@
 import type { Message } from "@core/entities/Message";
 import { type GenerateContentConfig, GoogleGenAI } from "@google/genai";
+import { getConfig } from "@infrastructure/config/Config";
 
 //gemini-2.5-pro is another option but is much slower.
 const model = "gemini-2.5-flash";
@@ -9,7 +10,9 @@ export type GeminiLlmService = {
 };
 
 export const createGeminiLlmService = (): GeminiLlmService => {
-    const apiKey = process.env.LLM_API_KEY;
+    const botId = getConfig().discord.clientId;
+    const apiKey = getConfig().llm.apiKey;
+
     if (!apiKey) {
         throw new Error("Missing LLM API key in createLlmChatService");
     }
@@ -19,7 +22,7 @@ export const createGeminiLlmService = (): GeminiLlmService => {
     //Generates a message with optional previous messages.
     async function generateMessage(input: string, messages: Message[] = [], systemInstruction = "") {
         const history = messages.map(m => ({
-            role: m.authorId === process.env.DISCORD_CLIENT_ID ? "model" : "user",
+            role: m.authorId === botId ? "model" : "user",
             parts: [{ text: m.content }],
         }));
 

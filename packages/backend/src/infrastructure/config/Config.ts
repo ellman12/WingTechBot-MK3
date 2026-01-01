@@ -12,8 +12,10 @@ const databaseConfigSchema = z.object({
 const discordConfigSchema = z.object({
     token: z.string().min(1, "Discord token is required"),
     clientId: z.string().min(1, "Discord client ID is required"),
-    serverId: z.string().optional(),
+    serverId: z.string(),
     botChannelId: z.string(),
+    defaultVoiceChannelId: z.string(),
+    roleId: z.string(),
     errorWebhookUrl: z
         .string()
         .refine(val => !val || val === "" || URL.canParse(val), "Must be a valid URL or empty string")
@@ -35,6 +37,10 @@ const ffmpegConfigSchema = z.object({
     ffprobePath: z.string().optional(),
 });
 
+const llmConfigSchema = z.object({
+    apiKey: z.string(),
+});
+
 const configSchema = z.object({
     server: serverConfigSchema,
     database: databaseConfigSchema,
@@ -42,6 +48,7 @@ const configSchema = z.object({
     sounds: soundsConfigSchema,
     cache: cacheConfigSchema,
     ffmpeg: ffmpegConfigSchema,
+    llm: llmConfigSchema,
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -62,6 +69,8 @@ const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
             clientId: process.env[`${envPrefix}DISCORD_CLIENT_ID`],
             serverId: process.env[`${envPrefix}DISCORD_GUILD_ID`],
             botChannelId: process.env[`${envPrefix}DISCORD_BOT_CHANNEL_ID`],
+            defaultVoiceChannelId: process.env.DEFAULT_VOICE_CHANNEL_ID,
+            roleId: process.env[`${envPrefix}DISCORD_BOT_ROLE_ID`],
             errorWebhookUrl: process.env.DISCORD_ERROR_WEBHOOK_URL,
         },
         sounds: {
@@ -75,6 +84,9 @@ const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
         ffmpeg: {
             ffmpegPath: process.env.FFMPEG_PATH,
             ffprobePath: process.env.FFPROBE_PATH,
+        },
+        llm: {
+            apiKey: process.env.LLM_API_KEY,
         },
     };
 

@@ -11,6 +11,7 @@ import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAud
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
 import { createAudioCacheService } from "@core/services/AudioCacheService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
+import { AudioFormatDetectionService } from "@core/services/AudioFormatDetectionService.js";
 import { createAutoReactionService } from "@core/services/AutoReactionService.js";
 import { createCommandChoicesService } from "@core/services/CommandChoicesService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
@@ -27,6 +28,7 @@ import { getConfig } from "@infrastructure/config/Config.js";
 import { connect, disconnect, getKysely } from "@infrastructure/database/DatabaseConnection.js";
 import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
+import { FfprobeService } from "@infrastructure/ffmpeg/FfprobeService.js";
 import { createFileManager } from "@infrastructure/filestore/FileManager.js";
 import { type ServerConfig, createExpressApp } from "@infrastructure/http/ExpressApp.js";
 import { type ErrorReportingService, createErrorReportingService } from "@infrastructure/services/ErrorReportingService.js";
@@ -57,8 +59,8 @@ export const createApplication = async (): Promise<App> => {
     const fileManager = createFileManager();
     const ffmpeg = createFfmpegService();
 
-    const ffprobeService = new (await import("@infrastructure/ffmpeg/FfprobeService.js")).FfprobeService(config);
-    const audioFormatDetectionService = new (await import("@core/services/AudioFormatDetectionService.js")).AudioFormatDetectionService(ffprobeService);
+    const ffprobeService = new FfprobeService(config);
+    const audioFormatDetectionService = new AudioFormatDetectionService(ffprobeService);
 
     const soundRepository = createSoundRepository(db);
     const voiceEventSoundsRepository = createVoiceEventsSoundsRepository(db);

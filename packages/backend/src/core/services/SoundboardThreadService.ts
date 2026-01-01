@@ -1,5 +1,6 @@
 import type { SoundRepository } from "@core/repositories/SoundRepository";
 import type { VoiceService } from "@core/services/VoiceService.js";
+import { getConfig } from "@infrastructure/config/Config";
 import { ChannelType, type Guild, type Message, MessageFlags, type TextChannel, ThreadAutoArchiveDuration, type ThreadChannel } from "discord.js";
 
 export type SoundboardThreadService = {
@@ -15,7 +16,7 @@ export type SoundboardThreadServiceDeps = {
 const threadName = "WTB Soundboard";
 
 function validMessage(message: Message): boolean {
-    return message.channel.type !== ChannelType.DM && !message.flags.has(MessageFlags.Ephemeral) && message.channel.name === threadName && message.author.id !== process.env.DISCORD_CLIENT_ID!;
+    return message.channel.type !== ChannelType.DM && !message.flags.has(MessageFlags.Ephemeral) && message.channel.name === threadName && message.author.id !== getConfig().discord.clientId;
 }
 
 export const createSoundboardThreadService = ({ soundRepository, voiceService }: SoundboardThreadServiceDeps) => {
@@ -25,7 +26,7 @@ export const createSoundboardThreadService = ({ soundRepository, voiceService }:
 
     async function findOrCreateSoundboardThread(guild: Guild): Promise<ThreadChannel> {
         const channels = guild.channels;
-        const botChannel = (await channels.fetch(process.env.DISCORD_BOT_CHANNEL_ID!)) as TextChannel;
+        const botChannel = (await channels.fetch(getConfig().discord.botChannelId)) as TextChannel;
         if (!botChannel) {
             throw new Error("[SoundboardThreadService] Could not find bot channel!");
         }
@@ -68,7 +69,7 @@ export const createSoundboardThreadService = ({ soundRepository, voiceService }:
             }
 
             if (!voiceService.isConnected(guildId)) {
-                await voiceService.connect(message.guild!, process.env.DEFAULT_VOICE_CHANNEL_ID!);
+                await voiceService.connect(message.guild!, getConfig().discord.defaultVoiceChannelId);
             }
 
             await voiceService.playAudio(guildId, (closestSound ?? foundSounds[0]!).name);
