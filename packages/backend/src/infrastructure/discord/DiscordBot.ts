@@ -164,8 +164,8 @@ export const createDiscordBot = async ({
             // Create a new client if this is first start or if previous client was destroyed
             if (!client || isClientDestroyed) {
                 client = createClient();
-                setupEventHandlers();
                 isClientDestroyed = false;
+                setupEventHandlers();
             }
 
             // Create a promise that resolves when the client is ready

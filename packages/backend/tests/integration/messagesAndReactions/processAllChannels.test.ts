@@ -26,7 +26,13 @@ describe("processAllChannels", async () => {
 
     afterEach(async () => {
         if (testChannel) {
-            await deleteTestChannel(testChannel);
+            // Re-fetch the channel from the current bot's client to ensure we have a valid token
+            const bot = getApp().discordBot;
+            const guild = await bot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+            const currentChannel = (await guild.channels.fetch(testChannel.id)) as TextChannel;
+            if (currentChannel) {
+                await deleteTestChannel(currentChannel);
+            }
             testChannel = null;
             await sleep(3000); // Allow bot operations to complete after channel deletion
         }
