@@ -124,8 +124,12 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                 const existingMessages = await messageRepository.getAllMessagesAsMap(endYear);
                 console.log(`🗨️ Fetched ${discordMessages.length} messages from #${name}`);
 
+                // Filter to only valid messages (exclude DMs, ephemeral messages, etc.)
+                const validDiscordMessages = discordMessages.filter(validMessage);
+                console.log(`🗨️ ${validDiscordMessages.length} valid messages in #${name}`);
+
                 // Step 1: Collect all reaction data from Discord messages
-                const allReactionData = await Promise.all(discordMessages.map(collectReactionData));
+                const allReactionData = await Promise.all(validDiscordMessages.map(collectReactionData));
                 const allEmotes = allReactionData.flatMap(d => d.emotes);
                 const allReactions = allReactionData.flatMap(d => d.reactions);
 
@@ -142,7 +146,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                 const messagesToUpdate: Array<{ id: string; content: string }> = [];
                 let newMessageCount = 0;
 
-                for (const discordMessage of discordMessages) {
+                for (const discordMessage of validDiscordMessages) {
                     if (discordMessage.partial) {
                         await discordMessage.fetch();
                     }
