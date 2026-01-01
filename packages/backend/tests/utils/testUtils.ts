@@ -98,6 +98,30 @@ export const recreateDatabase = async (): Promise<void> => {
     await runMigrations();
 };
 
+export async function createTemporaryTestChannel(bot: DiscordBot, channelName?: string): Promise<TextChannel> {
+    const guild = await getTestingGuild(bot);
+    const name = channelName || `test-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+    const channel = await guild.channels.create({
+        name,
+        type: 0, // GUILD_TEXT
+    });
+
+    console.log(`📝 Created temporary test channel: ${channel.name} (${channel.id})`);
+    return channel as TextChannel;
+}
+
+export async function deleteTestChannel(channel: TextChannel): Promise<void> {
+    try {
+        const channelName = channel.name;
+        const channelId = channel.id;
+        await channel.delete();
+        console.log(`🗑️ Deleted test channel: ${channelName} (${channelId})`);
+    } catch (error) {
+        console.warn(`Failed to delete test channel ${channel.id}:`, error);
+    }
+}
+
 export async function createTestReactions(db: Kysely<DB>, messageCount: number, reactionsPerMessage: number, baseMsgId: string) {
     const messages = createMessageRepository(db);
     const reactions = createReactionRepository(db);

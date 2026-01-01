@@ -20,6 +20,7 @@ const discordConfigSchema = z.object({
         .string()
         .refine(val => !val || val === "" || URL.canParse(val), "Must be a valid URL or empty string")
         .optional(),
+    skipChannelProcessingOnStartup: z.coerce.boolean().default(false),
 });
 
 const soundsConfigSchema = z.object({
@@ -72,6 +73,7 @@ const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
             defaultVoiceChannelId: process.env.DEFAULT_VOICE_CHANNEL_ID,
             roleId: process.env[`${envPrefix}DISCORD_BOT_ROLE_ID`],
             errorWebhookUrl: process.env.DISCORD_ERROR_WEBHOOK_URL,
+            skipChannelProcessingOnStartup: process.env.SKIP_CHANNEL_PROCESSING_ON_STARTUP,
         },
         sounds: {
             storagePath: process.env.SOUNDS_STORAGE_PATH,

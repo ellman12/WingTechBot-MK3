@@ -47,10 +47,9 @@ export default defineConfig({
                 mergeConfig(baseConfig, {
                     test: {
                         ...baseTestConfig,
-                        name: "unit-and-audio",
-                        include: ["tests/unit/**/*.{test,spec}.{js,ts}", "tests/integration/audio/**/*.{test,spec}.{js,ts}"],
-                        // File parallelism enabled (default)
-                        fileParallelism: true,
+                        name: "discord-integration",
+                        include: ["tests/integration/messagesAndReactions/**/*.{test,spec}.{js,ts}"],
+                        fileParallelism: false,
                     },
                 })
             ),
@@ -58,10 +57,9 @@ export default defineConfig({
                 mergeConfig(baseConfig, {
                     test: {
                         ...baseTestConfig,
-                        name: "discord-integration",
-                        include: ["tests/integration/messagesAndReactions/**/*.{test,spec}.{js,ts}"],
-                        // File parallelism disabled for Discord tests that share state
-                        fileParallelism: false,
+                        name: "unit-and-audio",
+                        include: ["tests/unit/**/*.{test,spec}.{js,ts}", "tests/integration/audio/**/*.{test,spec}.{js,ts}"],
+                        fileParallelism: true,
                     },
                 })
             ),

@@ -38,7 +38,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
 
         const existing = await findMessageById(id);
         if (existing) {
-            throw new Error("Message exists");
+            return existing;
         }
 
         const values = { id, author_id: authorId, channel_id: channelId, content, referenced_message_id: referencedMessageId, created_at: createdAt, edited_at: editedAt };
@@ -118,6 +118,55 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         return result.map(m => transformMessage(m, m.reactions));
     };
 
+    const batchCreateMessages = async (messages: CreateMessageData[]): Promise<void> => {
+        if (messages.length === 0) {
+            return;
+        }
+
+        // Validate all messages
+        for (const data of messages) {
+            const { id, authorId, channelId, referencedMessageId } = data;
+            const ids = [id, authorId, channelId];
+            if (ids.some(i => !i || i === "0")) {
+                throw new Error("Invalid id");
+            }
+            if (id === referencedMessageId) {
+                throw new Error("id and referencedMessageId cannot be the same");
+            }
+        }
+
+        // Batch insert with ON CONFLICT DO NOTHING to handle duplicates
+        const values = messages.map(data => ({
+            id: data.id,
+            author_id: data.authorId,
+            channel_id: data.channelId,
+            content: data.content,
+            referenced_message_id: data.referencedMessageId,
+            created_at: data.createdAt,
+            edited_at: data.editedAt,
+        }));
+
+        await db
+            .insertInto("messages")
+            .values(values)
+            .onConflict(oc => oc.column("id").doNothing())
+            .execute();
+    };
+
+    const batchUpdateMessages = async (messages: Array<{ id: string; content: string }>): Promise<void> => {
+        if (messages.length === 0) {
+            return;
+        }
+
+        // Update each message individually (Kysely doesn't support batch updates easily)
+        // This is still more efficient than using the edit() method which does a findById first
+        await Promise.all(
+            messages.map(async ({ id, content }) => {
+                await db.updateTable("messages").set({ content, edited_at: new Date() }).where("id", "=", id).execute();
+            })
+        );
+    };
+
     return {
         findById: findMessageById,
         create: createMessage,
@@ -126,5 +175,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         getAllMessages,
         getAllMessagesAsMap,
         getNewestMessages,
+        batchCreate: batchCreateMessages,
+        batchUpdate: batchUpdateMessages,
     };
 };

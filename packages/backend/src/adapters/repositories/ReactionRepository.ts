@@ -167,6 +167,46 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         return (await query.execute()).map(m => ({ ...m, count: Number(m.count) }));
     };
 
+    const batchCreateReactions = async (reactions: CreateReactionData[]): Promise<void> => {
+        if (reactions.length === 0) {
+            return;
+        }
+
+        // Validate all reactions
+        for (const data of reactions) {
+            const ids = [data.giverId, data.receiverId, data.channelId, data.messageId];
+            if (ids.some(i => !i || i === "0")) {
+                throw new Error("Invalid id");
+            }
+        }
+
+        // Batch insert - no ON CONFLICT needed since we delete reactions before inserting
+        const values = reactions.map(r => ({
+            giver_id: r.giverId,
+            receiver_id: r.receiverId,
+            channel_id: r.channelId,
+            message_id: r.messageId,
+            emote_id: r.emoteId,
+        }));
+
+        await db.insertInto("reactions").values(values).execute();
+    };
+
+    const batchDeleteReactions = async (reactions: DeleteReactionData[]): Promise<void> => {
+        if (reactions.length === 0) {
+            return;
+        }
+
+        // Build a query with OR conditions for each reaction to delete
+        await db
+            .deleteFrom("reactions")
+            .where(eb => {
+                const conditions = reactions.map(r => eb.and([eb("giver_id", "=", r.giverId), eb("receiver_id", "=", r.receiverId), eb("channel_id", "=", r.channelId), eb("message_id", "=", r.messageId), eb("emote_id", "=", r.emoteId)]));
+                return eb.or(conditions);
+            })
+            .execute();
+    };
+
     return {
         find: findReaction,
         findForMessage: findReactionsForMessage,
@@ -174,6 +214,8 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         delete: deleteReaction,
         deleteReactionsForMessage,
         deleteReactionsForEmote,
+        batchCreate: batchCreateReactions,
+        batchDelete: batchDeleteReactions,
         getKarmaAndAwards,
         getReactionsReceived,
         getReactionsGiven,

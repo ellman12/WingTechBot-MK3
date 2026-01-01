@@ -73,6 +73,7 @@ export const createDiscordBot = async ({
     let client: Client;
     let isReadyState = false;
     let isClientDestroyed = false;
+    let readyResolver: (() => void) | null = null;
 
     const createClient = (): Client => {
         return new Client({
@@ -118,6 +119,12 @@ export const createDiscordBot = async ({
                 console.warn("⚠️ Failed to deploy commands automatically:", error);
                 console.log("💡 You can deploy commands manually with: pnpm discord:deploy-commands");
             }
+
+            // Signal that the client is ready
+            if (readyResolver) {
+                readyResolver();
+                readyResolver = null;
+            }
         });
 
         client.on(Events.Error, (error: Error) => {
@@ -154,7 +161,15 @@ export const createDiscordBot = async ({
                 isClientDestroyed = false;
             }
 
+            // Create a promise that resolves when the client is ready
+            const readyPromise = new Promise<void>(resolve => {
+                readyResolver = resolve;
+            });
+
             await client.login(config.discord.token);
+
+            // Wait for the client to be fully ready before proceeding
+            await readyPromise;
 
             const guild = await client.guilds.fetch(config.discord.serverId!);
             await guild.fetch();
@@ -162,12 +177,14 @@ export const createDiscordBot = async ({
 
             await emoteRepository.createKarmaEmotes(guild);
 
-            //If first boot, pull in all messages from all time. Otherwise, just get this year's.
-            const year = (await messageArchiveService.getAllDBMessages()).length === 0 ? undefined : new Date().getUTCFullYear();
-            await messageArchiveService.processAllChannels(guild, year);
+            // Skip channel processing if configured (useful for tests)
+            if (!config.discord.skipChannelProcessingOnStartup) {
+                //Process all channels without year filtering to avoid missing messages near year boundaries
+                await messageArchiveService.processAllChannels(guild);
 
-            //Remove any messages that were deleted while bot offline.
-            await messageArchiveService.removeDeletedMessages(guild, year);
+                //Remove any messages that were deleted while bot offline
+                await messageArchiveService.removeDeletedMessages(guild);
+            }
 
             await soundboardThreadService.findOrCreateSoundboardThread(guild);
 

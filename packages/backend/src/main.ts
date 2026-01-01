@@ -16,7 +16,7 @@ import { createAutoReactionService } from "@core/services/AutoReactionService.js
 import { createCommandChoicesService } from "@core/services/CommandChoicesService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
 import { createLlmConversationService } from "@core/services/LlmConversationService.js";
-import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
+import { type MessageArchiveService, createMessageArchiveService } from "@core/services/MessageArchiveService.js";
 import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { createSoundTagService } from "@core/services/SoundTagService.js";
@@ -41,6 +41,7 @@ export type App = {
     readonly discordBot: DiscordBot;
     readonly isReady: () => boolean;
     readonly errorReportingService: ErrorReportingService;
+    readonly messageArchiveService: MessageArchiveService;
 };
 
 export const createApplication = async (): Promise<App> => {
@@ -101,8 +102,6 @@ export const createApplication = async (): Promise<App> => {
     const messageArchiveService = createMessageArchiveService({
         unitOfWork,
         messageRepository,
-        reactionRepository,
-        emoteRepository,
     });
     const geminiLlmService = createGeminiLlmService();
     const voiceService = createDiscordVoiceService({ soundService });
@@ -177,6 +176,7 @@ export const createApplication = async (): Promise<App> => {
         discordBot,
         isReady,
         errorReportingService,
+        messageArchiveService,
     };
 };
 
@@ -221,6 +221,10 @@ const startApplication = async (): Promise<void> => {
         setupGracefulShutdown(app);
     } catch (error) {
         console.error("❌ Failed to start application:", error);
+        if (process.env.NODE_ENV === "test" || process.env.CI) {
+            throw error; // Re-throw in tests so they fail
+        }
+        process.exit(1); // Exit in production
     }
 };
 
