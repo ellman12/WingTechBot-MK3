@@ -3,13 +3,16 @@ node_modules
 .env
 .env.test
 
-/packages/backend/sounds/
-/packages/backend/cache/
 **/dist
 
 .idea
 .vscode
 .cursor
 
-packages/backend/llmInstructions/*
+/packages/backend/cache/
+/packages/backend/sounds/
+
+/packages/backend/docker-compose.prod.yaml
+
+/packages/backend/llmInstructions/*
 !packages/backend/llmInstructions/README.md

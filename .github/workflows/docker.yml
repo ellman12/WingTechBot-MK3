@@ -62,26 +62,12 @@ jobs:
                       ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
                   platforms: linux/amd64,linux/arm64
 
-            # We don't use the frontend yet
-            # - name: Build and push Frontend image
-            # uses: docker/build-push-action@v5
-            # with:
-            # context: .
-            # file: packages/frontend/Dockerfile
-            # push: true
-            # tags:
-            #   ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ steps.meta.outputs.version }}
-            #   ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:latest
-            # platforms: linux/amd64,linux/arm64
-
             - name: Generate Docker Compose for production
               run: |
                   cat > docker-compose.prod.yml << EOF
-                  version: '3.8'
-
                   services:
                     backend:
-                      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ steps.meta.outputs.version }}
+                      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
                       environment:
                         - NODE_ENV=production
                         - DATABASE_URL=\${DATABASE_URL}
@@ -92,6 +78,11 @@ jobs:
                         - "3000:3000"
                       depends_on:
                         - postgres
+                      volumes:
+                        - sounds-data:/app/sounds
+                        - cache-data:/app/cache
+                      networks:
+                        - app-network
                       restart: unless-stopped
 
                     postgres:
@@ -102,17 +93,30 @@ jobs:
                         - POSTGRES_PASSWORD=\${POSTGRES_PASSWORD}
                       volumes:
                         - postgres_data:/var/lib/postgresql/data
+                      networks:
+                        - app-network
                       restart: unless-stopped
 
                     watchtower:
                       image: nickfedor/watchtower
                       volumes:
                         - /var/run/docker.sock:/var/run/docker.sock
-                      command: --interval 120 --cleanup backend
+                      environment:
+                        - WATCHTOWER_POLL_INTERVAL=60
+                        - WATCHTOWER_CLEANUP="true"
+                        - WATCHTOWER_REGISTRY_AUTH="true"
+                        - DOCKER_USERNAME=${GHCR_USERNAME}
+                        - DOCKER_PASSWORD=${GHCR_TOKEN}
                       restart: unless-stopped
 
                   volumes:
                     postgres_data:
+                    sounds-data:
+                    cache-data:
+
+                  networks:
+                    app-network:
+                      driver: bridge
                   EOF
 
             - name: Upload Docker Compose file
