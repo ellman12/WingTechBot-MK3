@@ -51,10 +51,20 @@ const mockSoundRepository: SoundRepository = {
 const mockConfig: Config = {
     server: { port: 3000, environment: "test" },
     database: { url: "postgresql://test:test@localhost:5432/test" },
-    discord: { token: "test-token", clientId: "test-client-id", botChannelId: "" },
+    discord: {
+        token: "test-token",
+        clientId: "test-client-id",
+        serverId: "",
+        botChannelId: "",
+        defaultVoiceChannelId: "",
+        roleId: "",
+    },
     sounds: { storagePath: "./sounds" },
     cache: { audioDownloadPath: "./cache/audio", ttlHours: 24, maxSizeMb: 1000 },
     ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
+    llm: {
+        apiKey: "",
+    },
 };
 
 // Remove describe.concurrent - not worth the complexity for tests with module mocks

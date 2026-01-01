@@ -1,4 +1,5 @@
 import type { VoiceService } from "@core/services/VoiceService.js";
+import { getConfig } from "@infrastructure/config/Config";
 import type { DiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { Events, VoiceChannel, VoiceState } from "discord.js";
 
@@ -7,9 +8,8 @@ export const registerVoiceServiceEventHandlers = (voiceService: VoiceService, re
         const guild = newState.guild;
         const guildId = guild.id;
         const isConnected = voiceService.isConnected(guildId);
-        const defaultVcId = process.env.DEFAULT_VOICE_CHANNEL_ID;
+        const defaultVcId = getConfig().discord.defaultVoiceChannelId;
 
-        // Validate DEFAULT_VOICE_CHANNEL_ID is configured
         if (!defaultVcId) {
             console.warn("[DiscordVoiceService] DEFAULT_VOICE_CHANNEL_ID not configured, skipping voice state update");
             return;
@@ -27,10 +27,11 @@ export const registerVoiceServiceEventHandlers = (voiceService: VoiceService, re
             return;
         }
 
-        const connectedMembers = connectedChannel.members.filter(m => m.id !== process.env.DISCORD_CLIENT_ID);
+        const botId = getConfig().discord.clientId;
+        const connectedMembers = connectedChannel.members.filter(m => m.id !== botId);
 
         //Join default VC if not in channel already.
-        if (!isConnected && newState.member?.id !== process.env.DISCORD_CLIENT_ID && newState.channel?.id === defaultVcId) {
+        if (!isConnected && newState.member?.id !== botId && newState.channel?.id === defaultVcId) {
             await voiceService.connect(guild, defaultVcId);
         }
 

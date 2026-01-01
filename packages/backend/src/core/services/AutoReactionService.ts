@@ -1,6 +1,7 @@
 import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import { oneIn, randomArrayItem } from "@core/utils/probabilityUtils.js";
+import { getConfig } from "@infrastructure/config/Config";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import type { Message, MessageReaction, PartialMessageReaction, PartialUser, TextChannel, User } from "discord.js";
 
@@ -51,8 +52,10 @@ export const reactionScoldMessages: Record<string, string[]> = {
 export const createAutoReactionService = ({ discordChatService, geminiLlmService, llmInstructionRepo }: AutoReactionServiceDeps): AutoReactionService => {
     console.log("[AutoReactionService] Creating AutoReactionService");
 
+    const botId = getConfig().discord.clientId;
+
     async function checkForFunnySubstrings(message: Message): Promise<void> {
-        if (message.author.id === process.env.DISCORD_CLIENT_ID) return;
+        if (message.author.id === botId) return;
 
         const substrings = ["69420", "69", "420"];
 
@@ -88,7 +91,7 @@ export const createAutoReactionService = ({ discordChatService, geminiLlmService
     }
 
     async function tryToSayErJoke(message: Message) {
-        if (message.author.id === process.env.DISCORD_CLIENT_ID) return;
+        if (message.author.id === botId) return;
 
         const erWord = findLastWordEndingWithEr(message.content);
         if (erWord) {
@@ -133,7 +136,7 @@ export const createAutoReactionService = ({ discordChatService, geminiLlmService
             await checkForFunnySubstrings(message);
             await tryToSayErJoke(message);
 
-            if (oneIn(1000) && message.author.id !== process.env.DISCORD_CLIENT_ID && (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "development")) {
+            if (oneIn(1000) && message.author.id !== botId && !process.env.CI) {
                 await tryToNekoizeMessage(message);
             }
         },

@@ -4,6 +4,7 @@ import { createReactionRepository } from "@adapters/repositories/ReactionReposit
 import type { CreateMessageData } from "@core/entities/Message.js";
 import { getKyselyForMigrations, runMigrations } from "@db/migrations";
 import type { DB } from "@db/types";
+import { getConfig } from "@infrastructure/config/Config";
 import { getKysely } from "@infrastructure/database/DatabaseConnection";
 import type { DiscordBot } from "@infrastructure/discord/DiscordBot";
 import { type Guild, type Message, type TextChannel } from "discord.js";
@@ -63,13 +64,16 @@ export async function createTestDb(): Promise<Kysely<DB>> {
 }
 
 export async function getTestingGuild(bot: DiscordBot): Promise<Guild> {
-    return bot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+    const guildId = getConfig().discord.serverId;
+    return bot.client.guilds.fetch(guildId);
 }
 
 export async function getTestingChannel(bot: DiscordBot): Promise<TextChannel> {
+    const botChannelId = getConfig().discord.botChannelId;
+
     const guild = await getTestingGuild(bot);
     await guild.channels.fetch();
-    return guild.channels.cache.get(process.env.DISCORD_BOT_CHANNEL_ID!) as TextChannel;
+    return guild.channels.cache.get(botChannelId) as TextChannel;
 }
 
 export async function getTestingEmotes(bot: DiscordBot): Promise<TestReactionEmote[]> {
