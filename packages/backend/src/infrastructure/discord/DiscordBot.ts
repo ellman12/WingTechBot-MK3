@@ -72,6 +72,7 @@ export const createDiscordBot = async ({
 }: DiscordBotDeps): Promise<DiscordBot> => {
     let client: Client;
     let isReadyState = false;
+    let isClientDestroyed = false;
 
     const createClient = (): Client => {
         return new Client({
@@ -147,9 +148,10 @@ export const createDiscordBot = async ({
             console.log("🚀 Starting Discord bot...");
 
             // Create a new client if this is first start or if previous client was destroyed
-            if (!client || client.isReady() === null) {
+            if (!client || isClientDestroyed) {
                 client = createClient();
                 setupEventHandlers();
+                isClientDestroyed = false;
             }
 
             await client.login(config.discord.token);
@@ -187,6 +189,7 @@ export const createDiscordBot = async ({
 
             // Destroy the client (this will clean up listeners internally)
             await client.destroy();
+            isClientDestroyed = true;
             console.log("✅ Discord bot stopped");
         } catch (error) {
             console.error("❌ Error stopping Discord bot:", error);
