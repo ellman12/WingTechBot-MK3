@@ -301,7 +301,6 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                 // Fetch all messages from channel in bulk (100 at a time)
                 const existingIds = new Set<string>();
                 let lastId: string | undefined;
-                let fetchedCount = 0;
 
                 // For deletion checking, we need to be thorough and check all messages
                 // The DB query already filters by year, so we only check a limited set
@@ -312,17 +311,10 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                         if (fetched.size === 0) break;
 
                         fetched.forEach(msg => existingIds.add(msg.id));
-                        fetchedCount += fetched.size;
                         lastId = fetched.last()?.id;
 
                         // If we fetched less than 100, we've reached the end
                         if (fetched.size < 100) break;
-
-                        // Safety limit: stop after 10,000 messages
-                        if (fetchedCount >= 10000) {
-                            console.warn(`⚠️ Reached 10,000-message fetch limit for channel ${channel.id}. Some older messages may not be checked for deletion.`);
-                            break;
-                        }
                     } catch {
                         break;
                     }
