@@ -1,6 +1,7 @@
 import type { SoundTag } from "@core/entities/SoundTag.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { SoundTagRepository } from "@core/repositories/SoundTagRepository.js";
+import type { UnitOfWork } from "@core/repositories/UnitOfWork.js";
 
 export type SoundTagService = {
     readonly addTagToSound: (soundName: string, tagName: string) => Promise<boolean>;
@@ -9,11 +10,12 @@ export type SoundTagService = {
 };
 
 export type SoundTagServiceDeps = {
+    readonly unitOfWork: UnitOfWork;
     readonly soundRepository: SoundRepository;
     readonly soundTagRepository: SoundTagRepository;
 };
 
-export const createSoundTagService = ({ soundRepository, soundTagRepository }: SoundTagServiceDeps): SoundTagService => {
+export const createSoundTagService = ({ unitOfWork, soundRepository, soundTagRepository }: SoundTagServiceDeps): SoundTagService => {
     return {
         addTagToSound: async (soundName, tagName): Promise<boolean> => {
             const sound = await soundRepository.getSoundByName(soundName);
@@ -22,19 +24,29 @@ export const createSoundTagService = ({ soundRepository, soundTagRepository }: S
                 return false;
             }
 
-            let tag = await soundTagRepository.getTagByName(tagName);
-            if (!tag) {
-                tag = await soundTagRepository.create(tagName);
-            }
+            // Extract sound.id to ensure TypeScript knows it's defined in the closure
+            const soundId = sound.id;
 
             try {
-                await soundTagRepository.addTagToSound(sound.id, tag.id);
+                // Use transaction to ensure tag creation and assignment are atomic
+                await unitOfWork.execute(async repos => {
+                    // Use transaction-scoped soundTagRepository
+                    let tag = await repos.soundTagRepository.getTagByName(tagName);
+                    if (!tag) {
+                        tag = await repos.soundTagRepository.create(tagName);
+                    }
+
+                    if (!tag.id) {
+                        throw new Error("Tag ID is undefined after creation");
+                    }
+
+                    await repos.soundTagRepository.addTagToSound(soundId, tag.id);
+                });
                 return true;
             } catch (e: unknown) {
                 console.error(`Error adding tag ${tagName} to ${soundName}`, e);
+                return false;
             }
-
-            return false;
         },
 
         removeTagFromSound: async (soundName, tagName): Promise<boolean> => {

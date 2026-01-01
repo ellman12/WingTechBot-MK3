@@ -98,6 +98,62 @@ export const recreateDatabase = async (): Promise<void> => {
     await runMigrations();
 };
 
+// Track all created test channels for cleanup
+const createdTestChannels = new Set<string>();
+
+export async function createTemporaryTestChannel(bot: DiscordBot, channelName?: string): Promise<TextChannel> {
+    const guild = await getTestingGuild(bot);
+    const name = channelName || `test-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+    const channel = await guild.channels.create({
+        name,
+        type: 0, // GUILD_TEXT
+    });
+
+    createdTestChannels.add(channel.id);
+    console.log(`📝 Created temporary test channel: ${channel.name} (${channel.id})`);
+    return channel as TextChannel;
+}
+
+export async function deleteTestChannel(channel: TextChannel): Promise<void> {
+    try {
+        const channelName = channel.name;
+        const channelId = channel.id;
+        await channel.delete();
+        createdTestChannels.delete(channelId);
+        console.log(`🗑️ Deleted test channel: ${channelName} (${channelId})`);
+    } catch (error) {
+        console.warn(`Failed to delete test channel ${channel.id}:`, error);
+    }
+}
+
+export async function cleanupAllTestChannels(bot: DiscordBot): Promise<void> {
+    if (createdTestChannels.size === 0) {
+        return;
+    }
+
+    console.log(`🧹 Cleaning up ${createdTestChannels.size} remaining test channels...`);
+    const guild = await getTestingGuild(bot);
+    await guild.channels.fetch();
+
+    const channelIds = Array.from(createdTestChannels);
+    for (const channelId of channelIds) {
+        try {
+            const channel = guild.channels.cache.get(channelId);
+            if (channel) {
+                await channel.delete();
+                createdTestChannels.delete(channelId);
+                console.log(`🗑️ Cleaned up test channel: ${channel.name} (${channelId})`);
+            } else {
+                createdTestChannels.delete(channelId);
+            }
+        } catch (error) {
+            console.warn(`Failed to cleanup test channel ${channelId}:`, error);
+            createdTestChannels.delete(channelId);
+        }
+    }
+}
+
 export async function createTestReactions(db: Kysely<DB>, messageCount: number, reactionsPerMessage: number, baseMsgId: string) {
     const messages = createMessageRepository(db);
     const reactions = createReactionRepository(db);
@@ -186,11 +242,11 @@ export async function createMessagesAndReactions(botChannel: TextChannel, tester
         const message = await botChannel.send(`Message ${i}: ${totalMessages} messages, ${reactionsPerMessage} reactions per message`);
         messages.push(message);
 
+        // Fetch the specific message once for the tester bot
+        const foundMessage = await testerBotChannel.messages.fetch(message.id);
+
         for (let j = 0; j < reactionsPerMessage; j++) {
             const [name, discordId] = emotes[j]!;
-
-            await testerBotChannel.messages.fetch();
-            const foundMessage = testerBotChannel.messages.cache.get(message.id)!;
             await foundMessage.react(discordId || name);
         }
     }

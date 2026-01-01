@@ -10,6 +10,8 @@ export type ReactionEmoteRepository = {
     create(name: string, discordId: string, karmaValue?: number): Promise<ReactionEmote>;
     update(id: number, data: UpdateReactionEmoteData): Promise<ReactionEmote | null>;
 
+    batchFindOrCreate(emotes: Array<{ name: string; discordId: string }>): Promise<Map<string, ReactionEmote>>;
+
     createKarmaEmotes(guild: Guild): Promise<void>;
 
     getKarmaEmotes(): Promise<ReactionEmote[]>;

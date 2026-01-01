@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createUnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
 import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
@@ -16,7 +17,7 @@ import { createAutoReactionService } from "@core/services/AutoReactionService.js
 import { createCommandChoicesService } from "@core/services/CommandChoicesService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
 import { createLlmConversationService } from "@core/services/LlmConversationService.js";
-import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
+import { type MessageArchiveService, createMessageArchiveService } from "@core/services/MessageArchiveService.js";
 import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { createSoundTagService } from "@core/services/SoundTagService.js";
@@ -40,6 +41,7 @@ export type App = {
     readonly discordBot: DiscordBot;
     readonly isReady: () => boolean;
     readonly errorReportingService: ErrorReportingService;
+    readonly messageArchiveService: MessageArchiveService;
 };
 
 export const createApplication = async (): Promise<App> => {
@@ -92,13 +94,14 @@ export const createApplication = async (): Promise<App> => {
         audioProcessor: audioProcessingService,
         fileManager,
         soundRepository,
+        config,
     });
-    const soundTagService = createSoundTagService({ soundRepository, soundTagRepository });
-    const reactionArchiveService = createReactionArchiveService({ reactionRepository, emoteRepository });
+    const unitOfWork = createUnitOfWork(db);
+    const soundTagService = createSoundTagService({ unitOfWork, soundRepository, soundTagRepository });
+    const reactionArchiveService = createReactionArchiveService({ messageRepository, reactionRepository, emoteRepository });
     const messageArchiveService = createMessageArchiveService({
+        unitOfWork,
         messageRepository,
-        reactionRepository,
-        emoteRepository,
     });
     const geminiLlmService = createGeminiLlmService();
     const voiceService = createDiscordVoiceService({ soundService });
@@ -173,6 +176,7 @@ export const createApplication = async (): Promise<App> => {
         discordBot,
         isReady,
         errorReportingService,
+        messageArchiveService,
     };
 };
 
@@ -199,14 +203,18 @@ const setupGracefulShutdown = (app: App): void => {
     process.on("uncaughtException", error => {
         console.error("❌ Uncaught Exception:", error);
         void app.errorReportingService.reportError(error, { source: "uncaughtException", willShutdown: true });
+
+        // After an uncaught exception, always perform a graceful shutdown to avoid running in an inconsistent state
         void shutdown(1);
     });
 
     process.on("unhandledRejection", (reason, promise) => {
         console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
         const error = reason instanceof Error ? reason : new Error(String(reason));
-        void app.errorReportingService.reportError(error, { source: "unhandledRejection", promise: String(promise), willShutdown: true });
-        void shutdown(1);
+        void app.errorReportingService.reportError(error, { source: "unhandledRejection", promise: String(promise), willShutdown: false });
+
+        // Unhandled rejections are usually less critical - just log and continue
+        // In dev/test environments, we could optionally crash for stricter error handling
     });
 };
 
@@ -217,6 +225,10 @@ const startApplication = async (): Promise<void> => {
         setupGracefulShutdown(app);
     } catch (error) {
         console.error("❌ Failed to start application:", error);
+        if (process.env.NODE_ENV === "test" || process.env.CI) {
+            throw error; // Re-throw in tests so they fail
+        }
+        process.exit(1); // Exit in production
     }
 };
 

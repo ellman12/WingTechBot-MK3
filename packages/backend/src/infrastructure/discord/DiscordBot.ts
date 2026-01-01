@@ -21,6 +21,7 @@ import type { SoundTagService } from "@core/services/SoundTagService.js";
 import type { SoundboardThreadService } from "@core/services/SoundboardThreadService.js";
 import type { VoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
+import { sleep } from "@core/utils/timeUtils.js";
 import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, RESTEvents, type TextChannel } from "discord.js";
 
 import type { Config } from "../config/Config.js";
@@ -70,20 +71,37 @@ export const createDiscordBot = async ({
     voiceService,
     commandChoicesService,
 }: DiscordBotDeps): Promise<DiscordBot> => {
-    const client = new Client({
-        intents: [
-            GatewayIntentBits.Guilds,
-            GatewayIntentBits.GuildMessages,
-            GatewayIntentBits.MessageContent,
-            GatewayIntentBits.GuildMembers,
-            GatewayIntentBits.DirectMessages,
-            GatewayIntentBits.GuildVoiceStates,
-            GatewayIntentBits.GuildMessageReactions,
-        ],
-        partials: [Partials.User, Partials.GuildMember, Partials.ThreadMember, Partials.Channel, Partials.Message, Partials.Reaction],
-    });
-
+    let client: Client;
     let isReadyState = false;
+    let isClientDestroyed = false;
+    let readyResolver: (() => void) | null = null;
+
+    const createClient = (): Client => {
+        return new Client({
+            intents: [
+                GatewayIntentBits.Guilds,
+                GatewayIntentBits.GuildMessages,
+                GatewayIntentBits.MessageContent,
+                GatewayIntentBits.GuildMembers,
+                GatewayIntentBits.DirectMessages,
+                GatewayIntentBits.GuildVoiceStates,
+                GatewayIntentBits.GuildMessageReactions,
+            ],
+            partials: [Partials.User, Partials.GuildMember, Partials.ThreadMember, Partials.Channel, Partials.Message, Partials.Reaction],
+        });
+    };
+
+    const registerEventHandler = <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>): void => {
+        if (!client) {
+            throw new Error("Discord client is not initialized. Call start() before registering event handlers.");
+        }
+
+        if (isClientDestroyed) {
+            throw new Error("Discord client has been destroyed. Cannot register new event handlers.");
+        }
+
+        client.on(event, handler);
+    };
 
     const setupEventHandlers = (): void => {
         client.once(Events.ClientReady, async (readyClient: Client<true>) => {
@@ -110,6 +128,12 @@ export const createDiscordBot = async ({
                 console.warn("⚠️ Failed to deploy commands automatically:", error);
                 console.log("💡 You can deploy commands manually with: pnpm discord:deploy-commands");
             }
+
+            // Signal that the client is ready
+            if (readyResolver) {
+                readyResolver();
+                readyResolver = null;
+            }
         });
 
         client.on(Events.Error, (error: Error) => {
@@ -126,8 +150,9 @@ export const createDiscordBot = async ({
 
         registerCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, registerEventHandler);
 
-        registerReactionArchiveEvents(reactionArchiveService, registerEventHandler);
+        // Register message and reaction events
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
+        registerReactionArchiveEvents(reactionArchiveService, registerEventHandler);
         registerLlmConversationServiceEventHandlers(llmConversationService, registerEventHandler);
         registerSoundboardThreadEventHandlers(soundboardThreadService, registerEventHandler);
         registerVoiceServiceEventHandlers(voiceService, registerEventHandler);
@@ -139,7 +164,22 @@ export const createDiscordBot = async ({
         try {
             console.log("🚀 Starting Discord bot...");
 
+            // Create a new client if this is first start or if previous client was destroyed
+            if (!client || isClientDestroyed) {
+                client = createClient();
+                isClientDestroyed = false;
+                setupEventHandlers();
+            }
+
+            // Create a promise that resolves when the client is ready
+            const readyPromise = new Promise<void>(resolve => {
+                readyResolver = resolve;
+            });
+
             await client.login(config.discord.token);
+
+            // Wait for the client to be fully ready before proceeding
+            await readyPromise;
 
             const guild = await client.guilds.fetch(config.discord.serverId!);
             await guild.fetch();
@@ -147,12 +187,25 @@ export const createDiscordBot = async ({
 
             await emoteRepository.createKarmaEmotes(guild);
 
-            //If first boot, pull in all messages from all time. Otherwise, just get this year's.
-            const year = (await messageArchiveService.getAllDBMessages()).length === 0 ? undefined : new Date().getUTCFullYear();
-            await messageArchiveService.processAllChannels(guild, year);
+            // Skip channel processing if configured (useful for tests)
+            if (!config.discord.skipChannelProcessingOnStartup) {
+                // Check if this is the first run by seeing if we have any messages in the DB
+                const isFirstRun = !(await messageArchiveService.hasAnyMessages());
+                const currentYear = new Date().getUTCFullYear();
 
-            //Remove any messages that were deleted while bot offline.
-            await messageArchiveService.removeDeletedMessages(guild, year);
+                if (isFirstRun) {
+                    // First run: process all channels without year filtering to get complete history
+                    console.log("🔄 First run detected - performing full message sync (all years)");
+                    await messageArchiveService.processAllChannels(guild);
+                } else {
+                    // Subsequent runs: only process current year for efficiency
+                    console.log(`🔄 Processing messages for ${currentYear} only`);
+                    await messageArchiveService.processAllChannels(guild, currentYear);
+                }
+
+                //Remove any messages that were deleted while bot offline
+                await messageArchiveService.removeDeletedMessages(guild, isFirstRun ? undefined : currentYear);
+            }
 
             await soundboardThreadService.findOrCreateSoundboardThread(guild);
 
@@ -166,8 +219,15 @@ export const createDiscordBot = async ({
     const stop = async (): Promise<void> => {
         try {
             console.log("🛑 Stopping Discord bot...");
-            await client.destroy();
+            // Set ready state to false first so event handlers can check and bail out
             isReadyState = false;
+
+            // Give any in-flight event handlers a brief moment to check isReady and bail out
+            await sleep(50);
+
+            // Destroy the client (this will clean up listeners internally)
+            await client.destroy();
+            isClientDestroyed = true;
             console.log("✅ Discord bot stopped");
         } catch (error) {
             console.error("❌ Error stopping Discord bot:", error);
@@ -175,16 +235,16 @@ export const createDiscordBot = async ({
         }
     };
 
-    const registerEventHandler = <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>): void => {
-        client.on(event, handler);
-    };
-
     const isReady = (): boolean => isReadyState;
 
+    // Create initial client and setup event handlers
+    client = createClient();
     setupEventHandlers();
 
     return {
-        client,
+        get client() {
+            return client;
+        },
         isReady,
         start,
         stop,

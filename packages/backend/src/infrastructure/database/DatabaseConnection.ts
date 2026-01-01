@@ -32,6 +32,7 @@ export const disconnect = async (): Promise<void> => {
         const kysely = getKysely();
         await kysely.destroy();
 
+        kyselyInstance = null;
         isConnected = false;
         console.log("✅ Database disconnected successfully");
     } catch (error) {

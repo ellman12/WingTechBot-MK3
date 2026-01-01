@@ -38,7 +38,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
 
         const existing = await findMessageById(id);
         if (existing) {
-            throw new Error("Message exists");
+            return existing;
         }
 
         const values = { id, author_id: authorId, channel_id: channelId, content, referenced_message_id: referencedMessageId, created_at: createdAt, edited_at: editedAt };
@@ -84,18 +84,15 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
 
     //Gets all messages (optionally filtered by year) and their reactions as an array.
     const getAllMessages = async (year?: number): Promise<Message[]> => {
-        let query = db
+        const result = await db
             .selectFrom("messages as m")
             .leftJoin("reactions", "reactions.message_id", "m.id")
             .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.giver_id IS NOT NULL), '[]')`.as("reactions")])
             .groupBy("m.id")
-            .orderBy("m.created_at");
+            .orderBy("m.created_at")
+            .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year!))
+            .execute();
 
-        if (year !== undefined) {
-            query = query.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year);
-        }
-
-        const result = await query.execute();
         return result.map(m => transformMessage(m, m.reactions));
     };
 
@@ -104,18 +101,92 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         return new Map((await getAllMessages(year)).map(m => [m.id, m]));
     };
 
-    const getNewestMessages = async (channelId: string, limit: number): Promise<Message[]> => {
-        const query = db
+    //Gets all messages for a specific channel (optionally filtered by year) with their reactions
+    const getMessagesForChannel = async (channelId: string, year?: number): Promise<Message[]> => {
+        const result = await db
             .selectFrom("messages as m")
             .where("m.channel_id", "=", channelId)
             .leftJoin("reactions", "reactions.message_id", "m.id")
             .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.giver_id IS NOT NULL), '[]')`.as("reactions")])
             .groupBy("m.id")
-            .orderBy("m.created_at", "desc")
-            .limit(limit);
+            .orderBy("m.created_at")
+            .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year!))
+            .execute();
 
-        const result = await query.execute();
         return result.map(m => transformMessage(m, m.reactions));
+    };
+
+    const getNewestMessages = async (limit: number, channelId?: string): Promise<Message[]> => {
+        const result = await db
+            .selectFrom("messages as m")
+            .leftJoin("reactions", "reactions.message_id", "m.id")
+            .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.giver_id IS NOT NULL), '[]')`.as("reactions")])
+            .groupBy("m.id")
+            .orderBy("m.created_at", "desc")
+            .limit(limit)
+            .$if(channelId !== undefined, qb => qb.where("m.channel_id", "=", channelId!))
+            .execute();
+
+        return result.map(m => transformMessage(m, m.reactions));
+    };
+
+    const batchCreateMessages = async (messages: CreateMessageData[]): Promise<void> => {
+        if (messages.length === 0) {
+            return;
+        }
+
+        // Validate all messages
+        for (const data of messages) {
+            const { id, authorId, channelId, referencedMessageId } = data;
+            const ids = [id, authorId, channelId];
+            if (ids.some(i => !i || i === "0")) {
+                throw new Error("Invalid id");
+            }
+            if (id === referencedMessageId) {
+                throw new Error("id and referencedMessageId cannot be the same");
+            }
+        }
+
+        // Batch insert with ON CONFLICT DO NOTHING to handle duplicates
+        const values = messages.map(data => ({
+            id: data.id,
+            author_id: data.authorId,
+            channel_id: data.channelId,
+            content: data.content,
+            referenced_message_id: data.referencedMessageId,
+            created_at: data.createdAt,
+            edited_at: data.editedAt,
+        }));
+
+        await db
+            .insertInto("messages")
+            .values(values)
+            .onConflict(oc => oc.column("id").doNothing())
+            .execute();
+    };
+
+    const batchUpdateMessages = async (messages: Array<{ id: string; content: string }>): Promise<void> => {
+        if (messages.length === 0) {
+            return;
+        }
+
+        // Use Kysely's query builder with a CTE to batch update all messages in a single query
+        const editedAt = new Date();
+
+        // Build the VALUES clause for the CTE
+        const values = messages.map(m => sql`(${m.id}, ${m.content})`);
+        const valuesClause = sql.join(values, sql`, `);
+
+        await db
+            .with("updates(id, content)", () => sql`VALUES ${valuesClause}`)
+            .updateTable("messages")
+            .from("updates")
+            .set({
+                content: sql.ref("updates.content"),
+                edited_at: editedAt,
+            })
+            .whereRef("messages.id", "=", "updates.id")
+            .execute();
     };
 
     return {
@@ -125,6 +196,9 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         edit: editMessage,
         getAllMessages,
         getAllMessagesAsMap,
+        getMessagesForChannel,
         getNewestMessages,
+        batchCreate: batchCreateMessages,
+        batchUpdate: batchUpdateMessages,
     };
 };

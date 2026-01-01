@@ -23,7 +23,6 @@ export const createFfmpegAudioProcessingService = ({ ffmpeg }: FfmpegAudioServic
         sourceStream.on("data", chunk => {
             bytesProcessed += chunk.length;
             _lastDataTime = Date.now();
-            console.log(`[FfmpegAudioProcessingService] Processed stream data: ${chunk.length} bytes, total: ${bytesProcessed}`);
         });
 
         sourceStream.on("end", () => {

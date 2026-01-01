@@ -32,6 +32,9 @@ export type ReactionRepository = {
     deleteReactionsForMessage(messageId: string): Promise<void>;
     deleteReactionsForEmote(messageId: string, emoteId: number): Promise<void>;
 
+    batchCreate(reactions: CreateReactionData[]): Promise<void>;
+    batchDelete(reactions: DeleteReactionData[]): Promise<void>;
+
     getKarmaAndAwards(userId: string, year?: number): Promise<EmoteTotals>;
 
     getReactionsReceived(receiverId: string, year?: number, giverIds?: string[]): Promise<EmoteTotals>;

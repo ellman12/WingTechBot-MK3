@@ -167,6 +167,57 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         return (await query.execute()).map(m => ({ ...m, count: Number(m.count) }));
     };
 
+    const batchCreateReactions = async (reactions: CreateReactionData[]): Promise<void> => {
+        if (reactions.length === 0) {
+            return;
+        }
+
+        // Validate all reactions
+        for (const data of reactions) {
+            const ids = [data.giverId, data.receiverId, data.channelId, data.messageId];
+            if (ids.some(i => !i || i === "0")) {
+                throw new Error("Invalid id");
+            }
+        }
+
+        // Batch insert
+        const values = reactions.map(r => ({
+            giver_id: r.giverId,
+            receiver_id: r.receiverId,
+            channel_id: r.channelId,
+            message_id: r.messageId,
+            emote_id: r.emoteId,
+        }));
+
+        await db
+            .insertInto("reactions")
+            .values(values)
+            .onConflict(oc => oc.columns(["giver_id", "receiver_id", "channel_id", "message_id", "emote_id"]).doNothing())
+            .execute();
+    };
+
+    const batchDeleteReactions = async (reactions: DeleteReactionData[]): Promise<void> => {
+        if (reactions.length === 0) {
+            return;
+        }
+
+        // Delete in chunks to avoid generating extremely large WHERE clauses
+        // which could exceed database query size limits
+        const CHUNK_SIZE = 200;
+
+        for (let i = 0; i < reactions.length; i += CHUNK_SIZE) {
+            const chunk = reactions.slice(i, i + CHUNK_SIZE);
+
+            await db
+                .deleteFrom("reactions")
+                .where(eb => {
+                    const conditions = chunk.map(r => eb.and([eb("giver_id", "=", r.giverId), eb("receiver_id", "=", r.receiverId), eb("channel_id", "=", r.channelId), eb("message_id", "=", r.messageId), eb("emote_id", "=", r.emoteId)]));
+                    return eb.or(conditions);
+                })
+                .execute();
+        }
+    };
+
     return {
         find: findReaction,
         findForMessage: findReactionsForMessage,
@@ -174,6 +225,8 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         delete: deleteReaction,
         deleteReactionsForMessage,
         deleteReactionsForEmote,
+        batchCreate: batchCreateReactions,
+        batchDelete: batchDeleteReactions,
         getKarmaAndAwards,
         getReactionsReceived,
         getReactionsGiven,

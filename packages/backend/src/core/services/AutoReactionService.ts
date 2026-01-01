@@ -16,6 +16,12 @@ export type AutoReactionServiceDeps = {
     readonly llmInstructionRepo: LlmInstructionRepository;
 };
 
+// Helper to check if error is due to Discord client being destroyed/token missing
+// This is a safety net for race conditions during bot shutdown
+const isClientDestroyedError = (error: unknown): boolean => {
+    return error instanceof Error && error.message.includes("Expected token to be set for this request");
+};
+
 const upvoteScolds = [
     "god imagine upvoting yourself",
     "eww, a self-upvote",
@@ -128,7 +134,10 @@ export const createAutoReactionService = ({ discordChatService, geminiLlmService
 
                 await message.channel.send(`${randomArrayItem(scoldMessages)} <@${user.id}>`);
             } catch (e: unknown) {
-                console.error("Error checking if added reaction needs to be scolded", e);
+                // Ignore errors when bot is being destroyed (token no longer available)
+                if (!isClientDestroyedError(e)) {
+                    console.error("Error checking if added reaction needs to be scolded", e);
+                }
             }
         },
 

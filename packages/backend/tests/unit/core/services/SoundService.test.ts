@@ -58,6 +58,7 @@ const mockConfig: Config = {
         botChannelId: "",
         defaultVoiceChannelId: "",
         roleId: "",
+        skipChannelProcessingOnStartup: false,
     },
     sounds: { storagePath: "./sounds" },
     cache: { audioDownloadPath: "./cache/audio", ttlHours: 24, maxSizeMb: 1000 },
