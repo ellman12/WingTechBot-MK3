@@ -2,7 +2,7 @@ import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEve
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { randomArrayItem } from "@core/utils/probabilityUtils.js";
 import type { VoiceEventSoundType } from "@db/types";
-import { getConfig } from "@infrastructure/config/Config";
+import { getConfig } from "@infrastructure/config/Config.js";
 import { VoiceState } from "discord.js";
 
 export type VoiceEventSoundsService = {

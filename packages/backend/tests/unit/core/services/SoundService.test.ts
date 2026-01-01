@@ -4,7 +4,7 @@ import { parseAudioSource } from "@core/services/AudioFetcherService";
 import type { AudioProcessingService } from "@core/services/AudioProcessingService";
 import type { FileManager } from "@core/services/FileManager";
 import { createSoundService } from "@core/services/SoundService";
-import type { Config } from "@infrastructure/config/Config";
+import type { Config } from "@infrastructure/config/Config.js";
 import { Readable } from "stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

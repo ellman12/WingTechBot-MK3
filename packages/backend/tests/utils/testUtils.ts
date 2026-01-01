@@ -4,7 +4,7 @@ import { createReactionRepository } from "@adapters/repositories/ReactionReposit
 import type { CreateMessageData } from "@core/entities/Message.js";
 import { getKyselyForMigrations, runMigrations } from "@db/migrations";
 import type { DB } from "@db/types";
-import { getConfig } from "@infrastructure/config/Config";
+import { getConfig } from "@infrastructure/config/Config.js";
 import { getKysely } from "@infrastructure/database/DatabaseConnection";
 import type { DiscordBot } from "@infrastructure/discord/DiscordBot";
 import { type Guild, type Message, type TextChannel } from "discord.js";

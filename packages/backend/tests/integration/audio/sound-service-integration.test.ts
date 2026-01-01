@@ -5,7 +5,7 @@ import type { Sound } from "@core/entities/Sound";
 import type { SoundRepository } from "@core/repositories/SoundRepository";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService";
 import { createSoundService } from "@core/services/SoundService";
-import type { Config } from "@infrastructure/config/Config";
+import type { Config } from "@infrastructure/config/Config.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService";
 import { createFileManager } from "@infrastructure/filestore/FileManager";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "fs";
