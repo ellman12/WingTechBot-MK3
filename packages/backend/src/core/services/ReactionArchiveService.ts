@@ -1,3 +1,4 @@
+import type { MessageRepository } from "@core/repositories/MessageRepository.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { Message, MessageReaction, OmitPartialGroupDMChannel, PartialMessage, PartialMessageReaction, PartialUser, User } from "discord.js";
@@ -10,6 +11,7 @@ export type ReactionArchiveService = {
 };
 
 export type ReactionArchiveServiceDeps = {
+    messageRepository: MessageRepository;
     reactionRepository: ReactionRepository;
     emoteRepository: ReactionEmoteRepository;
 };
@@ -21,7 +23,7 @@ const isClientDestroyedError = (error: unknown): boolean => {
 };
 
 //Archives all reactions added to all messages.
-export const createReactionArchiveService = ({ reactionRepository, emoteRepository }: ReactionArchiveServiceDeps): ReactionArchiveService => {
+export const createReactionArchiveService = ({ messageRepository, reactionRepository, emoteRepository }: ReactionArchiveServiceDeps): ReactionArchiveService => {
     console.log("[ReactionArchiveService] Creating reaction archive service");
 
     return {
@@ -42,11 +44,33 @@ export const createReactionArchiveService = ({ reactionRepository, emoteReposito
                     throw new Error("Missing reaction emoji name");
                 }
 
+                // Ensure the message exists in the database before adding a reaction
+                // This handles race conditions where a reaction arrives before the message is saved
+                const referencedMessageId = message.reference ? message.reference.messageId : undefined;
+                await messageRepository.create({
+                    id: message.id,
+                    authorId: message.author.id,
+                    channelId: channel.id,
+                    content: message.content,
+                    referencedMessageId,
+                    createdAt: message.createdAt,
+                    editedAt: message.editedAt,
+                });
+
                 const reactionEmote = await emoteRepository.create(emoteName, reaction.emoji.id ?? "");
 
                 const data = { giverId: user.id, receiverId: message.author.id, channelId: channel.id, messageId: message.id, emoteId: reactionEmote.id };
                 await reactionRepository.create(data);
             } catch (e: unknown) {
+                // Handle Discord API errors for deleted/unknown channels/messages
+                if (e && typeof e === "object" && "code" in e) {
+                    const apiError = e as { code: number };
+                    if (apiError.code === 10003 || apiError.code === 10008) {
+                        // 10003 = Unknown Channel, 10008 = Unknown Message
+                        // Silently skip - channel/message was deleted
+                        return;
+                    }
+                }
                 // Ignore errors when bot is being destroyed (token no longer available)
                 if (!isClientDestroyedError(e)) {
                     console.error("Error adding reaction to message", e);

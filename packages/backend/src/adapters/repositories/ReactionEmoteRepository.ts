@@ -44,26 +44,28 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
             throw new Error("Invalid data");
         }
 
-        // Use DO UPDATE with a no-op to always return the row (whether inserted or already exists)
-        // This avoids race conditions and retry loops
-        // NOTE: If an emote already exists, the karmaValue parameter is IGNORED and the existing
-        // karma_value is kept. To update karma_value, use the update() method instead.
-        const [emote] = await db
+        // Try to insert the emote. If it already exists, fetch the existing one.
+        // Note: If an emote already exists, the karmaValue parameter is ignored.
+        // To update karma_value, use the update() method.
+        const [inserted] = await db
             .insertInto("reaction_emotes")
             .values({ name: parsedName, discord_id: discordId, karma_value: karmaValue })
-            .onConflict(oc =>
-                oc.columns(["name", "discord_id"]).doUpdateSet({
-                    updated_at: eb => eb.ref("reaction_emotes.updated_at"),
-                })
-            )
+            .onConflict(oc => oc.columns(["name", "discord_id"]).doNothing())
             .returningAll()
             .execute();
 
-        if (!emote) {
+        // If insert returned a row, we created a new emote
+        if (inserted) {
+            return transformReactionEmote(inserted);
+        }
+
+        // Otherwise, the emote already existed. Fetch it.
+        const existing = await findByNameAndDiscordId(parsedName, discordId);
+        if (!existing) {
             throw new Error(`Failed to insert or find existing emote: ${parsedName} (${discordId})`);
         }
 
-        return transformReactionEmote(emote);
+        return existing;
     };
 
     const updateReactionEmote = async (id: number, data: UpdateReactionEmoteData): Promise<ReactionEmote | null> => {

@@ -3,7 +3,8 @@ import { deployCommands, registerCommands } from "@application/commands/Commands
 import { registerAutoReactionEvents } from "@application/eventHandlers/AutoReaction.js";
 import { registerVoiceServiceEventHandlers } from "@application/eventHandlers/DiscordVoiceService.js";
 import { registerLlmConversationServiceEventHandlers } from "@application/eventHandlers/LlmConversation.js";
-import { registerQueuedMessageEvents } from "@application/eventHandlers/QueuedMessageEvents.js";
+import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive.js";
+import { registerReactionArchiveEvents } from "@application/eventHandlers/ReactionArchive.js";
 import { registerSoundboardThreadEventHandlers } from "@application/eventHandlers/SoundboardThreadService.js";
 import { registerVoiceEventSoundsEventHandlers } from "@application/eventHandlers/VoiceEventSounds.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
@@ -148,8 +149,9 @@ export const createDiscordBot = async ({
 
         registerCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, registerEventHandler);
 
-        // Register message and reaction events through a queue to prevent race conditions
-        registerQueuedMessageEvents(messageArchiveService, reactionArchiveService, registerEventHandler);
+        // Register message and reaction events
+        registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
+        registerReactionArchiveEvents(reactionArchiveService, registerEventHandler);
         registerLlmConversationServiceEventHandlers(llmConversationService, registerEventHandler);
         registerSoundboardThreadEventHandlers(soundboardThreadService, registerEventHandler);
         registerVoiceServiceEventHandlers(voiceService, registerEventHandler);

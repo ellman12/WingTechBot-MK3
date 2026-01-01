@@ -189,22 +189,11 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
             emote_id: r.emoteId,
         }));
 
-        console.log(`[DEBUG] ReactionRepository.batchCreate: Inserting ${values.length} reactions`);
-        const uniqueMessageIds = [...new Set(values.map(v => v.message_id))];
-        console.log(`[DEBUG] ReactionRepository.batchCreate: Unique message IDs: ${uniqueMessageIds.join(", ")}`);
-
-        try {
-            await db
-                .insertInto("reactions")
-                .values(values)
-                .onConflict(oc => oc.columns(["giver_id", "receiver_id", "channel_id", "message_id", "emote_id"]).doNothing())
-                .execute();
-            console.log(`[DEBUG] ReactionRepository.batchCreate: Successfully inserted reactions`);
-        } catch (error) {
-            console.error(`[ERROR] ReactionRepository.batchCreate: Failed to insert reactions:`, error);
-            console.error(`[ERROR] Message IDs involved: ${uniqueMessageIds.join(", ")}`);
-            throw error;
-        }
+        await db
+            .insertInto("reactions")
+            .values(values)
+            .onConflict(oc => oc.columns(["giver_id", "receiver_id", "channel_id", "message_id", "emote_id"]).doNothing())
+            .execute();
     };
 
     const batchDeleteReactions = async (reactions: DeleteReactionData[]): Promise<void> => {

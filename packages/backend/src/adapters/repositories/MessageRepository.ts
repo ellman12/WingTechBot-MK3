@@ -104,6 +104,24 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         return new Map((await getAllMessages(year)).map(m => [m.id, m]));
     };
 
+    //Gets all messages for a specific channel (optionally filtered by year) with their reactions
+    const getMessagesForChannel = async (channelId: string, year?: number): Promise<Message[]> => {
+        let query = db
+            .selectFrom("messages as m")
+            .where("m.channel_id", "=", channelId)
+            .leftJoin("reactions", "reactions.message_id", "m.id")
+            .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.giver_id IS NOT NULL), '[]')`.as("reactions")])
+            .groupBy("m.id")
+            .orderBy("m.created_at");
+
+        if (year !== undefined) {
+            query = query.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year);
+        }
+
+        const result = await query.execute();
+        return result.map(m => transformMessage(m, m.reactions));
+    };
+
     const getNewestMessages = async (channelId: string, limit: number): Promise<Message[]> => {
         const query = db
             .selectFrom("messages as m")
@@ -146,21 +164,11 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
             edited_at: data.editedAt,
         }));
 
-        console.log(`[DEBUG] MessageRepository.batchCreate: Inserting ${values.length} messages`);
-        console.log(`[DEBUG] MessageRepository.batchCreate: Message IDs: ${values.map(v => v.id).join(", ")}`);
-
-        try {
-            const _result = await db
-                .insertInto("messages")
-                .values(values)
-                .onConflict(oc => oc.column("id").doNothing())
-                .execute();
-            console.log(`[DEBUG] MessageRepository.batchCreate: Successfully inserted messages (some may have been skipped due to conflict)`);
-        } catch (error) {
-            console.error(`[ERROR] MessageRepository.batchCreate: Failed to insert messages:`, error);
-            console.error(`[ERROR] Message IDs involved: ${values.map(v => v.id).join(", ")}`);
-            throw error;
-        }
+        await db
+            .insertInto("messages")
+            .values(values)
+            .onConflict(oc => oc.column("id").doNothing())
+            .execute();
     };
 
     const batchUpdateMessages = async (messages: Array<{ id: string; content: string }>): Promise<void> => {
@@ -194,6 +202,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         edit: editMessage,
         getAllMessages,
         getAllMessagesAsMap,
+        getMessagesForChannel,
         getNewestMessages,
         batchCreate: batchCreateMessages,
         batchUpdate: batchUpdateMessages,

@@ -96,9 +96,9 @@ export const createApplication = async (): Promise<App> => {
         soundRepository,
         config,
     });
-    const soundTagService = createSoundTagService({ soundRepository, soundTagRepository });
-    const reactionArchiveService = createReactionArchiveService({ reactionRepository, emoteRepository });
     const unitOfWork = createUnitOfWork(db);
+    const soundTagService = createSoundTagService({ unitOfWork, soundRepository, soundTagRepository });
+    const reactionArchiveService = createReactionArchiveService({ messageRepository, reactionRepository, emoteRepository });
     const messageArchiveService = createMessageArchiveService({
         unitOfWork,
         messageRepository,

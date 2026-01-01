@@ -121,7 +121,8 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                 console.log(`🗨️ Begin processing messages in #${name}`);
 
                 const discordMessages = await fetchAllMessages(channel, endYear);
-                const existingMessages = await messageRepository.getAllMessagesAsMap(endYear);
+                const existingMessagesArray = await messageRepository.getMessagesForChannel(channel.id, endYear);
+                const existingMessages = new Map(existingMessagesArray.map(m => [m.id, m]));
                 console.log(`🗨️ Fetched ${discordMessages.length} messages from #${name}`);
 
                 // Filter to only valid messages (exclude DMs, ephemeral messages, etc.)
@@ -202,64 +203,40 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                 const reactionsToAdd = targetReactions.filter(r => !existingSet.has(makeKey(r)));
                 const reactionsToRemove = existingReactions.filter(r => !targetSet.has(makeKey(r)));
 
-                // Step 6: Execute batch operations in a transaction
-                console.log(`[DEBUG] Channel ${name}: About to start transaction`);
-                console.log(`[DEBUG] Channel ${name}: messagesToCreate=${messagesToCreate.length}, messagesToUpdate=${messagesToUpdate.length}`);
-                console.log(`[DEBUG] Channel ${name}: reactionsToAdd=${reactionsToAdd.length}, reactionsToRemove=${reactionsToRemove.length}`);
-                console.log(`[DEBUG] Channel ${name}: existingMessages count=${existingMessages.size}`);
+                // Step 6: Execute batch operations in smaller chunks to avoid large transactions
+                const BATCH_SIZE = 100;
 
-                // Log message IDs being created
-                if (messagesToCreate.length > 0) {
-                    console.log(`[DEBUG] Channel ${name}: Message IDs to create: ${messagesToCreate.map(m => m.id).join(", ")}`);
+                // Process messages in batches
+                for (let i = 0; i < messagesToCreate.length; i += BATCH_SIZE) {
+                    const batch = messagesToCreate.slice(i, i + BATCH_SIZE);
+                    await unitOfWork.execute(async repos => {
+                        await repos.messageRepository.batchCreate(batch);
+                    });
                 }
 
-                // Log reaction message IDs
-                if (reactionsToAdd.length > 0) {
-                    const uniqueMessageIds = [...new Set(reactionsToAdd.map(r => r.messageId))];
-                    console.log(`[DEBUG] Channel ${name}: Reactions for message IDs: ${uniqueMessageIds.join(", ")}`);
-
-                    // Check if all reaction message IDs are in messagesToCreate or existingMessages
-                    for (const msgId of uniqueMessageIds) {
-                        const isInCreate = messagesToCreate.some(m => m.id === msgId);
-                        const isInExisting = existingMessages.has(msgId);
-                        console.log(`[DEBUG] Channel ${name}: Message ${msgId} - inCreate=${isInCreate}, inExisting=${isInExisting}`);
-                        if (!isInCreate && !isInExisting) {
-                            console.error(`[ERROR] Channel ${name}: Message ${msgId} is NOT in messagesToCreate and NOT in existingMessages!`);
-                        }
-                    }
+                // Process message updates in batches
+                for (let i = 0; i < messagesToUpdate.length; i += BATCH_SIZE) {
+                    const batch = messagesToUpdate.slice(i, i + BATCH_SIZE);
+                    await unitOfWork.execute(async repos => {
+                        await repos.messageRepository.batchUpdate(batch);
+                    });
                 }
 
-                await unitOfWork.execute(async repos => {
-                    // Batch create new messages
-                    if (messagesToCreate.length > 0) {
-                        console.log(`[DEBUG] Channel ${name}: Creating ${messagesToCreate.length} messages`);
-                        await repos.messageRepository.batchCreate(messagesToCreate);
-                        console.log(`[DEBUG] Channel ${name}: Successfully created messages`);
-                    }
+                // Process reaction removals in batches
+                for (let i = 0; i < reactionsToRemove.length; i += BATCH_SIZE) {
+                    const batch = reactionsToRemove.slice(i, i + BATCH_SIZE);
+                    await unitOfWork.execute(async repos => {
+                        await repos.reactionRepository.batchDelete(batch);
+                    });
+                }
 
-                    // Batch update edited messages
-                    if (messagesToUpdate.length > 0) {
-                        console.log(`[DEBUG] Channel ${name}: Updating ${messagesToUpdate.length} messages`);
-                        await repos.messageRepository.batchUpdate(messagesToUpdate);
-                        console.log(`[DEBUG] Channel ${name}: Successfully updated messages`);
-                    }
-
-                    // Batch delete removed reactions
-                    if (reactionsToRemove.length > 0) {
-                        console.log(`[DEBUG] Channel ${name}: Deleting ${reactionsToRemove.length} reactions`);
-                        await repos.reactionRepository.batchDelete(reactionsToRemove);
-                        console.log(`[DEBUG] Channel ${name}: Successfully deleted reactions`);
-                    }
-
-                    // Batch create new reactions
-                    if (reactionsToAdd.length > 0) {
-                        console.log(`[DEBUG] Channel ${name}: Creating ${reactionsToAdd.length} reactions`);
-                        await repos.reactionRepository.batchCreate(reactionsToAdd);
-                        console.log(`[DEBUG] Channel ${name}: Successfully created reactions`);
-                    }
-                });
-
-                console.log(`[DEBUG] Channel ${name}: Transaction completed successfully`);
+                // Process reaction additions in batches
+                for (let i = 0; i < reactionsToAdd.length; i += BATCH_SIZE) {
+                    const batch = reactionsToAdd.slice(i, i + BATCH_SIZE);
+                    await unitOfWork.execute(async repos => {
+                        await repos.reactionRepository.batchCreate(batch);
+                    });
+                }
 
                 if (newMessageCount > 0) {
                     console.log(`💾 Added ${newMessageCount} messages to #${name}`);
