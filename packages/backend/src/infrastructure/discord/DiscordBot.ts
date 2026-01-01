@@ -70,20 +70,27 @@ export const createDiscordBot = async ({
     voiceService,
     commandChoicesService,
 }: DiscordBotDeps): Promise<DiscordBot> => {
-    const client = new Client({
-        intents: [
-            GatewayIntentBits.Guilds,
-            GatewayIntentBits.GuildMessages,
-            GatewayIntentBits.MessageContent,
-            GatewayIntentBits.GuildMembers,
-            GatewayIntentBits.DirectMessages,
-            GatewayIntentBits.GuildVoiceStates,
-            GatewayIntentBits.GuildMessageReactions,
-        ],
-        partials: [Partials.User, Partials.GuildMember, Partials.ThreadMember, Partials.Channel, Partials.Message, Partials.Reaction],
-    });
-
+    let client: Client;
     let isReadyState = false;
+
+    const createClient = (): Client => {
+        return new Client({
+            intents: [
+                GatewayIntentBits.Guilds,
+                GatewayIntentBits.GuildMessages,
+                GatewayIntentBits.MessageContent,
+                GatewayIntentBits.GuildMembers,
+                GatewayIntentBits.DirectMessages,
+                GatewayIntentBits.GuildVoiceStates,
+                GatewayIntentBits.GuildMessageReactions,
+            ],
+            partials: [Partials.User, Partials.GuildMember, Partials.ThreadMember, Partials.Channel, Partials.Message, Partials.Reaction],
+        });
+    };
+
+    const registerEventHandler = <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>): void => {
+        client.on(event, handler);
+    };
 
     const setupEventHandlers = (): void => {
         client.once(Events.ClientReady, async (readyClient: Client<true>) => {
@@ -139,6 +146,12 @@ export const createDiscordBot = async ({
         try {
             console.log("🚀 Starting Discord bot...");
 
+            // Create a new client if this is first start or if previous client was destroyed
+            if (!client || client.isReady() === null) {
+                client = createClient();
+                setupEventHandlers();
+            }
+
             await client.login(config.discord.token);
 
             const guild = await client.guilds.fetch(config.discord.serverId!);
@@ -181,16 +194,16 @@ export const createDiscordBot = async ({
         }
     };
 
-    const registerEventHandler = <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>): void => {
-        client.on(event, handler);
-    };
-
     const isReady = (): boolean => isReadyState;
 
+    // Create initial client and setup event handlers
+    client = createClient();
     setupEventHandlers();
 
     return {
-        client,
+        get client() {
+            return client;
+        },
         isReady,
         start,
         stop,
