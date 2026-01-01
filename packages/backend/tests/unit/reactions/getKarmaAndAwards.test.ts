@@ -1,7 +1,7 @@
-import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
+import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 
-import { validEmotes } from "../../testData/reactionEmotes";
-import { createFakeMessagesAndReactions, createTestDb } from "../../utils/testUtils";
+import { validEmotes } from "../../testData/reactionEmotes.js";
+import { createFakeMessagesAndReactions, createTestDb } from "../../utils/testUtils.js";
 
 describe.concurrent("getKarmaAndAwards", () => {
     it("returns the correct karma and awards", async () => {

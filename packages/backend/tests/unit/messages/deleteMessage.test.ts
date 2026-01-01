@@ -1,8 +1,8 @@
-import { createMessageRepository } from "@adapters/repositories/MessageRepository";
-import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository";
-import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
+import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
+import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
+import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 
-import { createTestDb } from "../../utils/testUtils";
+import { createTestDb } from "../../utils/testUtils.js";
 
 describe.concurrent("deleteMessage", () => {
     it("should delete a message successfully", async () => {

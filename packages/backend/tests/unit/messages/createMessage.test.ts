@@ -1,7 +1,7 @@
-import { createMessageRepository } from "@adapters/repositories/MessageRepository";
-import type { Message } from "@core/entities/Message";
+import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
+import type { Message } from "@core/entities/Message.js";
 
-import { createTestDb } from "../../utils/testUtils";
+import { createTestDb } from "../../utils/testUtils.js";
 
 const sharedMessage: Message = { id: "m1", authorId: "a1", channelId: "c1", content: "hello", referencedMessageId: undefined, createdAt: new Date(), editedAt: null, reactions: [] };
 

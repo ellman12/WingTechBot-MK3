@@ -1,7 +1,7 @@
-import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository";
-import type { SoundTagRepository } from "@core/repositories/SoundTagRepository";
+import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
+import type { SoundTagRepository } from "@core/repositories/SoundTagRepository.js";
 
-import { createTestDb } from "../../utils/testUtils";
+import { createTestDb } from "../../utils/testUtils.js";
 
 export async function createTag(tagsRepo: SoundTagRepository, name: string) {
     const tag = await tagsRepo.create(name);

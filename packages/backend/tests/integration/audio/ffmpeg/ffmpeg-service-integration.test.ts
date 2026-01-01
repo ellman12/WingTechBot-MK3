@@ -1,4 +1,4 @@
-import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService";
+import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { describe, expect, it } from "vitest";
 
 // Helper function to check if ffmpeg is available and working

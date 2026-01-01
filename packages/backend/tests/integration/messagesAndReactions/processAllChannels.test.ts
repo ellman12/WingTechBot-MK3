@@ -1,4 +1,4 @@
-import { sleep } from "@core/utils/timeUtils";
+import { sleep } from "@core/utils/timeUtils.js";
 import type { Message, TextChannel } from "discord.js";
 
 import { getApp } from "@/main";

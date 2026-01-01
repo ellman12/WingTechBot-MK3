@@ -1,10 +1,10 @@
-import { reactionScoldMessages } from "@core/services/AutoReactionService";
-import { sleep } from "@core/utils/timeUtils";
+import { reactionScoldMessages } from "@core/services/AutoReactionService.js";
+import { sleep } from "@core/utils/timeUtils.js";
 import type { TextChannel } from "discord.js";
 
 import { getApp } from "@/main";
 
-import { cleanupAllTestChannels, createTemporaryTestChannel, deleteTestChannel, getTestingChannel, recreateDatabase, setUpIntegrationTest } from "../../utils/testUtils";
+import { cleanupAllTestChannels, createTemporaryTestChannel, deleteTestChannel, getTestingChannel, recreateDatabase, setUpIntegrationTest } from "../../utils/testUtils.js";
 
 const timeout = 120 * 1000;
 

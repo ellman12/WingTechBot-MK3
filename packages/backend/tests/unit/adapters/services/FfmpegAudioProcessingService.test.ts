@@ -1,5 +1,5 @@
-import { type FfmpegAudioServiceDeps, createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService";
-import type { FfmpegService } from "@infrastructure/ffmpeg/FfmpegService";
+import { type FfmpegAudioServiceDeps, createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
+import type { FfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { Readable } from "stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

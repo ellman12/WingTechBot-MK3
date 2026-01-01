@@ -1,7 +1,7 @@
-import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
+import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 import { expect } from "vitest";
 
-import { createTestDb, createTestReactions } from "../../utils/testUtils";
+import { createTestDb, createTestReactions } from "../../utils/testUtils.js";
 
 type MessageTestData = [number, number];
 

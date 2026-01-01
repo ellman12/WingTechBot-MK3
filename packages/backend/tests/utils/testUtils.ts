@@ -1,12 +1,12 @@
-import { createMessageRepository } from "@adapters/repositories/MessageRepository";
-import { createReactionEmoteRepository, defaultKarmaValues } from "@adapters/repositories/ReactionEmoteRepository";
-import { createReactionRepository } from "@adapters/repositories/ReactionRepository";
+import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
+import { createReactionEmoteRepository, defaultKarmaValues } from "@adapters/repositories/ReactionEmoteRepository.js";
+import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 import type { CreateMessageData } from "@core/entities/Message.js";
-import { getKyselyForMigrations, runMigrations } from "@db/migrations";
-import type { DB } from "@db/types";
+import { getKyselyForMigrations, runMigrations } from "@db/migrations.js";
+import type { DB } from "@db/types.js";
 import { getConfig } from "@infrastructure/config/Config.js";
-import { getKysely } from "@infrastructure/database/DatabaseConnection";
-import type { DiscordBot } from "@infrastructure/discord/DiscordBot";
+import { getKysely } from "@infrastructure/database/DatabaseConnection.js";
+import type { DiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { type Guild, type Message, type TextChannel } from "discord.js";
 import { promises as fs } from "fs";
 import { Kysely, PostgresDialect, sql } from "kysely";
@@ -17,8 +17,8 @@ import { expect } from "vitest";
 
 import { getApp } from "@/main";
 
-import { createTesterDiscordBot } from "../integration/testBot/TesterDiscordBot";
-import { type TestReactionEmote, validEmotes } from "../testData/reactionEmotes";
+import { createTesterDiscordBot } from "../integration/testBot/TesterDiscordBot.js";
+import { type TestReactionEmote, validEmotes } from "../testData/reactionEmotes.js";
 
 const migrationsDir = path.resolve(__dirname, "../../database/migrations");
 

@@ -1,8 +1,8 @@
-import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository";
+import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
 import { expect } from "vitest";
 
-import { invalidEmotes, validEmotes } from "../../testData/reactionEmotes";
-import { createTestDb } from "../../utils/testUtils";
+import { invalidEmotes, validEmotes } from "../../testData/reactionEmotes.js";
+import { createTestDb } from "../../utils/testUtils.js";
 
 describe.concurrent("Create ReactionEmote, valid data", () => {
     test.each(validEmotes)("%s, %s", async (name, discordId) => {

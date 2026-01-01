@@ -1,5 +1,5 @@
 import type { VoiceEventSound } from "@core/entities/VoiceEventSound.js";
-import type { DB, VoiceEventSoundType, VoiceEventSounds } from "@db/types";
+import type { DB, VoiceEventSoundType, VoiceEventSounds } from "@db/types.js";
 import type { Kysely, Selectable } from "kysely";
 
 export type VoiceEventSoundsRepository = {

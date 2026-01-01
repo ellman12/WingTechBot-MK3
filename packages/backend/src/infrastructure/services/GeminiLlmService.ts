@@ -1,4 +1,4 @@
-import type { Message } from "@core/entities/Message";
+import type { Message } from "@core/entities/Message.js";
 import { type GenerateContentConfig, GoogleGenAI } from "@google/genai";
 import { getConfig } from "@infrastructure/config/Config.js";
 

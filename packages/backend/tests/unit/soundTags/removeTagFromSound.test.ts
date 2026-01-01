@@ -1,7 +1,7 @@
-import { createSoundRepository } from "@adapters/repositories/SoundRepository";
-import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository";
+import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
+import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
 
-import { createTestDb } from "../../utils/testUtils";
+import { createTestDb } from "../../utils/testUtils.js";
 import { createSound } from "./addTagToSound.test";
 import { createTag } from "./createTag.test";
 

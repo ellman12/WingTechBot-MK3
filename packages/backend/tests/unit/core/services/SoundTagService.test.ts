@@ -1,9 +1,9 @@
-import { createUnitOfWork } from "@adapters/repositories/KyselyUnitOfWork";
-import { createSoundRepository } from "@adapters/repositories/SoundRepository";
-import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository";
-import { createSoundTagService } from "@core/services/SoundTagService";
+import { createUnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
+import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
+import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
+import { createSoundTagService } from "@core/services/SoundTagService.js";
 
-import { createTestDb } from "../../../utils/testUtils";
+import { createTestDb } from "../../../utils/testUtils.js";
 import { createSound } from "../../soundTags/addTagToSound.test";
 import { createTag } from "../../soundTags/createTag.test";
 
