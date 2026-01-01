@@ -21,6 +21,7 @@ import type { SoundTagService } from "@core/services/SoundTagService.js";
 import type { SoundboardThreadService } from "@core/services/SoundboardThreadService.js";
 import type { VoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
+import { sleep } from "@core/utils/timeUtils.js";
 import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, RESTEvents, type TextChannel } from "discord.js";
 
 import type { Config } from "../config/Config.js";
@@ -222,7 +223,7 @@ export const createDiscordBot = async ({
             isReadyState = false;
 
             // Give any in-flight event handlers a brief moment to check isReady and bail out
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await sleep(50);
 
             // Destroy the client (this will clean up listeners internally)
             await client.destroy();
