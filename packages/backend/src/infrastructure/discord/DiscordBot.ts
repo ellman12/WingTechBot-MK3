@@ -22,7 +22,7 @@ import type { SoundboardThreadService } from "@core/services/SoundboardThreadSer
 import type { VoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { sleep } from "@core/utils/timeUtils.js";
-import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, RESTEvents, type TextChannel } from "discord.js";
+import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, PresenceUpdateStatus, RESTEvents, type TextChannel } from "discord.js";
 
 import { type Config, getConfig } from "../config/Config.js";
 
@@ -105,6 +105,7 @@ export const createDiscordBot = async ({
 
     const setupEventHandlers = (): void => {
         client.once(Events.ClientReady, async (readyClient: Client<true>) => {
+            client.user!.setStatus(PresenceUpdateStatus.Invisible);
             console.log(`🤖 Discord bot ready! Logged in as ${readyClient.user.tag}`);
             console.log(`📊 Bot is in ${readyClient.guilds.cache.size} servers`);
             isReadyState = true;
@@ -209,6 +210,8 @@ export const createDiscordBot = async ({
 
             await soundboardThreadService.findOrCreateSoundboardThread(guild);
 
+            client.user!.setStatus(PresenceUpdateStatus.Online);
+
             if (getConfig().server.environment === "production") {
                 await botChannel.send("WTB3 online and ready");
             }
@@ -226,6 +229,8 @@ export const createDiscordBot = async ({
 
             // Give any in-flight event handlers a brief moment to check isReady and bail out
             await sleep(50);
+
+            client.user!.setStatus(PresenceUpdateStatus.Invisible);
 
             // Destroy the client (this will clean up listeners internally)
             await client.destroy();
