@@ -92,6 +92,11 @@ jobs:
                         - "3000:3000"
                       depends_on:
                         - postgres
+                      volumes:
+                        - sounds-data:/app/sounds
+                        - cache-data:/app/cache
+                      networks:
+                        - app-network
                       restart: unless-stopped
 
                     postgres:
@@ -108,11 +113,17 @@ jobs:
                       image: nickfedor/watchtower
                       volumes:
                         - /var/run/docker.sock:/var/run/docker.sock
-                      command: --interval 120 --cleanup backend
+                      command: --interval 600 --cleanup backend
                       restart: unless-stopped
 
-                  volumes:
-                    postgres_data:
+                    volumes:
+                      node_modules:
+                      sounds-data:
+                      cache-data:
+                    networks:
+                      app-network:
+                        name: backend_app-network
+                        driver: bridge
                   EOF
 
             - name: Upload Docker Compose file
