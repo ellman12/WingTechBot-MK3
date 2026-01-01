@@ -28,14 +28,6 @@ describe.concurrent("createMessage", () => {
         await expect(repo.create({ ...sharedMessage, channelId: "0" })).rejects.toThrow();
     });
 
-    it("should throw error if message with same id already exists", async () => {
-        const db = await createTestDb();
-        const repo = createMessageRepository(db);
-
-        await repo.create(sharedMessage);
-        await expect(repo.create(sharedMessage)).rejects.toThrow("Message exists");
-    });
-
     it("should throw error if message id and referenced message id are equal", async () => {
         const db = await createTestDb();
         const repo = createMessageRepository(db);

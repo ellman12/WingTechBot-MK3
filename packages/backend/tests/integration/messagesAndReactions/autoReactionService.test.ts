@@ -4,7 +4,7 @@ import type { TextChannel } from "discord.js";
 
 import { getApp } from "@/main";
 
-import { createTemporaryTestChannel, deleteTestChannel, getTestingChannel, recreateDatabase, setUpIntegrationTest } from "../../utils/testUtils";
+import { cleanupAllTestChannels, createTemporaryTestChannel, deleteTestChannel, getTestingChannel, recreateDatabase, setUpIntegrationTest } from "../../utils/testUtils";
 
 const timeout = 120 * 1000;
 
@@ -31,6 +31,11 @@ describe("Messages and Reactions integration tests", async () => {
             testChannel = null;
             await sleep(3000); // Allow bot operations to complete after channel deletion
         }
+    });
+
+    afterAll(async () => {
+        const bot = getApp().discordBot;
+        await cleanupAllTestChannels(bot);
     });
 
     it("should scold self-reactions", async () => {

@@ -3,7 +3,7 @@ import type { TextChannel } from "discord.js";
 
 import { getApp } from "@/main";
 
-import { createMessagesAndReactions, createTemporaryTestChannel, deleteTestChannel, getTestingChannel, recreateDatabase, setUpIntegrationTest, verifyTesterReactions } from "../../utils/testUtils";
+import { cleanupAllTestChannels, createMessagesAndReactions, createTemporaryTestChannel, deleteTestChannel, getTestingChannel, recreateDatabase, setUpIntegrationTest, verifyTesterReactions } from "../../utils/testUtils";
 
 const timeout = 360 * 1000;
 
@@ -30,6 +30,11 @@ describe("Messages and Reactions integration tests", async () => {
             testChannel = null;
             await sleep(3000); // Allow bot operations to complete after channel deletion
         }
+    });
+
+    afterAll(async () => {
+        const bot = getApp().discordBot;
+        await cleanupAllTestChannels(bot);
     });
 
     it("sends messages, adds reactions, removes both, verifies DB entries", async () => {

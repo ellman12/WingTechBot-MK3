@@ -3,7 +3,7 @@ import type { Message, TextChannel } from "discord.js";
 
 import { getApp } from "@/main";
 
-import { createTemporaryTestChannel, deleteTestChannel, getTestingChannel, recreateDatabase, setUpIntegrationTest } from "../../utils/testUtils.js";
+import { cleanupAllTestChannels, createTemporaryTestChannel, deleteTestChannel, getTestingChannel, recreateDatabase, setUpIntegrationTest } from "../../utils/testUtils.js";
 
 const timeout = 360 * 1000;
 const delay = 6000;
@@ -32,6 +32,11 @@ describe("processAllChannels", async () => {
         }
     });
 
+    afterAll(async () => {
+        const bot = getApp().discordBot;
+        await cleanupAllTestChannels(bot);
+    });
+
     //prettier-ignore
     it("should read all messages and reactions on load", async () => {
         const { bot, testerBot, db } = await setUpIntegrationTest();
@@ -50,6 +55,7 @@ describe("processAllChannels", async () => {
             await bot.start();
             // Manually process channels since SKIP_CHANNEL_PROCESSING_ON_STARTUP is enabled for tests
             const guild = await bot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+            if (!testChannel) throw new Error("Test channel not initialized");
             await app.messageArchiveService.processAllChannels(guild, undefined, [testChannel.id]);
             await app.messageArchiveService.removeDeletedMessages(guild);
             await sleep(2000); // Wait for processing to complete

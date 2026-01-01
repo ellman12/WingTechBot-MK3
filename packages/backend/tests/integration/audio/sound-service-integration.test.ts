@@ -84,6 +84,7 @@ describe.concurrent("SoundService Integration Tests", () => {
                 botChannelId: "",
                 defaultVoiceChannelId: "",
                 roleId: "",
+                skipChannelProcessingOnStartup: false,
             },
             sounds: { storagePath: tempDir },
             cache: { audioDownloadPath: join(tempDir, "cache"), ttlHours: 24, maxSizeMb: 1000 },
