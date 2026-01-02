@@ -67,10 +67,7 @@ describe("Messages and Reactions integration tests", async () => {
 
         const message = await testerChannel.send("Reacting to this message");
 
-        // Test just one self-reaction instead of all three
-        // emotes[2] should be "upvote" which has scold messages
-        const [emoteName, emoteId] = emotes[2]!; // Just test one emote
-        console.log(`[Test] Reacting with emote: ${emoteName} (${emoteId})`);
+        const [emoteName, emoteId] = emotes[2]!;
         await message.react(emoteId!);
         
         const botScoldMessage = await waitForBotScoldMessage(testerChannel, bot.client.user!.id, emoteName!);

@@ -142,7 +142,6 @@ export const createDiscordBot = async ({
                 console.log("⏩ Skipping command deployment (skipCommandDeploymentOnStartup = true)");
             }
 
-            // Signal that the client is ready
             if (readyResolver) {
                 readyResolver();
                 readyResolver = null;
@@ -225,7 +224,6 @@ export const createDiscordBot = async ({
                     await messageArchiveService.processAllChannels(guild, currentYear);
                 }
 
-                //Remove any messages that were deleted while bot offline
                 await messageArchiveService.removeDeletedMessages(guild, isFirstRun ? undefined : currentYear);
             }
 

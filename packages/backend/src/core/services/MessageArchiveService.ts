@@ -56,7 +56,6 @@ async function collectReactionData(discordMessage: Message) {
                 });
             }
 
-            // Add unique emote
             if (!emotes.some(e => e.name === name && e.discordId === emoteDiscordId)) {
                 emotes.push({ name, discordId: emoteDiscordId });
             }

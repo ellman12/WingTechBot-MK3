@@ -66,7 +66,6 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
     const databaseConnection = createDatabaseConnection(config, schemaName);
     await databaseConnection.connect();
 
-    // Run migrations
     console.log(`⏱️  Running migrations for schema ${schemaName}...`);
     await runMigrations(schemaName);
     console.log(`✅ Migrations completed`);

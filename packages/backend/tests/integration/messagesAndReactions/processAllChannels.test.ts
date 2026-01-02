@@ -86,7 +86,7 @@ describe("processAllChannels", async () => {
             if (!testChannel || !messageArchiveService) throw new Error("Test channel or messageArchiveService not initialized");
             await messageArchiveService.processAllChannels(guild, undefined, [testChannel.id]);
             await messageArchiveService.removeDeletedMessages(guild);
-            await sleep(2000); // Wait for processing to complete
+            await sleep(2000);
         }
 
         async function getAllMessages() {
@@ -98,7 +98,6 @@ describe("processAllChannels", async () => {
             expect(reactions).toHaveLength(expected);
         }
 
-        //Go offline and send messages for bot to process later.
         await stopBot();
 
         const newMessages: Message[] = [];
@@ -129,7 +128,6 @@ describe("processAllChannels", async () => {
             await message.delete();
         }
 
-        // Wait a bit for Discord to process the deletions
         await sleep(2000);
 
         await startBot();
