@@ -44,6 +44,7 @@ export type DiscordBotDeps = {
     readonly voiceEventSoundsService: VoiceEventSoundsService;
     readonly voiceService: VoiceService;
     readonly commandChoicesService: CommandChoicesService;
+    readonly clientWrapper?: (client: Client) => Client;
 };
 
 export type DiscordBot = {
@@ -72,11 +73,13 @@ export const createDiscordBot = async ({
     voiceEventSoundsService,
     voiceService,
     commandChoicesService,
+    clientWrapper,
 }: DiscordBotDeps): Promise<DiscordBot> => {
     let client: Client;
     let isReadyState = false;
     let isClientDestroyed = false;
     let readyResolver: (() => void) | null = null;
+    const clientWrapperFn = clientWrapper;
 
     const createClient = (): Client => {
         return new Client({
@@ -175,17 +178,18 @@ export const createDiscordBot = async ({
             console.log("🚀 Starting Discord bot...");
             const botStartTime = Date.now();
 
-            // Create a new client if this is first start or if previous client was destroyed
             console.log("⏱️  Creating Discord client...");
             const clientCreateStart = Date.now();
             if (!client || isClientDestroyed) {
                 client = createClient();
+                if (clientWrapperFn) {
+                    client = clientWrapperFn(client);
+                }
                 isClientDestroyed = false;
                 setupEventHandlers();
             }
             console.log(`✅ Client created in ${Date.now() - clientCreateStart}ms`);
 
-            // Create a promise that resolves when the client is ready
             const readyPromise = new Promise<void>(resolve => {
                 readyResolver = resolve;
             });
@@ -194,7 +198,6 @@ export const createDiscordBot = async ({
             const loginStart = Date.now();
             await client.login(config.discord.token);
 
-            // Wait for the client to be fully ready before proceeding
             await readyPromise;
             console.log(`✅ Discord login and ready in ${Date.now() - loginStart}ms`);
 
@@ -210,18 +213,14 @@ export const createDiscordBot = async ({
             await emoteRepository.createKarmaEmotes(guild);
             console.log(`✅ Karma emotes created in ${Date.now() - emotesStart}ms`);
 
-            // Skip channel processing if configured (useful for tests)
             if (!config.discord.skipChannelProcessingOnStartup) {
-                // Check if this is the first run by seeing if we have any messages in the DB
                 const isFirstRun = !(await messageArchiveService.hasAnyMessages());
                 const currentYear = new Date().getUTCFullYear();
 
                 if (isFirstRun) {
-                    // First run: process all channels without year filtering to get complete history
                     console.log("🔄 First run detected - performing full message sync (all years)");
                     await messageArchiveService.processAllChannels(guild);
                 } else {
-                    // Subsequent runs: only process current year for efficiency
                     console.log(`🔄 Processing messages for ${currentYear} only`);
                     await messageArchiveService.processAllChannels(guild, currentYear);
                 }
@@ -252,17 +251,14 @@ export const createDiscordBot = async ({
     const stop = async (): Promise<void> => {
         try {
             console.log("🛑 Stopping Discord bot...");
-            // Set ready state to false first so event handlers can check and bail out
             isReadyState = false;
 
-            // Give any in-flight event handlers a brief moment to check isReady and bail out
             await sleep(50);
 
             if (client.user) {
                 client.user.setStatus(PresenceUpdateStatus.Invisible);
             }
 
-            // Destroy the client (this will clean up listeners internally)
             await client.destroy();
             isClientDestroyed = true;
             console.log("✅ Discord bot stopped");
@@ -274,9 +270,10 @@ export const createDiscordBot = async ({
 
     const isReady = (): boolean => isReadyState;
 
-    // Create initial client and setup event handlers
-    // Migrations have already been run before createDiscordBot() is called
     client = createClient();
+    if (clientWrapper) {
+        client = clientWrapper(client);
+    }
     setupEventHandlers();
 
     return {

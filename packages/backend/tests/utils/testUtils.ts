@@ -23,16 +23,14 @@ import { type TestReactionEmote, validEmotes } from "../testData/reactionEmotes.
 const migrationsDir = path.resolve(__dirname, "../../database/migrations");
 
 /**
- * Sanitizes and lowercases schema name for PostgreSQL compatibility.
- * PostgreSQL lowercases unquoted identifiers, so we normalize to lowercase.
+ * Normalizes schema names to lowercase because PostgreSQL lowercases unquoted identifiers.
  */
 function sanitizeSchemaName(schemaName: string): string {
     return schemaName.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
 }
 
 /**
- * Creates a connection string with search_path set to the specified schema.
- * This ensures all connections from the pool use the correct schema.
+ * Sets search_path in connection string to ensure all pool connections use the correct schema.
  */
 function buildSchemaConnectionString(baseDatabaseUrl: string, schemaName: string): string {
     const sanitizedSchema = sanitizeSchemaName(schemaName);
@@ -41,8 +39,7 @@ function buildSchemaConnectionString(baseDatabaseUrl: string, schemaName: string
 }
 
 /**
- * Verifies that the database connection is using the expected schema.
- * Throws an error if there's a mismatch.
+ * Verifies schema isolation by checking current_schema() matches expected.
  */
 async function verifyCurrentSchema(db: Kysely<DB>, expectedSchema: string): Promise<void> {
     const sanitizedSchema = sanitizeSchemaName(expectedSchema);
@@ -55,8 +52,7 @@ async function verifyCurrentSchema(db: Kysely<DB>, expectedSchema: string): Prom
 }
 
 /**
- * Creates a migration provider that loads migrations from the migrations directory.
- * This provider is compatible with both test and production environments.
+ * Creates a migration provider compatible with both test and production environments.
  */
 function createMigrationProvider() {
     return {
@@ -65,7 +61,6 @@ function createMigrationProvider() {
             const migrations: Record<string, { up: (db: Kysely<DB>) => Promise<void>; down: (db: Kysely<DB>) => Promise<void> }> = {};
 
             for (const file of files) {
-                // Skip TypeScript declaration files and index files
                 if (file.endsWith(".d.ts") || file === "index.ts" || file === "index.js") {
                     continue;
                 }
@@ -85,26 +80,16 @@ function createMigrationProvider() {
 }
 
 /**
- * Runs Kysely migrations in a specific PostgreSQL schema.
- *
- * CRITICAL: This function sets migrationTableSchema to ensure migration tracking
- * tables (kysely_migration, kysely_migration_lock) are created in the correct schema.
- * Without this, migrations fail with "relation kysely_migration_lock does not exist".
- *
- * @param db - Kysely database instance configured with the target schema
- * @param schemaName - Name of the schema to run migrations in
+ * Runs migrations in a specific schema. Sets migrationTableSchema to prevent
+ * migration tables from being created in the public schema, which breaks test isolation.
  */
 async function runMigrationsInSchema(db: Kysely<DB>, schemaName: string): Promise<void> {
     const sanitizedSchema = sanitizeSchemaName(schemaName);
 
-    // Verify we're in the correct schema before running migrations
     await verifyCurrentSchema(db, schemaName);
 
     const migrationProvider = createMigrationProvider();
 
-    // BUG FIX: Add migrationTableSchema parameter to scope migration tables to this schema
-    // Without this, Kysely creates migration tables in 'public' schema by default,
-    // even when search_path is set, causing isolation failures between test schemas.
     const migrator = new Migrator({
         db,
         provider: migrationProvider,
@@ -295,7 +280,7 @@ export const recreateDatabase = async (app: App, schemaName: string, baseDatabas
 // Track all created test channels for cleanup
 const createdTestChannels = new Set<string>();
 
-export async function createTemporaryTestChannel(bot: DiscordBot, channelName?: string, app?: App): Promise<TextChannel> {
+export async function createTemporaryTestChannel(bot: DiscordBot, channelName?: string): Promise<TextChannel> {
     const guild = await getTestingGuild(bot);
     const name = channelName || `test-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
@@ -305,16 +290,6 @@ export async function createTemporaryTestChannel(bot: DiscordBot, channelName?: 
     });
 
     createdTestChannels.add(channel.id);
-
-    // Register channel with app's config for channel filtering
-    if (app?.config?.discord) {
-        // Initialize restrictToChannelIds array if it doesn't exist
-        if (!app.config.discord.restrictToChannelIds) {
-            app.config.discord.restrictToChannelIds = [];
-        }
-        app.config.discord.restrictToChannelIds.push(channel.id);
-        console.log(`✅ Registered channel ${channel.id} in restrictToChannelIds (total: ${app.config.discord.restrictToChannelIds.length})`);
-    }
 
     console.log(`📝 Created temporary test channel: ${channel.name} (${channel.id})`);
     return channel as TextChannel;
@@ -337,25 +312,37 @@ export async function cleanupAllTestChannels(bot: DiscordBot): Promise<void> {
         return;
     }
 
-    console.log(`🧹 Cleaning up ${createdTestChannels.size} remaining test channels...`);
-    const guild = await getTestingGuild(bot);
-    await guild.channels.fetch();
+    // Check if bot is ready and client is not destroyed before attempting cleanup
+    if (!bot.isReady() || !bot.client.token) {
+        console.log(`⚠️ Bot is not ready or client is destroyed, skipping channel cleanup`);
+        createdTestChannels.clear();
+        return;
+    }
 
-    const channelIds = Array.from(createdTestChannels);
-    for (const channelId of channelIds) {
-        try {
-            const channel = guild.channels.cache.get(channelId);
-            if (channel) {
-                await channel.delete();
-                createdTestChannels.delete(channelId);
-                console.log(`🗑️ Cleaned up test channel: ${channel.name} (${channelId})`);
-            } else {
+    console.log(`🧹 Cleaning up ${createdTestChannels.size} remaining test channels...`);
+    try {
+        const guild = await getTestingGuild(bot);
+        await guild.channels.fetch();
+
+        const channelIds = Array.from(createdTestChannels);
+        for (const channelId of channelIds) {
+            try {
+                const channel = guild.channels.cache.get(channelId);
+                if (channel) {
+                    await channel.delete();
+                    createdTestChannels.delete(channelId);
+                    console.log(`🗑️ Cleaned up test channel: ${channel.name} (${channelId})`);
+                } else {
+                    createdTestChannels.delete(channelId);
+                }
+            } catch (error) {
+                console.warn(`Failed to cleanup test channel ${channelId}:`, error);
                 createdTestChannels.delete(channelId);
             }
-        } catch (error) {
-            console.warn(`Failed to cleanup test channel ${channelId}:`, error);
-            createdTestChannels.delete(channelId);
         }
+    } catch (error) {
+        console.error(`Error during channel cleanup:`, error);
+        createdTestChannels.clear();
     }
 }
 
@@ -590,4 +577,30 @@ export async function waitForAllReactionsRemoved(db: Kysely<DB>, timeoutMs: numb
         console.log(`   Remaining reactions are for messages: ${messageIds.join(", ")}`);
     }
     expect(reactions.length).toStrictEqual(0);
+}
+
+//Polls the channel until the bot's scold message appears, or timeout.
+export async function waitForBotScoldMessage(channel: TextChannel, botId: string, emoteName: string, timeoutMs: number = 30000, pollIntervalMs: number = 1000): Promise<Message | undefined> {
+    const { reactionScoldMessages } = await import("@core/services/AutoReactionService.js");
+    const possibleMessages = reactionScoldMessages[emoteName];
+    if (!possibleMessages) {
+        throw new Error(`No scold messages found for emote: ${emoteName}`);
+    }
+
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeoutMs) {
+        const fetchedMessages = await channel.messages.fetch({ limit: 10 });
+        const botScoldMessage = fetchedMessages.find(m => m.author.id === botId && m.content.includes("<@") && possibleMessages.some(scoldMsg => m.content.includes(scoldMsg)));
+
+        if (botScoldMessage) {
+            console.log(`✅ Found bot scold message after ${Date.now() - startTime}ms`);
+            return botScoldMessage;
+        }
+
+        await sleep(pollIntervalMs);
+    }
+
+    console.log(`❌ Timeout waiting for bot scold message in channel ${channel.id}`);
+    return undefined;
 }

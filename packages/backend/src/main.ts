@@ -58,7 +58,6 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
 
     await databaseConnection.connect();
 
-    // Run migrations immediately after connecting, before creating any services
     console.log("⏱️  Running database migrations...");
     const migrationsStart = Date.now();
     await runMigrations(schemaName);
@@ -111,9 +110,8 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
     });
     const unitOfWork = createUnitOfWork(db);
     const soundTagService = createSoundTagService({ unitOfWork, soundRepository, soundTagRepository });
-    const reactionArchiveService = createReactionArchiveService({ config, messageRepository, reactionRepository, emoteRepository });
+    const reactionArchiveService = createReactionArchiveService({ messageRepository, reactionRepository, emoteRepository });
     const messageArchiveService = createMessageArchiveService({
-        config,
         unitOfWork,
         messageRepository,
     });
@@ -228,7 +226,6 @@ const setupGracefulShutdown = (app: App): void => {
         console.error("❌ Uncaught Exception:", error);
         void app.errorReportingService.reportError(error, { source: "uncaughtException", willShutdown: true });
 
-        // After an uncaught exception, always perform a graceful shutdown to avoid running in an inconsistent state
         void shutdown(1);
     });
 
@@ -236,13 +233,9 @@ const setupGracefulShutdown = (app: App): void => {
         console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
         const error = reason instanceof Error ? reason : new Error(String(reason));
         void app.errorReportingService.reportError(error, { source: "unhandledRejection", promise: String(promise), willShutdown: false });
-
-        // Unhandled rejections are usually less critical - just log and continue
-        // In dev/test environments, we could optionally crash for stricter error handling
     });
 };
 
-// Production entry point - auto-starts the application
 if (process.env.NODE_ENV !== "test" && !process.env.CI) {
     const startApplication = async (): Promise<void> => {
         try {

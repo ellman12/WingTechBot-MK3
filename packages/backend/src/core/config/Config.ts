@@ -22,7 +22,6 @@ const discordConfigSchema = z.object({
         .optional(),
     skipChannelProcessingOnStartup: z.coerce.boolean().default(false),
     skipCommandDeploymentOnStartup: z.coerce.boolean().default(false),
-    restrictToChannelIds: z.array(z.string()).optional(),
 });
 
 const soundsConfigSchema = z.object({

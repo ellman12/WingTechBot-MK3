@@ -1,8 +1,6 @@
-import type { Config } from "@core/config/Config.js";
 import type { MessageRepository } from "@core/repositories/MessageRepository.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
-import { shouldProcessChannel } from "@core/utils/channelFilter.js";
 import type { Message, MessageReaction, OmitPartialGroupDMChannel, PartialMessage, PartialMessageReaction, PartialUser, User } from "discord.js";
 
 export type ReactionArchiveService = {
@@ -13,7 +11,6 @@ export type ReactionArchiveService = {
 };
 
 export type ReactionArchiveServiceDeps = {
-    config: Config;
     messageRepository: MessageRepository;
     reactionRepository: ReactionRepository;
     emoteRepository: ReactionEmoteRepository;
@@ -25,8 +22,7 @@ const isClientDestroyedError = (error: unknown): boolean => {
     return error instanceof Error && error.message.includes("Expected token to be set for this request");
 };
 
-//Archives all reactions added to all messages.
-export const createReactionArchiveService = ({ config, messageRepository, reactionRepository, emoteRepository }: ReactionArchiveServiceDeps): ReactionArchiveService => {
+export const createReactionArchiveService = ({ messageRepository, reactionRepository, emoteRepository }: ReactionArchiveServiceDeps): ReactionArchiveService => {
     console.log("[ReactionArchiveService] Creating reaction archive service");
 
     return {
@@ -35,11 +31,6 @@ export const createReactionArchiveService = ({ config, messageRepository, reacti
             try {
                 const message = await reaction.message.fetch();
                 const channel = message.channel;
-
-                // Skip if channel is not in the allowed list
-                if (!shouldProcessChannel(message.channelId, config)) {
-                    return;
-                }
 
                 const year = message.createdAt.getUTCFullYear();
 
@@ -54,8 +45,6 @@ export const createReactionArchiveService = ({ config, messageRepository, reacti
                     throw new Error("Missing reaction emoji name");
                 }
 
-                // Ensure the message exists in the database before adding a reaction
-                // This handles race conditions where a reaction arrives before the message is saved
                 const referencedMessageId = message.reference ? message.reference.messageId : undefined;
                 await messageRepository.create({
                     id: message.id,
@@ -74,16 +63,12 @@ export const createReactionArchiveService = ({ config, messageRepository, reacti
                 console.log(`[ReactionArchiveService] ✅ Successfully saved reaction - emoji: ${emoteName}, channel: ${channel.id}`);
             } catch (e: unknown) {
                 console.error(`[ReactionArchiveService] ❌ Error in addReaction - emoji: ${reaction.emoji.name}, error:`, e);
-                // Handle Discord API errors for deleted/unknown channels/messages
                 if (e && typeof e === "object" && "code" in e) {
                     const apiError = e as { code: number };
                     if (apiError.code === 10003 || apiError.code === 10008) {
-                        // 10003 = Unknown Channel, 10008 = Unknown Message
-                        // Silently skip - channel/message was deleted
                         return;
                     }
                 }
-                // Ignore errors when bot is being destroyed (token no longer available)
                 if (!isClientDestroyedError(e)) {
                     console.error("Error adding reaction to message", e);
                 }
@@ -94,11 +79,6 @@ export const createReactionArchiveService = ({ config, messageRepository, reacti
             try {
                 const message = await reaction.message.fetch();
                 const channel = message.channel;
-
-                // Skip if channel is not in the allowed list
-                if (!shouldProcessChannel(message.channelId, config)) {
-                    return;
-                }
 
                 const year = message.createdAt.getUTCFullYear();
 
@@ -123,8 +103,6 @@ export const createReactionArchiveService = ({ config, messageRepository, reacti
                 const data = { giverId: user.id, receiverId: message.author.id, channelId: channel.id, messageId: message.id, emoteId: reactionEmote.id };
                 await reactionRepository.delete(data);
             } catch (e: unknown) {
-                // Ignore errors when bot is being destroyed (token no longer available)
-                // Also ignore errors when the channel/message no longer exists (race condition with deletion)
                 if (!isClientDestroyedError(e)) {
                     console.error("Error removing reaction from message", e);
                 }
@@ -135,11 +113,6 @@ export const createReactionArchiveService = ({ config, messageRepository, reacti
             try {
                 await message.fetch();
 
-                // Skip if channel is not in the allowed list
-                if (!shouldProcessChannel(message.channelId, config)) {
-                    return;
-                }
-
                 const year = message.createdAt.getUTCFullYear();
 
                 if (year < new Date().getUTCFullYear()) {
@@ -149,8 +122,6 @@ export const createReactionArchiveService = ({ config, messageRepository, reacti
 
                 await reactionRepository.deleteReactionsForMessage(message.id);
             } catch (e: unknown) {
-                // Ignore errors when bot is being destroyed (token no longer available)
-                // Also ignore errors when the channel/message no longer exists (race condition with deletion)
                 if (!isClientDestroyedError(e)) {
                     console.error("Error removing reaction from message", e);
                 }
@@ -160,11 +131,6 @@ export const createReactionArchiveService = ({ config, messageRepository, reacti
         removeReactionsForEmote: async (reaction): Promise<void> => {
             try {
                 await reaction.fetch();
-
-                // Skip if channel is not in the allowed list
-                if (!shouldProcessChannel(reaction.message.channelId, config)) {
-                    return;
-                }
 
                 const year = reaction.message.createdAt.getUTCFullYear();
                 const name = reaction.emoji.name;
@@ -186,8 +152,6 @@ export const createReactionArchiveService = ({ config, messageRepository, reacti
 
                 await reactionRepository.deleteReactionsForEmote(reaction.message.id, emote.id);
             } catch (e: unknown) {
-                // Ignore errors when bot is being destroyed (token no longer available)
-                // Also ignore errors when the channel/message no longer exists (race condition with deletion)
                 if (!isClientDestroyedError(e)) {
                     console.error("Error removing reactions for emote", e);
                 }

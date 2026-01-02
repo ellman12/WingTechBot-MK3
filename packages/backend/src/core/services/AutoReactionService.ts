@@ -1,7 +1,6 @@
 import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import type { Config } from "@core/config/Config.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
-import { shouldProcessChannel } from "@core/utils/channelFilter.js";
 import { oneIn, randomArrayItem } from "@core/utils/probabilityUtils.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import type { Message, MessageReaction, PartialMessageReaction, PartialUser, TextChannel, User } from "discord.js";
@@ -56,7 +55,6 @@ export const reactionScoldMessages: Record<string, string[]> = {
     platinum: awardScolds,
 };
 
-//Listens for various events the bot can react and respond to.
 export const createAutoReactionService = ({ config, discordChatService, geminiLlmService, llmInstructionRepo }: AutoReactionServiceDeps): AutoReactionService => {
     console.log("[AutoReactionService] Creating AutoReactionService");
 
@@ -67,7 +65,6 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
 
         const substrings = ["69420", "69", "420"];
 
-        //Finds the first substring and the 3 words before and after it.
         const regex = new RegExp(`\\b(?:\\w+\\b\\W+){0,3}\\w*(${substrings.join("|")})\\w*(?:\\W+\\b\\w+\\b){0,3}`, "gi");
         const matches = message.content.match(regex);
 
@@ -90,10 +87,8 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
 
         if (!lastWord) return;
 
-        //Remove trailing punctuation
         lastWord = lastWord.replace(/[.,!?;:]+$/, "");
 
-        //Check if it ends with "er" (case-insensitive)
         if (/er$/i.test(lastWord)) {
             return lastWord;
         }
@@ -113,7 +108,6 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         return false;
     }
 
-    //Very small chance for the LLM to respond with the message but nekoized.
     async function tryToNekoizeMessage(message: Message): Promise<boolean> {
         if (config.llm.disabled || message.author.id === botId || process.env.CI) return false;
 
@@ -138,15 +132,6 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
                 const message = await reaction.message.fetch();
                 reaction = await reaction.fetch();
 
-                // Skip if channel is not in the allowed list
-                const allowedChannels = config.discord.restrictToChannelIds || [];
-                if (!shouldProcessChannel(message.channelId, config)) {
-                    console.log(`[AutoReactionService] Skipping reaction in channel ${message.channelId} - not in allowed list (allowed: ${allowedChannels.join(", ")})`);
-                    return;
-                }
-
-                console.log(`[AutoReactionService] Processing reaction in channel ${message.channelId} (allowed channels: ${allowedChannels.join(", ")})`);
-
                 if (message.author.id !== user.id) {
                     console.log(`[AutoReactionService] Skipping reaction - not a self-reaction (author: ${message.author.id}, user: ${user.id})`);
                     return;
@@ -158,7 +143,6 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
                 console.log(`[AutoReactionService] Sending scold message for self-reaction in channel ${message.channelId}`);
                 await message.channel.send(`${randomArrayItem(scoldMessages)} <@${user.id}>`);
             } catch (e: unknown) {
-                // Ignore errors when bot is being destroyed (token no longer available)
                 if (!isClientDestroyedError(e)) {
                     console.error("Error checking if added reaction needs to be scolded", e);
                 }
@@ -166,10 +150,6 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         },
 
         messageCreated: async (message): Promise<void> => {
-            // Skip if channel is not in the allowed list
-            if (!shouldProcessChannel(message.channelId, config)) {
-                return;
-            }
             const autoReactions: Array<{ probabilityDenominator: number; handler: (message: Message) => Promise<boolean> }> = [
                 { probabilityDenominator: config.autoReaction.funnySubstringsProbability, handler: checkForFunnySubstrings },
                 { probabilityDenominator: config.autoReaction.erJokeProbability, handler: tryToSayErJoke },

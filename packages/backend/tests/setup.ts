@@ -25,7 +25,6 @@ export const getTestConfig = (): Config => {
             ...baseConfig.discord,
             skipChannelProcessingOnStartup: true,
             skipCommandDeploymentOnStartup: true,
-            restrictToChannelIds: [], // Start with empty array - test channels will be added here
         },
         autoReaction: {
             funnySubstringsProbability: 1,

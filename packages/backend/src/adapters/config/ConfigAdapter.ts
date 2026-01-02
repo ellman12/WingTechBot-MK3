@@ -62,8 +62,6 @@ export const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
     }
 };
 
-// Legacy getConfig for backward compatibility - creates a new config instance each time
-// Prefer passing config through dependency injection
 export const getConfig = (configType: "default" | "tester" = "default"): Config => {
     const envPrefix = configType === "tester" ? "TESTER_" : "";
     return loadConfig(envPrefix);
