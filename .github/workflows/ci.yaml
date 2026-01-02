@@ -182,11 +182,12 @@ jobs:
         needs: [setup, build-types]
         runs-on: ubuntu-latest
         strategy:
+            fail-fast: false
             matrix:
                 package: [backend, frontend, types]
         services:
             postgres:
-                image: postgres:15
+                image: postgres:16-alpine
                 env:
                     POSTGRES_USER: wingtechbot
                     POSTGRES_PASSWORD: wingtechbot_password
@@ -232,7 +233,7 @@ jobs:
                       ${{ steps.pip-cache.outputs.dir }}
                       ~/.local/lib/python*/site-packages
                       ~/.local/bin
-                  key: ${{ runner.os }}-pip-yt-dlp-${{ hashFiles('.github/workflows/ci.yml') }}
+                  key: ${{ runner.os }}-pip-yt-dlp-${{ hashFiles('.github/workflows/ci.yaml') }}
                   restore-keys: |
                       ${{ runner.os }}-pip-yt-dlp-
 
@@ -272,13 +273,6 @@ jobs:
                   name: types-build
                   path: packages/types/dist
 
-            # Skip database type generation in CI - types should be pre-generated
-            # - name: Generate database types
-            #   if: matrix.package == 'backend'
-            #   env:
-            #       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
-            #   run: pnpm --filter backend db:generate
-
             - name: Run tests for ${{ matrix.package }}
               run: pnpm --filter ${{ matrix.package }} test${{ matrix.package == 'backend' && ':ci' || '' }}
               env:
@@ -312,6 +306,7 @@ jobs:
         needs: [setup, build-types]
         runs-on: ubuntu-latest
         strategy:
+            fail-fast: false
             matrix:
                 package: [backend, frontend]
         steps:
@@ -349,13 +344,6 @@ jobs:
               with:
                   name: types-build
                   path: packages/types/dist
-
-            # Skip database type generation in CI - types should be pre-generated
-            # - name: Generate database types
-            #   if: matrix.package == 'backend'
-            #   env:
-            #       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
-            #   run: pnpm --filter backend db:generate
 
             - name: Build ${{ matrix.package }}
               run: pnpm build:${{ matrix.package }}
