@@ -1,4 +1,6 @@
 import type { FileManager } from "@core/services/FileManager.js";
+import { getConfig } from "@infrastructure/config/Config.js";
+import { join } from "path";
 
 export const instructionTypes = ["generalChat", "nekoize", "discordStatus"] as const;
 export type InstructionType = (typeof instructionTypes)[number];
@@ -11,8 +13,10 @@ export type LlmInstructionRepository = {
 };
 
 export const createLlmInstructionRepository = (fileManager: FileManager): LlmInstructionRepository => {
+    const config = getConfig();
+
     const getInstructionPath = (instructionType: InstructionType): string => {
-        return `./llmInstructions/${instructionType}.txt`;
+        return join(config.llm.instructionsPath, `${instructionType}.txt`);
     };
 
     const getInstruction = async (instructionType: InstructionType): Promise<string> => {

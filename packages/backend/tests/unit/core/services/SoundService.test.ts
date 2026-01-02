@@ -65,6 +65,7 @@ const mockConfig: Config = {
     ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
     llm: {
         apiKey: "",
+        instructionsPath: "",
     },
 };
 

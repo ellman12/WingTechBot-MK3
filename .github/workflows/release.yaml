@@ -50,7 +50,7 @@ jobs:
                   echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
             - name: Build and push Backend image
-              uses: docker/build-push-action@v5
+              uses: docker/build-push-action@v6
               with:
                   context: .
                   file: packages/backend/Dockerfile
@@ -59,6 +59,12 @@ jobs:
                       ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ steps.meta.outputs.version }}
                       ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
                   platforms: linux/amd64,linux/arm64
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+                  labels: |
+                      org.opencontainers.image.source=${{ github.repositoryUrl }}
+                      org.opencontainers.image.revision=${{ github.sha }}
+                      org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
 
             - name: Generate Docker Compose for production
               run: |
@@ -68,17 +74,31 @@ jobs:
                       image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
                       environment:
                         - NODE_ENV=production
-                        - DATABASE_URL=\${DATABASE_URL}
+                        - DATABASE_URL=postgresql://wingtechbot:wingtechbot_password@postgres:5432/wingtechbot
+                        - PORT=\${PORT:-3000}
+                        - CORS_ORIGIN=\${CORS_ORIGIN}
+                        - SOUNDS_STORAGE_PATH=/app/sounds
+                        - AUDIO_CACHE_PATH=/app/cache
+                        - AUDIO_CACHE_TTL_HOURS=\${AUDIO_CACHE_TTL_HOURS:-24}
+                        - AUDIO_CACHE_MAX_SIZE_MB=\${AUDIO_CACHE_MAX_SIZE_MB:-1000}
                         - DISCORD_TOKEN=\${DISCORD_TOKEN}
                         - DISCORD_CLIENT_ID=\${DISCORD_CLIENT_ID}
                         - DISCORD_GUILD_ID=\${DISCORD_GUILD_ID}
+                        - DISCORD_BOT_CHANNEL_ID=\${DISCORD_BOT_CHANNEL_ID}
+                        - DISCORD_BOT_ROLE_ID=\${DISCORD_BOT_ROLE_ID}
+                        - DISCORD_ERROR_WEBHOOK_URL=\${DISCORD_ERROR_WEBHOOK_URL}
+                        - DEFAULT_VOICE_CHANNEL_ID=\${DEFAULT_VOICE_CHANNEL_ID}
+                        - LLM_API_KEY=\${LLM_API_KEY}
+                        - LLM_INSTRUCTIONS_PATH=\${LLM_INSTRUCTIONS_PATH}
                       ports:
                         - "3000:3000"
                       depends_on:
-                        - postgres
+                        postgres:
+                          condition: service_healthy
                       volumes:
                         - sounds-data:/app/sounds
-                        - cache-data:/app/cache
+                        - \${LLM_INSTRUCTIONS_PATH}:/app/llm-instructions
+                        - /tmp/wingtechbot/cache:/app/cache
                       networks:
                         - app-network
                       restart: unless-stopped
@@ -94,6 +114,11 @@ jobs:
                         - postgres_data:/var/lib/postgresql/data
                       networks:
                         - app-network
+                      healthcheck:
+                        test: ["CMD-SHELL", "pg_isready -U wingtechbot -d wingtechbot"]
+                        interval: 5s
+                        timeout: 5s
+                        retries: 5
                       restart: unless-stopped
 
                     watchtower:
@@ -111,7 +136,6 @@ jobs:
                   volumes:
                     postgres_data:
                     sounds-data:
-                    cache-data:
 
                   networks:
                     app-network:

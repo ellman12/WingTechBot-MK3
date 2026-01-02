@@ -40,6 +40,7 @@ const ffmpegConfigSchema = z.object({
 
 const llmConfigSchema = z.object({
     apiKey: z.string(),
+    instructionsPath: z.string(),
 });
 
 const configSchema = z.object({
@@ -89,6 +90,7 @@ const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
         },
         llm: {
             apiKey: process.env.LLM_API_KEY,
+            instructionsPath: process.env.LLM_INSTRUCTIONS_PATH,
         },
     };
 
