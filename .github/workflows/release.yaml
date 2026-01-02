@@ -122,6 +122,20 @@ jobs:
                         retries: 5
                       restart: unless-stopped
 
+                    backup:
+                      build:
+                        dockerfile: packages/backup/Dockerfile
+                      depends_on:
+                        - postgres
+                      environment:
+                        - DATABASE_NAME=wingtechbot
+                        - DATABASE_HOST=postgres
+                        - DATABASE_USER=wingtechbot
+                        - PGPASSWORD=wingtechbot_password
+                        - BACKUP_RETENTION_DAYS=7
+                      volumes:
+                        - wtb_backups:/backups
+
                     watchtower:
                       image: nickfedor/watchtower
                       volumes:
