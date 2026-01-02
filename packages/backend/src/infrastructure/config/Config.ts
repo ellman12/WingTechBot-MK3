@@ -40,7 +40,7 @@ const ffmpegConfigSchema = z.object({
 
 const llmConfigSchema = z.object({
     apiKey: z.string(),
-    instructionsPath: z.string(),
+    instructionsPath: z.string().default("./llmInstructions"),
 });
 
 const configSchema = z.object({
