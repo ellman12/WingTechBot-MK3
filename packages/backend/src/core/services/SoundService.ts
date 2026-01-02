@@ -1,7 +1,7 @@
+import type { Config } from "@core/config/Config.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import { createRepeatedPcmStream } from "@core/utils/audio/pcmRepeater.js";
 import { createPreBufferedStream, readStreamToBytes } from "@core/utils/streamUtils.js";
-import type { Config } from "@infrastructure/config/Config.js";
 import { Readable } from "stream";
 
 import { type AudioFetcherService, parseAudioSource } from "./AudioFetcherService.js";

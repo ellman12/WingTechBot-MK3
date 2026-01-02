@@ -1,10 +1,10 @@
+import { getConfig } from "@adapters/config/ConfigAdapter.js";
 import { OpenAPIRegistry, OpenApiGeneratorV3 } from "@asteasolutions/zod-to-openapi";
 import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import type { Application } from "express";
 import swaggerUi from "swagger-ui-express";
 import { z } from "zod/v4";
 
-import { getConfig } from "../config/Config.js";
 import { getAllRoutes } from "./api/RouteRegistry.js";
 import type { RouteRegistryEntry } from "./api/types.js";
 

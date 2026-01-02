@@ -1,10 +1,10 @@
+import { getConfig } from "@adapters/config/ConfigAdapter.js";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
 import { createReactionEmoteRepository, defaultKarmaValues } from "@adapters/repositories/ReactionEmoteRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 import type { CreateMessageData } from "@core/entities/Message.js";
 import { getKyselyForMigrations, runMigrations } from "@db/migrations.js";
 import type { DB } from "@db/types.js";
-import { getConfig } from "@infrastructure/config/Config.js";
 import { getKysely } from "@infrastructure/database/DatabaseConnection.js";
 import type { DiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { type Guild, type Message, type TextChannel } from "discord.js";

@@ -1,3 +1,4 @@
+import { getConfig } from "@adapters/config/ConfigAdapter.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
 import { registerAutoReactionEvents } from "@application/eventHandlers/AutoReaction.js";
@@ -7,6 +8,7 @@ import { registerMessageArchiveEvents } from "@application/eventHandlers/Message
 import { registerReactionArchiveEvents } from "@application/eventHandlers/ReactionArchive.js";
 import { registerSoundboardThreadEventHandlers } from "@application/eventHandlers/SoundboardThreadService.js";
 import { registerVoiceEventSoundsEventHandlers } from "@application/eventHandlers/VoiceEventSounds.js";
+import type { Config } from "@core/config/Config.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
@@ -24,8 +26,6 @@ import type { VoiceService } from "@core/services/VoiceService.js";
 import { sleep } from "@core/utils/timeUtils.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, PresenceUpdateStatus, RESTEvents, type TextChannel } from "discord.js";
-
-import { type Config, getConfig } from "../config/Config.js";
 
 export type DiscordBotDeps = {
     readonly config: Config;

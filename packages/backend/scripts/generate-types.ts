@@ -1,6 +1,9 @@
 #!/usr/bin/env tsx
-import "@dotenvx/dotenvx/config";
 import { execSync } from "node:child_process";
+
+import { loadEnvironment } from "../src/infrastructure/config/EnvLoader.js";
+
+await loadEnvironment();
 
 async function generateTypes() {
     try {

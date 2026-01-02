@@ -1,11 +1,11 @@
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
+import type { Config } from "@core/config/Config.js";
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream.js";
 import { createAudioStreamWithFormat } from "@core/entities/AudioStream.js";
 import type { Sound } from "@core/entities/Sound.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { createSoundService } from "@core/services/SoundService.js";
-import type { Config } from "@infrastructure/config/Config.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { createFileManager } from "@infrastructure/filestore/FileManager.js";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "fs";
@@ -92,6 +92,11 @@ describe.concurrent("SoundService Integration Tests", () => {
             llm: {
                 apiKey: "",
                 instructionsPath: "",
+            },
+            autoReaction: {
+                funnySubstringsProbability: 10,
+                erJokeProbability: 50,
+                nekoizeProbability: 1000,
             },
         };
 

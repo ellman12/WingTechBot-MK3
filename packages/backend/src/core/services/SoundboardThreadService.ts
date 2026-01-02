@@ -1,6 +1,6 @@
+import { getConfig } from "@adapters/config/ConfigAdapter.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
-import { getConfig } from "@infrastructure/config/Config.js";
 import { ChannelType, type Guild, type Message, MessageFlags, type TextChannel, ThreadAutoArchiveDuration, type ThreadChannel } from "discord.js";
 
 export type SoundboardThreadService = {

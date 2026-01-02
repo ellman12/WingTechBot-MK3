@@ -1,3 +1,4 @@
+import { getConfig, setConfig } from "@adapters/config/ConfigAdapter.js";
 import { reactionScoldMessages } from "@core/services/AutoReactionService.js";
 import { sleep } from "@core/utils/timeUtils.js";
 import type { TextChannel } from "discord.js";
@@ -13,6 +14,17 @@ describe("Messages and Reactions integration tests", async () => {
     let testChannel: TextChannel | null = null;
 
     beforeAll(async () => {
+        // Override autoReaction probabilities to ensure they trigger 100% of the time in tests
+        const config = getConfig();
+        setConfig({
+            ...config,
+            autoReaction: {
+                funnySubstringsProbability: 1,
+                erJokeProbability: 1,
+                nekoizeProbability: 1,
+            },
+        });
+
         await sleep(2000);
 
         const bot = getApp().discordBot;

@@ -1,7 +1,7 @@
+import { getConfig } from "@adapters/config/ConfigAdapter.js";
 import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import { oneIn, randomArrayItem } from "@core/utils/probabilityUtils.js";
-import { getConfig } from "@infrastructure/config/Config.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import type { Message, MessageReaction, PartialMessageReaction, PartialUser, TextChannel, User } from "discord.js";
 
@@ -130,12 +130,6 @@ export const createAutoReactionService = ({ discordChatService, geminiLlmService
         }
     }
 
-    const autoReactions: Array<{ probabilityDenominator: number; handler: (message: Message) => Promise<boolean> }> = [
-        { probabilityDenominator: 10, handler: checkForFunnySubstrings },
-        { probabilityDenominator: 50, handler: tryToSayErJoke },
-        { probabilityDenominator: 1000, handler: tryToNekoizeMessage },
-    ];
-
     return {
         reactionAdded: async (reaction, user): Promise<void> => {
             try {
@@ -157,6 +151,13 @@ export const createAutoReactionService = ({ discordChatService, geminiLlmService
         },
 
         messageCreated: async (message): Promise<void> => {
+            const config = getConfig();
+            const autoReactions: Array<{ probabilityDenominator: number; handler: (message: Message) => Promise<boolean> }> = [
+                { probabilityDenominator: config.autoReaction.funnySubstringsProbability, handler: checkForFunnySubstrings },
+                { probabilityDenominator: config.autoReaction.erJokeProbability, handler: tryToSayErJoke },
+                { probabilityDenominator: config.autoReaction.nekoizeProbability, handler: tryToNekoizeMessage },
+            ];
+
             for (const { probabilityDenominator, handler } of autoReactions) {
                 if (oneIn(probabilityDenominator) && (await handler(message))) {
                     return;

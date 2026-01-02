@@ -1,59 +1,5 @@
+import { type Config, configSchema } from "@core/config/Config.js";
 import { z } from "zod";
-
-const serverConfigSchema = z.object({
-    port: z.coerce.number().min(1, "PORT must be at least 1").max(65535, "PORT must be at most 65535").default(3000),
-    environment: z.string().default("development"),
-});
-
-const databaseConfigSchema = z.object({
-    url: z.string().min(1, "DATABASE_URL is required"),
-});
-
-const discordConfigSchema = z.object({
-    token: z.string().min(1, "Discord token is required"),
-    clientId: z.string().min(1, "Discord client ID is required"),
-    serverId: z.string(),
-    botChannelId: z.string(),
-    defaultVoiceChannelId: z.string().default(""),
-    roleId: z.string().default(""),
-    errorWebhookUrl: z
-        .string()
-        .refine(val => !val || val === "" || URL.canParse(val), "Must be a valid URL or empty string")
-        .optional(),
-    skipChannelProcessingOnStartup: z.coerce.boolean().default(false),
-});
-
-const soundsConfigSchema = z.object({
-    storagePath: z.string().default("./sounds"),
-});
-
-const cacheConfigSchema = z.object({
-    audioDownloadPath: z.string().default("./cache/audio"),
-    ttlHours: z.coerce.number().positive().default(24),
-    maxSizeMb: z.coerce.number().positive().default(1000),
-});
-
-const ffmpegConfigSchema = z.object({
-    ffmpegPath: z.string().optional(),
-    ffprobePath: z.string().optional(),
-});
-
-const llmConfigSchema = z.object({
-    apiKey: z.string(),
-    instructionsPath: z.string().default("./llmInstructions"),
-});
-
-const configSchema = z.object({
-    server: serverConfigSchema,
-    database: databaseConfigSchema,
-    discord: discordConfigSchema,
-    sounds: soundsConfigSchema,
-    cache: cacheConfigSchema,
-    ffmpeg: ffmpegConfigSchema,
-    llm: llmConfigSchema,
-});
-
-export type Config = z.infer<typeof configSchema>;
 
 let configInstance: Config | null = null;
 
@@ -92,6 +38,11 @@ const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
             apiKey: process.env.LLM_API_KEY,
             instructionsPath: process.env.LLM_INSTRUCTIONS_PATH,
         },
+        autoReaction: {
+            funnySubstringsProbability: process.env.AUTO_REACTION_FUNNY_SUBSTRINGS_PROBABILITY,
+            erJokeProbability: process.env.AUTO_REACTION_ER_JOKE_PROBABILITY,
+            nekoizeProbability: process.env.AUTO_REACTION_NEKOIZE_PROBABILITY,
+        },
     };
 
     try {
@@ -119,4 +70,8 @@ export const getConfig = (configType: "default" | "tester" = "default"): Config 
 
 export const resetConfig = (): void => {
     configInstance = null;
+};
+
+export const setConfig = (config: Config): void => {
+    configInstance = config;
 };

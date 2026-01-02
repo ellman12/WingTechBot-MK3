@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { getConfig } from "@adapters/config/ConfigAdapter.js";
 import { createUnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
 import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
@@ -24,8 +25,7 @@ import { createSoundTagService } from "@core/services/SoundTagService.js";
 import { createSoundboardThreadService } from "@core/services/SoundboardThreadService.js";
 import { createVoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
 import { runMigrations } from "@db/migrations.js";
-import "@dotenvx/dotenvx/config";
-import { getConfig } from "@infrastructure/config/Config.js";
+import { loadEnvironment } from "@infrastructure/config/EnvLoader.js";
 import { connect, disconnect, getKysely } from "@infrastructure/database/DatabaseConnection.js";
 import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
@@ -45,6 +45,7 @@ export type App = {
 };
 
 export const createApplication = async (): Promise<App> => {
+    await loadEnvironment();
     const config = getConfig();
 
     const errorReportingService = await createErrorReportingService({ config });

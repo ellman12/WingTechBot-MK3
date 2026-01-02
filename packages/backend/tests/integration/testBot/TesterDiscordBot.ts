@@ -1,5 +1,5 @@
+import { getConfig, resetConfig } from "@adapters/config/ConfigAdapter.js";
 import { config } from "@dotenvx/dotenvx";
-import { getConfig, resetConfig } from "@infrastructure/config/Config.js";
 import type { DiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { Client, Partials } from "discord.js";
 import path from "path";

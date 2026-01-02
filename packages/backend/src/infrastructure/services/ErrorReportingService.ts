@@ -1,4 +1,4 @@
-import type { Config } from "@infrastructure/config/Config.js";
+import type { Config } from "@core/config/Config.js";
 import xxhash from "xxhash-wasm";
 
 export type ErrorReportingService = {

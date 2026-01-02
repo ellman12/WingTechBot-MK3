@@ -1,7 +1,7 @@
+import type { Config } from "@core/config/Config.js";
 import type { AudioFormatInfo } from "@core/entities/AudioFormatInfo.js";
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream.js";
 import { createAudioStreamWithFormat } from "@core/entities/AudioStream.js";
-import type { Config } from "@infrastructure/config/Config.js";
 import crypto from "crypto";
 import { Readable } from "stream";
 

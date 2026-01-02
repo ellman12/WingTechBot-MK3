@@ -1,8 +1,8 @@
+import { getConfig } from "@adapters/config/ConfigAdapter.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { randomArrayItem } from "@core/utils/probabilityUtils.js";
 import type { VoiceEventSoundType } from "@db/types.js";
-import { getConfig } from "@infrastructure/config/Config.js";
 import { VoiceState } from "discord.js";
 
 export type VoiceEventSoundsService = {

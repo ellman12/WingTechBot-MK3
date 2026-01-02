@@ -1,10 +1,10 @@
+import type { Config } from "@core/config/Config.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { parseAudioSource } from "@core/services/AudioFetcherService.js";
 import type { AudioProcessingService } from "@core/services/AudioProcessingService.js";
 import type { FileManager } from "@core/services/FileManager.js";
 import { createSoundService } from "@core/services/SoundService.js";
-import type { Config } from "@infrastructure/config/Config.js";
 import { Readable } from "stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -66,6 +66,11 @@ const mockConfig: Config = {
     llm: {
         apiKey: "",
         instructionsPath: "",
+    },
+    autoReaction: {
+        funnySubstringsProbability: 10,
+        erJokeProbability: 50,
+        nekoizeProbability: 1000,
     },
 };
 
