@@ -178,7 +178,6 @@ export const createDiscordBot = async ({
             const botStartTime = Date.now();
 
             console.log("⏱️  Creating Discord client...");
-            const clientCreateStart = Date.now();
             if (!client || isClientDestroyed) {
                 client = createClient();
                 if (clientWrapperFn) {
@@ -187,7 +186,7 @@ export const createDiscordBot = async ({
                 isClientDestroyed = false;
                 setupEventHandlers();
             }
-            console.log(`✅ Client created in ${Date.now() - clientCreateStart}ms`);
+            console.log(`✅ Client created in ${Date.now() - botStartTime}ms`);
 
             const readyPromise = new Promise<void>(resolve => {
                 readyResolver = resolve;
