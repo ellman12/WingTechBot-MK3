@@ -97,8 +97,9 @@ jobs:
                           condition: service_healthy
                       volumes:
                         - sounds-data:/app/sounds
-                        - \${LLM_INSTRUCTIONS_PATH}:/app/llm-instructions
                         - /tmp/wingtechbot/cache:/app/cache
+                        - ./.env:/app/packages/backend/.env:ro
+                        - ./llmInstructions/:/app/packages/backend/llmInstructions:ro
                       networks:
                         - app-network
                       restart: unless-stopped
