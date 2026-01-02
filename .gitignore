@@ -12,7 +12,7 @@ node_modules
 /packages/backend/cache/
 /packages/backend/sounds/
 
-/packages/backend/docker-compose.prod.yaml
+/packages/backend/compose.yaml
 
 /packages/backend/llmInstructions/*
 !packages/backend/llmInstructions/README.md

@@ -91,6 +91,7 @@ describe.concurrent("SoundService Integration Tests", () => {
             ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
             llm: {
                 apiKey: "",
+                instructionsPath: "",
             },
         };
 
