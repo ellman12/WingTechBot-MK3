@@ -30,11 +30,9 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
 
     console.log(`[AudioCacheService] Creating cache service with path: ${cachePath}, TTL: ${config.cache.ttlHours}h, Max Size: ${config.cache.maxSizeMb}MB`);
 
-    /**
-     * Generate a cache key from a URL
-     * For YouTube URLs, extract the video ID
-     * For other URLs, hash the URL
-     */
+    // Generate a cache key from a URL
+    // For YouTube URLs, extract the video ID
+    // For other URLs, hash the URL
     const generateCacheKey = (url: string): string => {
         // Extract YouTube video ID
         const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
@@ -47,25 +45,19 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
         return `url_${hash.substring(0, 16)}`;
     };
 
-    /**
-     * Get the full cache file path for a URL
-     */
+    // Get the full cache file path for a URL
     const getCacheFilePath = (url: string): string => {
         const key = generateCacheKey(url);
         return `${cachePath}/${key}.cache`;
     };
 
-    /**
-     * Get the metadata file path for a cached audio file
-     */
+    // Get the metadata file path for a cached audio file
     const getMetadataFilePath = (url: string): string => {
         const key = generateCacheKey(url);
         return `${cachePath}/${key}.meta.json`;
     };
 
-    /**
-     * Check if cache file exists and is not expired
-     */
+    // Check if cache file exists and is not expired
     const getCached = async (url: string): Promise<AudioStreamWithMetadata | null> => {
         const filePath = getCacheFilePath(url);
         const metadataPath = getMetadataFilePath(url);
@@ -127,9 +119,7 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
         }
     };
 
-    /**
-     * Save audio data to cache with format information
-     */
+    // Save audio data to cache with format information
     const saveToCache = async (url: string, audioData: Uint8Array, formatInfo?: AudioFormatInfo): Promise<void> => {
         const filePath = getCacheFilePath(url);
         const metadataPath = getMetadataFilePath(url);
@@ -159,9 +149,7 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
         }
     };
 
-    /**
-     * Clean up expired cache entries
-     */
+    // Clean up expired cache entries
     const cleanExpired = async (): Promise<void> => {
         try {
             console.log(`[AudioCacheService] Starting cache cleanup`);
@@ -191,10 +179,8 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
         }
     };
 
-    /**
-     * Evict oldest cache files if total size exceeds the limit
-     * Files are evicted based on oldest mtime (shortest TTL remaining)
-     */
+    // Evict oldest cache files if total size exceeds the limit
+    // Files are evicted based on oldest mtime (shortest TTL remaining)
     const evictIfNeeded = async (): Promise<void> => {
         try {
             const cacheFiles = await fileManager.listFiles(cachePath);

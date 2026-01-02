@@ -26,6 +26,8 @@ import { sleep } from "@core/utils/timeUtils.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, PresenceUpdateStatus, RESTEvents, type TextChannel } from "discord.js";
 
+export type EventFilter = <K extends keyof ClientEvents>(event: K, args: ClientEvents[K]) => boolean;
+
 export type DiscordBotDeps = {
     readonly config: Config;
     readonly voiceEventSoundsRepository: VoiceEventSoundsRepository;
@@ -44,7 +46,7 @@ export type DiscordBotDeps = {
     readonly voiceEventSoundsService: VoiceEventSoundsService;
     readonly voiceService: VoiceService;
     readonly commandChoicesService: CommandChoicesService;
-    readonly clientWrapper?: (client: Client) => Client;
+    readonly eventFilter?: EventFilter;
 };
 
 export type DiscordBot = {
@@ -73,13 +75,12 @@ export const createDiscordBot = async ({
     voiceEventSoundsService,
     voiceService,
     commandChoicesService,
-    clientWrapper,
+    eventFilter,
 }: DiscordBotDeps): Promise<DiscordBot> => {
     let client: Client;
     let isReadyState = false;
     let isClientDestroyed = false;
     let readyResolver: (() => void) | null = null;
-    const clientWrapperFn = clientWrapper;
 
     const createClient = (): Client => {
         return new Client({
@@ -105,7 +106,16 @@ export const createDiscordBot = async ({
             throw new Error("Discord client has been destroyed. Cannot register new event handlers.");
         }
 
-        client.on(event, handler);
+        const wrappedHandler = eventFilter
+            ? (...args: ClientEvents[K]): void | Promise<void> => {
+                  if (!eventFilter(event, args)) {
+                      return;
+                  }
+                  return handler(...args);
+              }
+            : handler;
+
+        client.on(event, wrappedHandler);
     };
 
     const setupEventHandlers = (): void => {
@@ -180,9 +190,6 @@ export const createDiscordBot = async ({
             console.log("⏱️  Creating Discord client...");
             if (!client || isClientDestroyed) {
                 client = createClient();
-                if (clientWrapperFn) {
-                    client = clientWrapperFn(client);
-                }
                 isClientDestroyed = false;
                 setupEventHandlers();
             }
@@ -268,9 +275,6 @@ export const createDiscordBot = async ({
     const isReady = (): boolean => isReadyState;
 
     client = createClient();
-    if (clientWrapper) {
-        client = clientWrapper(client);
-    }
     setupEventHandlers();
 
     return {

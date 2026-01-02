@@ -4,9 +4,7 @@ import { promisify } from "util";
 
 const execFileAsync = promisify(execFile);
 
-/**
- * Raw ffprobe output structure for format information
- */
+// Raw ffprobe output structure for format information
 type FfprobeFormat = {
     format_name: string;
     format_long_name: string;
@@ -17,9 +15,7 @@ type FfprobeFormat = {
     tags?: Record<string, string>;
 };
 
-/**
- * Raw ffprobe output structure for stream information
- */
+// Raw ffprobe output structure for stream information
 type FfprobeStream = {
     index: number;
     codec_name: string;
@@ -35,9 +31,7 @@ type FfprobeStream = {
     tags?: Record<string, string>;
 };
 
-/**
- * Complete ffprobe output structure
- */
+// Complete ffprobe output structure
 type FfprobeOutput = {
     streams?: FfprobeStream[];
     format?: FfprobeFormat;
@@ -47,17 +41,10 @@ type FfprobeOutput = {
     };
 };
 
-/**
- * Low-level FFprobe service for probing media files and streams.
- *
- * This service wraps the ffprobe command-line tool to extract format
- * and stream metadata from audio/video files. It provides structured
- * JSON output for programmatic parsing.
- *
- * Usage:
- *   const probe = await ffprobeService.probe('/path/to/audio.mp3');
- *   console.log(probe.format.format_name); // 'mp3'
- */
+// Low-level FFprobe service for probing media files and streams.
+// This service wraps the ffprobe command-line tool to extract format
+// and stream metadata from audio/video files. It provides structured
+// JSON output for programmatic parsing.
 export class FfprobeService {
     private readonly ffprobePath: string;
 
@@ -65,35 +52,20 @@ export class FfprobeService {
         this.ffprobePath = config.ffmpeg.ffprobePath || "ffprobe";
     }
 
-    /**
-     * Probe a media file or URL and return raw ffprobe output.
-     *
-     * @param input - File path or URL to probe
-     * @param options - Additional options for probing
-     * @returns Parsed ffprobe output with format and stream information
-     * @throws Error if ffprobe execution fails or returns error
-     */
+    // Probe a media file or URL and return raw ffprobe output.
     async probe(
         input: string,
         options: {
-            /**
-             * Select specific streams (e.g., 'a:0' for first audio stream)
-             */
+            // Select specific streams (e.g., 'a:0' for first audio stream)
             selectStreams?: string;
 
-            /**
-             * Maximum time in microseconds to analyze for probing (default: 5000000 = 5s)
-             */
+            // Maximum time in microseconds to analyze for probing (default: 5000000 = 5s)
             analyzeDuration?: number;
 
-            /**
-             * Maximum size in bytes to probe (default: unlimited)
-             */
+            // Maximum size in bytes to probe (default: unlimited)
             probeSize?: number;
 
-            /**
-             * Timeout for probe operation in milliseconds (default: 30000 = 30s)
-             */
+            // Timeout for probe operation in milliseconds (default: 30000 = 30s)
             timeout?: number;
         } = {}
     ): Promise<FfprobeOutput> {
@@ -171,14 +143,8 @@ export class FfprobeService {
         }
     }
 
-    /**
-     * Quick probe focusing only on audio streams.
-     * More efficient than full probe when only audio metadata is needed.
-     *
-     * @param input - File path or URL to probe
-     * @param timeout - Timeout in milliseconds (default: 30000)
-     * @returns Ffprobe output with only audio stream(s)
-     */
+    // Quick probe focusing only on audio streams.
+    // More efficient than full probe when only audio metadata is needed.
     async probeAudio(input: string, timeout?: number): Promise<FfprobeOutput> {
         return this.probe(input, {
             selectStreams: "a", // Only audio streams
@@ -186,14 +152,8 @@ export class FfprobeService {
         });
     }
 
-    /**
-     * Probe a stream or file with limited data reading.
-     * Useful for large files or streams where you only need format info.
-     *
-     * @param input - File path or URL to probe
-     * @param maxBytes - Maximum bytes to read (default: 1MB)
-     * @returns Ffprobe output with partial data
-     */
+    // Probe a stream or file with limited data reading.
+    // Useful for large files or streams where you only need format info.
     async probeFast(input: string, maxBytes: number = 1024 * 1024): Promise<FfprobeOutput> {
         return this.probe(input, {
             probeSize: maxBytes,

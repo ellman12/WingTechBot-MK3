@@ -1,10 +1,9 @@
-import type { Client, ClientEvents } from "discord.js";
+import type { EventFilter } from "@infrastructure/discord/DiscordBot.js";
+import type { ClientEvents } from "discord.js";
 import { Events } from "discord.js";
 
-/**
- * Extracts the channel ID from Discord event arguments.
- * Returns null if the channel ID cannot be determined.
- */
+// Extracts the channel ID from Discord event arguments.
+// Returns null if the channel ID cannot be determined.
 function extractChannelId<K extends keyof ClientEvents>(event: K, args: ClientEvents[K]): string | null {
     try {
         if (event === Events.MessageReactionAdd || event === Events.MessageReactionRemove || event === Events.MessageReactionRemoveEmoji) {
@@ -29,47 +28,17 @@ function extractChannelId<K extends keyof ClientEvents>(event: K, args: ClientEv
     }
 }
 
-/**
- * Wraps a Discord client to intercept and filter events based on allowed channels.
- * This intercepts at the client level, so all event registrations are filtered.
- *
- * @param client - The Discord client to wrap
- * @param allowedChannels - Set of channel IDs that should be processed
- * @returns A wrapped client that filters events
- */
-export function wrapClientWithEventInterceptor(client: Client, allowedChannels: Set<string>): Client {
-    const originalOn = client.on.bind(client);
-    const originalOnce = client.once.bind(client);
+// Creates an event filter function that filters events based on allowed channels.
+// Returns true if the event should be processed, false if it should be filtered out.
+export function createChannelEventFilter(allowedChannels: Set<string>): EventFilter {
+    return <K extends keyof ClientEvents>(event: K, args: ClientEvents[K]): boolean => {
+        const channelId = extractChannelId(event, args);
 
-    client.on = function <K extends keyof ClientEvents>(event: K, listener: (...args: ClientEvents[K]) => void) {
-        const filteredListener = async (...args: ClientEvents[K]): Promise<void> => {
-            const channelId = extractChannelId(event, args);
+        // Allow through if channelId couldn't be determined (safer than blocking)
+        if (channelId === null) {
+            return true;
+        }
 
-            if (channelId !== null && !allowedChannels.has(channelId)) {
-                return;
-            }
-
-            // Allow through if channelId couldn't be determined (safer than blocking)
-            return listener(...args);
-        };
-
-        // Type assertion needed because filteredListener is async but listener might not be
-        return originalOn(event, filteredListener as (...args: ClientEvents[K]) => void);
+        return allowedChannels.has(channelId);
     };
-
-    client.once = function <K extends keyof ClientEvents>(event: K, listener: (...args: ClientEvents[K]) => void) {
-        const filteredListener = async (...args: ClientEvents[K]): Promise<void> => {
-            const channelId = extractChannelId(event, args);
-
-            if (channelId !== null && !allowedChannels.has(channelId)) {
-                return;
-            }
-
-            return listener(...args);
-        };
-
-        return originalOnce(event, filteredListener as (...args: ClientEvents[K]) => void);
-    };
-
-    return client;
 }

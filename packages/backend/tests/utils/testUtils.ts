@@ -22,25 +22,19 @@ import { type TestReactionEmote, validEmotes } from "../testData/reactionEmotes.
 
 const migrationsDir = path.resolve(__dirname, "../../database/migrations");
 
-/**
- * Normalizes schema names to lowercase because PostgreSQL lowercases unquoted identifiers.
- */
+// Normalizes schema names to lowercase because PostgreSQL lowercases unquoted identifiers.
 function sanitizeSchemaName(schemaName: string): string {
     return schemaName.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
 }
 
-/**
- * Sets search_path in connection string to ensure all pool connections use the correct schema.
- */
+// Sets search_path in connection string to ensure all pool connections use the correct schema.
 function buildSchemaConnectionString(baseDatabaseUrl: string, schemaName: string): string {
     const sanitizedSchema = sanitizeSchemaName(schemaName);
     const separator = baseDatabaseUrl.includes("?") ? "&" : "?";
     return `${baseDatabaseUrl}${separator}options=-csearch_path=${sanitizedSchema}`;
 }
 
-/**
- * Verifies schema isolation by checking current_schema() matches expected.
- */
+// Verifies schema isolation by checking current_schema() matches expected.
 async function verifyCurrentSchema(db: Kysely<DB>, expectedSchema: string): Promise<void> {
     const sanitizedSchema = sanitizeSchemaName(expectedSchema);
     const result = await sql<{ current_schema: string }>`SELECT current_schema()`.execute(db);
@@ -51,9 +45,7 @@ async function verifyCurrentSchema(db: Kysely<DB>, expectedSchema: string): Prom
     }
 }
 
-/**
- * Creates a migration provider compatible with both test and production environments.
- */
+// Creates a migration provider compatible with both test and production environments.
 function createMigrationProvider() {
     return {
         async getMigrations() {
@@ -79,10 +71,8 @@ function createMigrationProvider() {
     };
 }
 
-/**
- * Runs migrations in a specific schema. Sets migrationTableSchema to prevent
- * migration tables from being created in the public schema, which breaks test isolation.
- */
+// Runs migrations in a specific schema. Sets migrationTableSchema to prevent
+// migration tables from being created in the public schema, which breaks test isolation.
 async function runMigrationsInSchema(db: Kysely<DB>, schemaName: string): Promise<void> {
     const sanitizedSchema = sanitizeSchemaName(schemaName);
 
@@ -113,11 +103,9 @@ async function runMigrationsInSchema(db: Kysely<DB>, schemaName: string): Promis
     }
 }
 
-/**
- * Executes a schema DDL operation (CREATE/DROP) using a temporary connection
- * to the public schema. This is necessary because you can't drop a schema
- * from a connection that has that schema in its search_path.
- */
+// Executes a schema DDL operation (CREATE/DROP) using a temporary connection
+// to the public schema. This is necessary because you can't drop a schema
+// from a connection that has that schema in its search_path.
 async function executeSchemaOperation(databaseUrl: string, operation: (db: Kysely<DB>, schemaName: string) => Promise<void>, schemaName: string): Promise<void> {
     const sanitizedSchema = sanitizeSchemaName(schemaName);
     const pool = new Pool({ connectionString: databaseUrl });
@@ -202,15 +190,9 @@ export async function getTestingEmotes(bot: DiscordBot): Promise<TestReactionEmo
     return emotes;
 }
 
-/**
- * Creates a test schema for database isolation.
- * The app will run migrations in this schema when it starts.
- *
- * Each test file should use a unique schema name to avoid conflicts.
- *
- * @param schemaName - Unique name for the test schema (will be sanitized)
- * @param databaseUrl - PostgreSQL connection string
- */
+// Creates a test schema for database isolation.
+// The app will run migrations in this schema when it starts.
+// Each test file should use a unique schema name to avoid conflicts.
 export const createTestSchema = async (schemaName: string, databaseUrl: string): Promise<void> => {
     // Create the schema using a public schema connection
     // The app's runMigrations() will handle migrating this schema
@@ -223,13 +205,8 @@ export const createTestSchema = async (schemaName: string, databaseUrl: string):
     );
 };
 
-/**
- * Drops a test schema and all its contents.
- * This is used in afterAll hooks to clean up test schemas.
- *
- * @param schemaName - Name of the schema to drop
- * @param databaseUrl - PostgreSQL connection string
- */
+// Drops a test schema and all its contents.
+// This is used in afterAll hooks to clean up test schemas.
 export const dropTestSchema = async (schemaName: string, databaseUrl: string): Promise<void> => {
     await executeSchemaOperation(
         databaseUrl,
@@ -240,14 +217,8 @@ export const dropTestSchema = async (schemaName: string, databaseUrl: string): P
     );
 };
 
-/**
- * Recreates a test schema by dropping and recreating it, then running all migrations.
- * This is used in beforeEach hooks to ensure a clean database state for each test.
- *
- * @param app - The application instance (currently unused, but kept for API compatibility)
- * @param schemaName - Name of the test schema to recreate
- * @param baseDatabaseUrl - PostgreSQL connection string
- */
+// Recreates a test schema by dropping and recreating it, then running all migrations.
+// This is used in beforeEach hooks to ensure a clean database state for each test.
 export const recreateDatabase = async (app: App, schemaName: string, baseDatabaseUrl: string): Promise<void> => {
     const sanitizedSchema = sanitizeSchemaName(schemaName);
 

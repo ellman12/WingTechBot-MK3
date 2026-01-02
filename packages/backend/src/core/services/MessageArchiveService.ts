@@ -28,9 +28,7 @@ export type MessageArchiveServiceDeps = {
     messageRepository: MessageRepository;
 };
 
-/**
- * Collects reaction data for batch processing to minimize database round trips.
- */
+// Collects reaction data for batch processing to minimize database round trips.
 async function collectReactionData(discordMessage: Message) {
     const messageId = discordMessage.id;
     const authorId = discordMessage.author.id;

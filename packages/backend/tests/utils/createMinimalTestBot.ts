@@ -34,7 +34,7 @@ import type { Kysely } from "kysely";
 import { Readable } from "stream";
 import { vi } from "vitest";
 
-import { wrapClientWithEventInterceptor } from "./testEventInterceptor.js";
+import { createChannelEventFilter } from "./testEventInterceptor.js";
 
 export type MinimalTestBotOptions = {
     readonly autoReactionService?: boolean;
@@ -53,15 +53,8 @@ export type MinimalTestBot = {
     readonly messageArchiveService?: ReturnType<typeof createMessageArchiveService>;
 };
 
-/**
- * Creates a minimal test bot with only the services needed for testing.
- * Events are automatically filtered to only process channels in the allowed set.
- *
- * @param config - Application configuration
- * @param schemaName - Database schema name for test isolation
- * @param options - Which services to enable
- * @returns A minimal test bot with filtered event handling
- */
+// Creates a minimal test bot with only the services needed for testing.
+// Events are automatically filtered to only process channels in the allowed set.
 export async function createMinimalTestBot(config: Config, schemaName: string, options: MinimalTestBotOptions): Promise<MinimalTestBot> {
     const databaseConnection = createDatabaseConnection(config, schemaName);
     await databaseConnection.connect();
@@ -259,7 +252,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
         voiceEventSoundsService: createStubVoiceEventSoundsService(),
         voiceService: createStubVoiceService(),
         commandChoicesService: createStubCommandChoicesService(),
-        clientWrapper: client => wrapClientWithEventInterceptor(client, allowedChannels),
+        eventFilter: createChannelEventFilter(allowedChannels),
     });
 
     return {
