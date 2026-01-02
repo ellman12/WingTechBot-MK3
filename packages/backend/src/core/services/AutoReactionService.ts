@@ -60,8 +60,8 @@ export const createAutoReactionService = ({ discordChatService, geminiLlmService
 
     const botId = getConfig().discord.clientId;
 
-    async function checkForFunnySubstrings(message: Message): Promise<void> {
-        if (message.author.id === botId) return;
+    async function checkForFunnySubstrings(message: Message): Promise<boolean> {
+        if (message.author.id === botId) return false;
 
         const substrings = ["69420", "69", "420"];
 
@@ -76,7 +76,10 @@ export const createAutoReactionService = ({ discordChatService, geminiLlmService
             const highlighted = match.replace(highlightRegex, "**$1**");
 
             await message.reply(`> ${highlighted}\nNice`);
+            return true;
         }
+
+        return false;
     }
 
     function findLastWordEndingWithEr(sentence: string) {
@@ -96,17 +99,22 @@ export const createAutoReactionService = ({ discordChatService, geminiLlmService
         return undefined;
     }
 
-    async function tryToSayErJoke(message: Message) {
-        if (message.author.id === botId) return;
+    async function tryToSayErJoke(message: Message): Promise<boolean> {
+        if (message.author.id === botId) return false;
 
         const erWord = findLastWordEndingWithEr(message.content);
         if (erWord) {
             await message.reply(`"${erWord}"? I hardly know her!`);
+            return true;
         }
+
+        return false;
     }
 
     //Very small chance for the LLM to respond with the message but nekoized.
-    async function tryToNekoizeMessage(message: Message) {
+    async function tryToNekoizeMessage(message: Message): Promise<boolean> {
+        if (message.author.id === botId || process.env.CI) return false;
+
         const channel = (await message.channel.fetch()) as TextChannel;
         const controller = new AbortController();
         void discordChatService.sendTypingIndicator(controller.signal, channel);
@@ -116,10 +124,17 @@ export const createAutoReactionService = ({ discordChatService, geminiLlmService
             const systemInstruction = await llmInstructionRepo.getInstruction("nekoize");
             const response = await geminiLlmService.generateMessage(content, [], systemInstruction);
             await message.reply(response);
+            return true;
         } finally {
             controller.abort();
         }
     }
+
+    const autoReactions: Array<{ probabilityDenominator: number; handler: (message: Message) => Promise<boolean> }> = [
+        { probabilityDenominator: 10, handler: checkForFunnySubstrings },
+        { probabilityDenominator: 50, handler: tryToSayErJoke },
+        { probabilityDenominator: 1000, handler: tryToNekoizeMessage },
+    ];
 
     return {
         reactionAdded: async (reaction, user): Promise<void> => {
@@ -142,11 +157,10 @@ export const createAutoReactionService = ({ discordChatService, geminiLlmService
         },
 
         messageCreated: async (message): Promise<void> => {
-            await checkForFunnySubstrings(message);
-            await tryToSayErJoke(message);
-
-            if (oneIn(1000) && message.author.id !== botId && !process.env.CI) {
-                await tryToNekoizeMessage(message);
+            for (const { probabilityDenominator, handler } of autoReactions) {
+                if (oneIn(probabilityDenominator) && (await handler(message))) {
+                    return;
+                }
             }
         },
     };
