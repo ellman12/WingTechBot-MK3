@@ -1,5 +1,5 @@
+import { getConfig } from "@adapters/config/ConfigAdapter.js";
 import type { FileManager } from "@core/services/FileManager.js";
-import { getConfig } from "@infrastructure/config/Config.js";
 import { join } from "path";
 
 export const instructionTypes = ["generalChat", "nekoize", "discordStatus"] as const;
