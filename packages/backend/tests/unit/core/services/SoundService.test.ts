@@ -59,6 +59,7 @@ const mockConfig: Config = {
         defaultVoiceChannelId: "",
         roleId: "",
         skipChannelProcessingOnStartup: false,
+        skipCommandDeploymentOnStartup: false,
     },
     sounds: { storagePath: "./sounds" },
     cache: { audioDownloadPath: "./cache/audio", ttlHours: 24, maxSizeMb: 1000 },
@@ -66,6 +67,7 @@ const mockConfig: Config = {
     llm: {
         apiKey: "",
         instructionsPath: "",
+        disabled: true,
     },
     autoReaction: {
         funnySubstringsProbability: 10,

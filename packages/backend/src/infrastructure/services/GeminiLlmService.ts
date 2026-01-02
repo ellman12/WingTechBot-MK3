@@ -1,4 +1,4 @@
-import { getConfig } from "@adapters/config/ConfigAdapter.js";
+import type { Config } from "@core/config/Config.js";
 import type { Message } from "@core/entities/Message.js";
 import { type GenerateContentConfig, GoogleGenAI } from "@google/genai";
 
@@ -9,9 +9,13 @@ export type GeminiLlmService = {
     readonly generateMessage: (input: string, previousMessages?: Message[], systemInstruction?: string) => Promise<string>;
 };
 
-export const createGeminiLlmService = (): GeminiLlmService => {
-    const botId = getConfig().discord.clientId;
-    const apiKey = getConfig().llm.apiKey;
+export type GeminiLlmServiceDeps = {
+    readonly config: Config;
+};
+
+export const createGeminiLlmService = ({ config }: GeminiLlmServiceDeps): GeminiLlmService => {
+    const botId = config.discord.clientId;
+    const apiKey = config.llm.apiKey;
 
     if (!apiKey) {
         throw new Error("Missing LLM API key in createLlmChatService");

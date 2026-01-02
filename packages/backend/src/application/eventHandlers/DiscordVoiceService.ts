@@ -1,16 +1,16 @@
-import { getConfig } from "@adapters/config/ConfigAdapter.js";
+import type { Config } from "@core/config/Config.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import type { DiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { Events, VoiceChannel, VoiceState } from "discord.js";
 
-export const registerVoiceServiceEventHandlers = (voiceService: VoiceService, registerEventHandler: DiscordBot["registerEventHandler"]): void => {
+export const registerVoiceServiceEventHandlers = (config: Config, voiceService: VoiceService, registerEventHandler: DiscordBot["registerEventHandler"]): void => {
     const kickedStateByGuild = new Map<string, boolean>();
 
     async function voiceStateUpdate(oldState: VoiceState, newState: VoiceState) {
         const guild = newState.guild;
         const guildId = guild.id;
         const isConnected = voiceService.isConnected(guildId);
-        const defaultVcId = getConfig().discord.defaultVoiceChannelId;
+        const defaultVcId = config.discord.defaultVoiceChannelId;
 
         if (!defaultVcId) {
             console.warn("[DiscordVoiceService] DEFAULT_VOICE_CHANNEL_ID not configured, skipping voice state update");
@@ -29,7 +29,7 @@ export const registerVoiceServiceEventHandlers = (voiceService: VoiceService, re
             return;
         }
 
-        const botId = getConfig().discord.clientId;
+        const botId = config.discord.clientId;
         const connectedMembers = connectedChannel.members.filter(m => m.id !== botId);
 
         //Detect if bot was kicked from the voice channel.

@@ -1,9 +1,7 @@
 import { type Config, configSchema } from "@core/config/Config.js";
 import { z } from "zod";
 
-let configInstance: Config | null = null;
-
-const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
+export const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
     const rawConfig = {
         server: {
             port: process.env.PORT,
@@ -21,6 +19,7 @@ const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
             roleId: process.env[`${envPrefix}DISCORD_BOT_ROLE_ID`],
             errorWebhookUrl: process.env.DISCORD_ERROR_WEBHOOK_URL,
             skipChannelProcessingOnStartup: process.env.SKIP_CHANNEL_PROCESSING_ON_STARTUP,
+            skipCommandDeploymentOnStartup: process.env.SKIP_COMMAND_DEPLOYMENT_ON_STARTUP,
         },
         sounds: {
             storagePath: process.env.SOUNDS_STORAGE_PATH,
@@ -53,25 +52,19 @@ const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
             error.issues.forEach(err => {
                 console.error(`  - ${err.path.join(".")}: ${err.message}`);
             });
+            // Don't exit process in test environments - throw error instead
+            if (process.env.NODE_ENV === "test" || process.env.CI) {
+                throw new Error("Configuration validation failed. See errors above.");
+            }
             process.exit(1);
         }
         throw error;
     }
 };
 
+// Legacy getConfig for backward compatibility - creates a new config instance each time
+// Prefer passing config through dependency injection
 export const getConfig = (configType: "default" | "tester" = "default"): Config => {
-    if (!configInstance) {
-        const envPrefix = configType === "tester" ? "TESTER_" : "";
-        configInstance = loadConfig(envPrefix);
-    }
-
-    return configInstance;
-};
-
-export const resetConfig = (): void => {
-    configInstance = null;
-};
-
-export const setConfig = (config: Config): void => {
-    configInstance = config;
+    const envPrefix = configType === "tester" ? "TESTER_" : "";
+    return loadConfig(envPrefix);
 };

@@ -1,5 +1,5 @@
-import { getConfig } from "@adapters/config/ConfigAdapter.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
+import type { Config } from "@core/config/Config.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { randomArrayItem } from "@core/utils/probabilityUtils.js";
 import type { VoiceEventSoundType } from "@db/types.js";
@@ -10,11 +10,12 @@ export type VoiceEventSoundsService = {
 };
 
 export type VoiceEventSoundsServiceDeps = {
-    voiceEventSoundsRepository: VoiceEventSoundsRepository;
-    voiceService: VoiceService;
+    readonly config: Config;
+    readonly voiceEventSoundsRepository: VoiceEventSoundsRepository;
+    readonly voiceService: VoiceService;
 };
 
-export const createVoiceEventSoundsService = ({ voiceEventSoundsRepository, voiceService }: VoiceEventSoundsServiceDeps): VoiceEventSoundsService => {
+export const createVoiceEventSoundsService = ({ config, voiceEventSoundsRepository, voiceService }: VoiceEventSoundsServiceDeps): VoiceEventSoundsService => {
     function getEventType(oldState: VoiceState, newState: VoiceState): VoiceEventSoundType | "" {
         if (oldState.channelId === null && newState.channelId !== null) return "UserJoin";
         if (oldState.channelId !== null && newState.channelId === null) return "UserLeave";
@@ -37,7 +38,7 @@ export const createVoiceEventSoundsService = ({ voiceEventSoundsRepository, voic
         }
 
         if (!voiceService.isConnected(guild.id)) {
-            await voiceService.connect(guild, getConfig().discord.defaultVoiceChannelId);
+            await voiceService.connect(guild, config.discord.defaultVoiceChannelId);
         }
 
         await voiceService.playAudio(guild.id, sound.soundName!);

@@ -1,4 +1,4 @@
-import { getConfig } from "@adapters/config/ConfigAdapter.js";
+import type { Config } from "@core/config/Config.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { ChannelType, type Guild, type Message, MessageFlags, type TextChannel, ThreadAutoArchiveDuration, type ThreadChannel } from "discord.js";
@@ -9,24 +9,24 @@ export type SoundboardThreadService = {
 };
 
 export type SoundboardThreadServiceDeps = {
+    readonly config: Config;
     readonly soundRepository: SoundRepository;
     readonly voiceService: VoiceService;
 };
 
 const threadName = "WTB Soundboard";
 
-function validMessage(message: Message): boolean {
-    return message.channel.type !== ChannelType.DM && !message.flags.has(MessageFlags.Ephemeral) && message.channel.name === threadName && message.author.id !== getConfig().discord.clientId;
-}
-
-export const createSoundboardThreadService = ({ soundRepository, voiceService }: SoundboardThreadServiceDeps) => {
+export const createSoundboardThreadService = ({ config, soundRepository, voiceService }: SoundboardThreadServiceDeps) => {
+    function validMessage(message: Message): boolean {
+        return message.channel.type !== ChannelType.DM && !message.flags.has(MessageFlags.Ephemeral) && message.channel.name === threadName && message.author.id !== config.discord.clientId;
+    }
     async function handleMessageCreated(message: Message) {
         await tryToPlaySoundFromMessage(message);
     }
 
     async function findOrCreateSoundboardThread(guild: Guild): Promise<ThreadChannel> {
         const channels = guild.channels;
-        const botChannel = (await channels.fetch(getConfig().discord.botChannelId)) as TextChannel;
+        const botChannel = (await channels.fetch(config.discord.botChannelId)) as TextChannel;
         if (!botChannel) {
             throw new Error("[SoundboardThreadService] Could not find bot channel!");
         }
@@ -69,7 +69,7 @@ export const createSoundboardThreadService = ({ soundRepository, voiceService }:
             }
 
             if (!voiceService.isConnected(guildId)) {
-                await voiceService.connect(message.guild!, getConfig().discord.defaultVoiceChannelId);
+                await voiceService.connect(message.guild!, config.discord.defaultVoiceChannelId);
             }
 
             await voiceService.playAudio(guildId, (closestSound ?? foundSounds[0]!).name);

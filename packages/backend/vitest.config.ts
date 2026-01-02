@@ -49,7 +49,7 @@ export default defineConfig({
                         ...baseTestConfig,
                         name: "discord-integration",
                         include: ["tests/integration/messagesAndReactions/**/*.{test,spec}.{js,ts}"],
-                        fileParallelism: false,
+                        fileParallelism: true,
                     },
                 })
             ),

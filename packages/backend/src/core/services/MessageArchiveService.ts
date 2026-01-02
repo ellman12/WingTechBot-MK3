@@ -1,6 +1,8 @@
+import type { Config } from "@core/config/Config.js";
 import type { CreateMessageData, Message as DBMessage } from "@core/entities/Message.js";
 import type { MessageRepository } from "@core/repositories/MessageRepository.js";
 import type { UnitOfWork } from "@core/repositories/UnitOfWork.js";
+import { shouldProcessChannel } from "@core/utils/channelFilter.js";
 import { ChannelType, Collection, type FetchMessagesOptions, type Guild, type Message, MessageFlags, type OmitPartialGroupDMChannel, type PartialMessage, type TextChannel } from "discord.js";
 
 export type MessageArchiveService = {
@@ -26,6 +28,7 @@ export type MessageArchiveService = {
 };
 
 export type MessageArchiveServiceDeps = {
+    config: Config;
     unitOfWork: UnitOfWork;
     messageRepository: MessageRepository;
 };
@@ -84,7 +87,7 @@ function validMessage(message: Message): boolean {
     return message.channel.type !== ChannelType.DM && !message.flags.has(MessageFlags.Ephemeral);
 }
 
-export const createMessageArchiveService = ({ unitOfWork, messageRepository }: MessageArchiveServiceDeps): MessageArchiveService => {
+export const createMessageArchiveService = ({ config, unitOfWork, messageRepository }: MessageArchiveServiceDeps): MessageArchiveService => {
     console.log("[MessageArchiveService] Creating message archive service");
 
     async function fetchAllMessages(channel: TextChannel, endYear?: number) {
@@ -372,6 +375,11 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
             return;
         }
 
+        // Skip if channel is not in the allowed list
+        if (!shouldProcessChannel(message.channelId, config)) {
+            return;
+        }
+
         if (message.partial) {
             await message.fetch();
         }
@@ -398,6 +406,11 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
             return;
         }
 
+        // Skip if channel is not in the allowed list
+        if (!shouldProcessChannel(message.channelId, config)) {
+            return;
+        }
+
         if (message.partial) {
             await message.fetch();
         }
@@ -415,6 +428,11 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
 
     async function messageEdited(_oldMessage: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, newMessage: OmitPartialGroupDMChannel<Message<boolean>>): Promise<void> {
         if (!validMessage(newMessage)) {
+            return;
+        }
+
+        // Skip if channel is not in the allowed list
+        if (!shouldProcessChannel(newMessage.channelId, config)) {
             return;
         }
 

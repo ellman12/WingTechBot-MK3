@@ -1,4 +1,4 @@
-import { getConfig } from "@adapters/config/ConfigAdapter.js";
+import type { Config } from "@core/config/Config.js";
 import type { FileManager } from "@core/services/FileManager.js";
 import { join } from "path";
 
@@ -12,9 +12,12 @@ export type LlmInstructionRepository = {
     readonly validateInstructions: () => Promise<void>;
 };
 
-export const createLlmInstructionRepository = (fileManager: FileManager): LlmInstructionRepository => {
-    const config = getConfig();
+export type LlmInstructionRepositoryDeps = {
+    readonly config: Config;
+    readonly fileManager: FileManager;
+};
 
+export const createLlmInstructionRepository = ({ config, fileManager }: LlmInstructionRepositoryDeps): LlmInstructionRepository => {
     const getInstructionPath = (instructionType: InstructionType): string => {
         return join(config.llm.instructionsPath, `${instructionType}.txt`);
     };

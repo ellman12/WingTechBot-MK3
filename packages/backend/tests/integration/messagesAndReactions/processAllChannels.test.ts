@@ -1,34 +1,48 @@
 import { sleep } from "@core/utils/timeUtils.js";
 import type { Message, TextChannel } from "discord.js";
 
-import { getApp } from "@/main";
+import { createApplication } from "@/main";
+import type { App } from "@/main";
 
-import { cleanupAllTestChannels, createTemporaryTestChannel, deleteTestChannel, getTestingChannel, recreateDatabase, setUpIntegrationTest } from "../../utils/testUtils.js";
+import { getTestConfig } from "../../setup.js";
+import { cleanupAllTestChannels, createTemporaryTestChannel, createTestSchema, deleteTestChannel, dropTestSchema, getTestingChannel, recreateDatabase, setUpIntegrationTest } from "../../utils/testUtils.js";
 
 const timeout = 360 * 1000;
 const delay = 6000;
+const schemaName = "test_processAllChannels";
 
 describe("processAllChannels", async () => {
     let testChannel: TextChannel | null = null;
+    let app: App | null = null;
 
     beforeAll(async () => {
+        const testConfig = getTestConfig();
+
+        // Create the test schema and run migrations BEFORE creating the app
+        // The app's connection string needs the schema to exist
+        await createTestSchema(schemaName, testConfig.database.url);
+
+        app = await createApplication(testConfig, schemaName);
+        await app.start();
+
         await sleep(delay);
 
-        const bot = getApp().discordBot;
-        const channel = await getTestingChannel(bot);
+        const channel = await getTestingChannel(app.discordBot);
         await channel.send("Starting processAllChannels tests");
-    });
+    }, timeout);
 
     beforeEach(async () => {
         await sleep(delay);
-        await recreateDatabase();
+        if (app) {
+            const testConfig = getTestConfig();
+            await recreateDatabase(app, schemaName, testConfig.database.url);
+        }
     });
 
     afterEach(async () => {
-        if (testChannel) {
+        if (testChannel && app) {
             // Re-fetch the channel from the current bot's client to ensure we have a valid token
-            const bot = getApp().discordBot;
-            const guild = await bot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+            const guild = await app.discordBot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
             const currentChannel = (await guild.channels.fetch(testChannel.id)) as TextChannel;
             if (currentChannel) {
                 await deleteTestChannel(currentChannel);
@@ -39,17 +53,22 @@ describe("processAllChannels", async () => {
     });
 
     afterAll(async () => {
-        const bot = getApp().discordBot;
-        await cleanupAllTestChannels(bot);
+        if (app) {
+            await cleanupAllTestChannels(app.discordBot);
+            const testConfig = getTestConfig();
+            await app.stop();
+
+            // Drop the test schema
+            await dropTestSchema(schemaName, testConfig.database.url);
+        }
     });
 
     //prettier-ignore
     it("should read all messages and reactions on load", async () => {
-        const { bot, testerBot, db } = await setUpIntegrationTest();
-        const app = (await import("@/main")).getApp();
+        const { bot, testerBot, db } = await setUpIntegrationTest(app!);
 
         // Create temporary channel for this test
-        testChannel = await createTemporaryTestChannel(bot);
+        testChannel = await createTemporaryTestChannel(bot, undefined, app!);
         const testerChannel = await testerBot.client.channels.fetch(testChannel.id) as TextChannel;
 
         async function stopBot() {
@@ -61,7 +80,7 @@ describe("processAllChannels", async () => {
             await bot.start();
             // Manually process channels since SKIP_CHANNEL_PROCESSING_ON_STARTUP is enabled for tests
             const guild = await bot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-            if (!testChannel) throw new Error("Test channel not initialized");
+            if (!testChannel || !app) throw new Error("Test channel or app not initialized");
             await app.messageArchiveService.processAllChannels(guild, undefined, [testChannel.id]);
             await app.messageArchiveService.removeDeletedMessages(guild);
             await sleep(2000); // Wait for processing to complete

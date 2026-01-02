@@ -85,6 +85,7 @@ describe.concurrent("SoundService Integration Tests", () => {
                 defaultVoiceChannelId: "",
                 roleId: "",
                 skipChannelProcessingOnStartup: false,
+                skipCommandDeploymentOnStartup: false,
             },
             sounds: { storagePath: tempDir },
             cache: { audioDownloadPath: join(tempDir, "cache"), ttlHours: 24, maxSizeMb: 1000 },
@@ -92,6 +93,7 @@ describe.concurrent("SoundService Integration Tests", () => {
             llm: {
                 apiKey: "",
                 instructionsPath: "",
+                disabled: true,
             },
             autoReaction: {
                 funnySubstringsProbability: 10,

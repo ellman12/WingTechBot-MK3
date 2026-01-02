@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { getConfig } from "@adapters/config/ConfigAdapter.js";
+import { loadConfig } from "@adapters/config/ConfigAdapter.js";
 import { createUnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
 import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
@@ -11,6 +11,7 @@ import { createVoiceEventsSoundsRepository } from "@adapters/repositories/VoiceE
 import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
 import { createYtdlYoutubeService } from "@adapters/services/YtdlYoutubeAudioService.js";
+import type { Config } from "@core/config/Config.js";
 import { createAudioCacheService } from "@core/services/AudioCacheService.js";
 import { createAudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { AudioFormatDetectionService } from "@core/services/AudioFormatDetectionService.js";
@@ -25,8 +26,9 @@ import { createSoundTagService } from "@core/services/SoundTagService.js";
 import { createSoundboardThreadService } from "@core/services/SoundboardThreadService.js";
 import { createVoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
 import { runMigrations } from "@db/migrations.js";
+import type { DB } from "@db/types.js";
 import { loadEnvironment } from "@infrastructure/config/EnvLoader.js";
-import { connect, disconnect, getKysely } from "@infrastructure/database/DatabaseConnection.js";
+import { createDatabaseConnection } from "@infrastructure/database/DatabaseConnection.js";
 import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { FfprobeService } from "@infrastructure/ffmpeg/FfprobeService.js";
@@ -34,6 +36,7 @@ import { createFileManager } from "@infrastructure/filestore/FileManager.js";
 import { type ServerConfig, createExpressApp } from "@infrastructure/http/ExpressApp.js";
 import { type ErrorReportingService, createErrorReportingService } from "@infrastructure/services/ErrorReportingService.js";
 import { createGeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
+import type { Kysely } from "kysely";
 
 export type App = {
     readonly start: () => Promise<void>;
@@ -42,17 +45,26 @@ export type App = {
     readonly isReady: () => boolean;
     readonly errorReportingService: ErrorReportingService;
     readonly messageArchiveService: MessageArchiveService;
+    readonly getDatabase: () => Kysely<DB>;
+    readonly config: Config;
 };
 
-export const createApplication = async (): Promise<App> => {
+export const createApplication = async (overrideConfig?: Config, schemaName?: string): Promise<App> => {
     await loadEnvironment();
-    const config = getConfig();
+    const config = overrideConfig ?? loadConfig();
+    const databaseConnection = createDatabaseConnection(config, schemaName);
 
     const errorReportingService = await createErrorReportingService({ config });
 
-    await connect();
+    await databaseConnection.connect();
 
-    const db = getKysely();
+    // Run migrations immediately after connecting, before creating any services
+    console.log("⏱️  Running database migrations...");
+    const migrationsStart = Date.now();
+    await runMigrations(schemaName);
+    console.log(`✅ Migrations completed in ${Date.now() - migrationsStart}ms`);
+
+    const db = databaseConnection.getKysely();
     const serverConfig: ServerConfig = {
         port: config.server.port,
         nodeEnv: process.env.NODE_ENV || "development",
@@ -71,7 +83,7 @@ export const createApplication = async (): Promise<App> => {
     const messageRepository = createMessageRepository(db);
     const reactionRepository = createReactionRepository(db);
     const emoteRepository = createReactionEmoteRepository(db);
-    const llmInstructionRepo = createLlmInstructionRepository(fileManager);
+    const llmInstructionRepo = createLlmInstructionRepository({ config, fileManager });
 
     if (!process.env.CI) {
         await llmInstructionRepo.validateInstructions();
@@ -99,20 +111,21 @@ export const createApplication = async (): Promise<App> => {
     });
     const unitOfWork = createUnitOfWork(db);
     const soundTagService = createSoundTagService({ unitOfWork, soundRepository, soundTagRepository });
-    const reactionArchiveService = createReactionArchiveService({ messageRepository, reactionRepository, emoteRepository });
+    const reactionArchiveService = createReactionArchiveService({ config, messageRepository, reactionRepository, emoteRepository });
     const messageArchiveService = createMessageArchiveService({
+        config,
         unitOfWork,
         messageRepository,
     });
-    const geminiLlmService = createGeminiLlmService();
+    const geminiLlmService = createGeminiLlmService({ config });
     const voiceService = createDiscordVoiceService({ soundService });
-    const discordChatService = createDiscordChatService();
-    const llmConversationService = createLlmConversationService({ discordChatService, geminiLlmService, messageArchiveService, llmInstructionRepo });
-    const soundboardThreadService = createSoundboardThreadService({ soundRepository, voiceService });
-    const autoReactionService = createAutoReactionService({ discordChatService, geminiLlmService, llmInstructionRepo });
-    const voiceEventSoundsService = createVoiceEventSoundsService({ voiceEventSoundsRepository, voiceService });
+    const discordChatService = createDiscordChatService({ config });
+    const llmConversationService = createLlmConversationService({ config, discordChatService, geminiLlmService, messageArchiveService, llmInstructionRepo });
+    const soundboardThreadService = createSoundboardThreadService({ config, soundRepository, voiceService });
+    const autoReactionService = createAutoReactionService({ config, discordChatService, geminiLlmService, llmInstructionRepo });
+    const voiceEventSoundsService = createVoiceEventSoundsService({ config, voiceEventSoundsRepository, voiceService });
 
-    const expressApp = createExpressApp({ db, config: serverConfig });
+    const expressApp = createExpressApp({ db, config: serverConfig, appConfig: config });
     const discordBot = await createDiscordBot({
         config,
         voiceEventSoundsRepository,
@@ -138,12 +151,19 @@ export const createApplication = async (): Promise<App> => {
     const start = async (): Promise<void> => {
         try {
             console.log("🚀 Starting WingTechBot MK3...");
+            const startTime = Date.now();
 
-            await runMigrations();
+            console.log("⏱️  [1/2] Starting Discord bot...");
+            const discordStart = Date.now();
             await discordBot.start();
-            expressApp.start();
+            console.log(`✅ [1/2] Discord bot started in ${Date.now() - discordStart}ms`);
 
-            console.log("✅ Application started successfully!");
+            console.log("⏱️  [2/2] Starting Express server...");
+            const expressStart = Date.now();
+            expressApp.start();
+            console.log(`✅ [2/2] Express server started in ${Date.now() - expressStart}ms`);
+
+            console.log(`✅ Application started successfully in ${Date.now() - startTime}ms!`);
             isReadyState = true;
         } catch (error) {
             console.error("❌ Failed to start application:", error);
@@ -161,7 +181,7 @@ export const createApplication = async (): Promise<App> => {
 
             errorReportingService.shutdown();
 
-            await disconnect();
+            await databaseConnection.disconnect();
 
             console.log("✅ Application shut down gracefully");
         } catch (error) {
@@ -179,6 +199,8 @@ export const createApplication = async (): Promise<App> => {
         isReady,
         errorReportingService,
         messageArchiveService,
+        getDatabase: () => db,
+        config,
     };
 };
 
@@ -220,22 +242,18 @@ const setupGracefulShutdown = (app: App): void => {
     });
 };
 
-const startApplication = async (): Promise<void> => {
-    try {
-        app = await createApplication();
-        await app.start();
-        setupGracefulShutdown(app);
-    } catch (error) {
-        console.error("❌ Failed to start application:", error);
-        if (process.env.NODE_ENV === "test" || process.env.CI) {
-            throw error; // Re-throw in tests so they fail
+// Production entry point - auto-starts the application
+if (process.env.NODE_ENV !== "test" && !process.env.CI) {
+    const startApplication = async (): Promise<void> => {
+        try {
+            const app = await createApplication();
+            await app.start();
+            setupGracefulShutdown(app);
+        } catch (error) {
+            console.error("❌ Failed to start application:", error);
+            process.exit(1);
         }
-        process.exit(1); // Exit in production
-    }
-};
+    };
 
-export let app: App;
-
-export const getApp = () => app;
-
-void startApplication();
+    void startApplication();
+}

@@ -21,6 +21,8 @@ const discordConfigSchema = z.object({
         .refine(val => !val || val === "" || URL.canParse(val), "Must be a valid URL or empty string")
         .optional(),
     skipChannelProcessingOnStartup: z.coerce.boolean().default(false),
+    skipCommandDeploymentOnStartup: z.coerce.boolean().default(false),
+    restrictToChannelIds: z.array(z.string()).optional(),
 });
 
 const soundsConfigSchema = z.object({
@@ -41,6 +43,7 @@ const ffmpegConfigSchema = z.object({
 const llmConfigSchema = z.object({
     apiKey: z.string(),
     instructionsPath: z.string().default("./llmInstructions"),
+    disabled: z.coerce.boolean().default(false),
 });
 
 const autoReactionConfigSchema = z.object({
