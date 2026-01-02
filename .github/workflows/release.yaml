@@ -68,7 +68,7 @@ jobs:
 
             - name: Generate Docker Compose for production
               run: |
-                  cat > docker-compose.prod.yaml << EOF
+                  cat > compose.yaml << EOF
                   services:
                     backend:
                       image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
@@ -142,9 +142,9 @@ jobs:
                       driver: bridge
                   EOF
 
-            - name: Upload docker-compose.prod.yaml to GitHub Release
+            - name: Upload compose.yaml to GitHub Release
               uses: softprops/action-gh-release@v2
               with:
-                  files: docker-compose.prod.yaml
+                  files: compose.yaml
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
