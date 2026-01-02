@@ -58,6 +58,12 @@ export const reactionScoldMessages: Record<string, string[]> = {
 export const createAutoReactionService = ({ config, discordChatService, geminiLlmService, llmInstructionRepo }: AutoReactionServiceDeps): AutoReactionService => {
     console.log("[AutoReactionService] Creating AutoReactionService");
 
+    const autoReactions: Array<{ probabilityDenominator: number; handler: (message: Message) => Promise<boolean> }> = [
+        { probabilityDenominator: config.autoReaction.funnySubstringsProbability, handler: checkForFunnySubstrings },
+        { probabilityDenominator: config.autoReaction.erJokeProbability, handler: tryToSayErJoke },
+        { probabilityDenominator: config.autoReaction.nekoizeProbability, handler: tryToNekoizeMessage },
+    ];
+
     const botId = config.discord.clientId;
 
     async function checkForFunnySubstrings(message: Message): Promise<boolean> {
@@ -150,12 +156,6 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         },
 
         messageCreated: async (message): Promise<void> => {
-            const autoReactions: Array<{ probabilityDenominator: number; handler: (message: Message) => Promise<boolean> }> = [
-                { probabilityDenominator: config.autoReaction.funnySubstringsProbability, handler: checkForFunnySubstrings },
-                { probabilityDenominator: config.autoReaction.erJokeProbability, handler: tryToSayErJoke },
-                { probabilityDenominator: config.autoReaction.nekoizeProbability, handler: tryToNekoizeMessage },
-            ];
-
             for (const { probabilityDenominator, handler } of autoReactions) {
                 if (oneIn(probabilityDenominator) && (await handler(message))) {
                     return;
