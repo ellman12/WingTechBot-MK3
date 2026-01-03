@@ -1,4 +1,5 @@
 import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
+import type { Config } from "@core/config/Config.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
@@ -9,14 +10,16 @@ export type LlmConversationService = {
 };
 
 export type LlmConversationServiceDeps = {
+    readonly config: Config;
     readonly discordChatService: DiscordChatService;
     readonly messageArchiveService: MessageArchiveService;
     readonly geminiLlmService: GeminiLlmService;
     readonly llmInstructionRepo: LlmInstructionRepository;
 };
 
-export const createLlmConversationService = ({ discordChatService, messageArchiveService, geminiLlmService, llmInstructionRepo }: LlmConversationServiceDeps): LlmConversationService => {
+export const createLlmConversationService = ({ config, discordChatService, messageArchiveService, geminiLlmService, llmInstructionRepo }: LlmConversationServiceDeps): LlmConversationService => {
     async function handleMessageCreated(message: Message) {
+        if (config.llm.disabled) return;
         if (validMessage(message) && discordChatService.hasBeenPinged(message)) {
             await respondToPing(message);
         }

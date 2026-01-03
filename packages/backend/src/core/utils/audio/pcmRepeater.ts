@@ -13,15 +13,8 @@ type RepetitionSchedule = {
     readonly clipData: Buffer;
 };
 
-/**
- * Creates a PCM stream that plays a sound clip at specified delay times.
- * Properly mixes overlapping audio samples. Pre-computes chunks asynchronously to avoid blocking.
- *
- * @param pcmData - The PCM audio data to repeat (must be signed 16-bit PCM), each element is a separate clip
- * @param delaysMs - Array of additive delays in milliseconds (e.g., [0, 1000, 1500] plays at 0ms, 1s, and 2.5s)
- * @param options - PCM format options
- * @returns A Readable stream of mixed PCM audio
- */
+// Creates a PCM stream that plays a sound clip at specified delay times.
+// Properly mixes overlapping audio samples. Pre-computes chunks asynchronously to avoid blocking.
 export function createRepeatedPcmStream(pcmData: (Uint8Array | Buffer)[], delaysMs: number[], options?: PcmStreamOptions): Readable {
     const sampleRate = options?.sampleRate ?? 48000;
     const channels = options?.channels ?? 2;
@@ -84,9 +77,7 @@ export function createRepeatedPcmStream(pcmData: (Uint8Array | Buffer)[], delays
     });
 }
 
-/**
- * Generates a schedule of when each repetition should start
- */
+// Generates a schedule of when each repetition should start
 function generateRepetitionSchedule(clipBuffers: Buffer[], delaysMs: number[], sampleRate: number): RepetitionSchedule[] {
     const schedule = delaysMs.reduce<{ schedule: RepetitionSchedule[]; cumulativeMs: number }>(
         (acc, delayMs, delayIndex) => {
@@ -106,9 +97,7 @@ function generateRepetitionSchedule(clipBuffers: Buffer[], delaysMs: number[], s
     return schedule;
 }
 
-/**
- * Gets all active sample values from repetitions at a specific absolute sample and channel
- */
+// Gets all active sample values from repetitions at a specific absolute sample and channel
 function getActiveSamples(absoluteSample: number, channel: number, schedule: RepetitionSchedule[], bytesPerSample: number): number[] {
     return schedule
         .map(repetition => {
@@ -123,9 +112,7 @@ function getActiveSamples(absoluteSample: number, channel: number, schedule: Rep
         .filter((sample): sample is number => sample !== null);
 }
 
-/**
- * Mixes all active repetitions into a new buffer for a specific chunk
- */
+// Mixes all active repetitions into a new buffer for a specific chunk
 function mixRepeatedChunk(startSample: number, sampleCount: number, schedule: RepetitionSchedule[], bytesPerSample: number, channels: number): Buffer {
     const bytesToGenerate = sampleCount * bytesPerSample;
     const outputBuffer = Buffer.alloc(bytesToGenerate);

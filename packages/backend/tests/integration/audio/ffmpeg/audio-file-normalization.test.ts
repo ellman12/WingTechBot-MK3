@@ -39,7 +39,8 @@ describe.concurrent("Audio File Normalization Integration Test", () => {
         tempFiles = [];
     });
 
-    it("should normalize and convert MP3 to Opus format", async () => {
+    it("should normalize and convert MP3 to Opus format", testNormalizeAndConvertMp3ToOpus, 30000);
+    async function testNormalizeAndConvertMp3ToOpus() {
         console.log(`[Test] Starting audio normalization test with input: ${inputFilePath}`);
 
         // Read the test MP3 file
@@ -75,9 +76,10 @@ describe.concurrent("Audio File Normalization Integration Test", () => {
         // Verify the output file was created successfully
         const outputStats = await readFile(outputFilePath);
         expect(outputStats.length).toBe(audioOutput.length);
-    }, 30000); // 30 second timeout for FFmpeg processing
+    }
 
-    it("should process audio stream in real-time", async () => {
+    it("should process audio stream in real-time", testProcessAudioStreamRealtime, 30000);
+    async function testProcessAudioStreamRealtime() {
         console.log(`[Test] Starting real-time stream processing test`);
 
         // Read the test file as a stream input
@@ -126,27 +128,30 @@ describe.concurrent("Audio File Normalization Integration Test", () => {
         tempFiles.push(streamOutputPath);
 
         console.log(`[Test] Stream output written to: ${streamOutputPath}`);
-    }, 30000);
+    }
 
-    it("should handle invalid audio input gracefully", async () => {
+    it("should handle invalid audio input gracefully", testHandleInvalidAudioInput, 10000);
+    async function testHandleInvalidAudioInput() {
         console.log(`[Test] Testing error handling with invalid input`);
 
         // Test with invalid audio data
         const invalidInput = new Uint8Array([0x00, 0x01, 0x02, 0x03]); // Not valid audio
 
         await expect(ffmpegAudioService.deepProcessAudio(invalidInput)).rejects.toThrow();
-    }, 10000);
+    }
 
-    it("should handle empty input gracefully", async () => {
+    it("should handle empty input gracefully", testHandleEmptyInput);
+    async function testHandleEmptyInput() {
         console.log(`[Test] Testing error handling with empty input`);
 
         // Test with empty input
         const emptyInput = new Uint8Array(0);
 
         await expect(ffmpegAudioService.deepProcessAudio(emptyInput)).rejects.toThrow();
-    });
+    }
 
-    it("should produce consistent output for the same input", async () => {
+    it("should produce consistent output for the same input", testProduceConsistentOutput, 45000);
+    async function testProduceConsistentOutput() {
         console.log(`[Test] Testing output consistency`);
 
         const audioInput = await readFile(inputFilePath);
@@ -168,5 +173,5 @@ describe.concurrent("Audio File Normalization Integration Test", () => {
         console.log(`[Test] Output 1: ${output1.length} bytes`);
         console.log(`[Test] Output 2: ${output2.length} bytes`);
         console.log(`[Test] Size difference: ${sizeDifference} bytes`);
-    }, 45000); // Longer timeout for dual processing
+    }
 });

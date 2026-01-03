@@ -6,10 +6,8 @@ import { ChannelType, Collection, type FetchMessagesOptions, type Guild, type Me
 export type MessageArchiveService = {
     readonly fetchAllMessages: (channel: TextChannel, endYear?: number) => Promise<Message[]>;
 
-    //Walk backwards through each channel, and store/update each message until told to stop or hit the last message.
     readonly processAllChannels: (guild: Guild, endYear?: number, channelIds?: string[]) => Promise<void>;
 
-    //Remove any messages from the DB that no longer exist on Discord.
     readonly removeDeletedMessages: (guild: Guild, endYear?: number) => Promise<void>;
 
     readonly messageCreated: (message: Message) => Promise<void>;
@@ -30,10 +28,7 @@ export type MessageArchiveServiceDeps = {
     messageRepository: MessageRepository;
 };
 
-/**
- * Collects reaction data from a Discord message.
- * Returns emote info and reaction data for later batch processing.
- */
+// Collects reaction data for batch processing to minimize database round trips.
 async function collectReactionData(discordMessage: Message) {
     const messageId = discordMessage.id;
     const authorId = discordMessage.author.id;
@@ -59,12 +54,10 @@ async function collectReactionData(discordMessage: Message) {
                 });
             }
 
-            // Add unique emote
             if (!emotes.some(e => e.name === name && e.discordId === emoteDiscordId)) {
                 emotes.push({ name, discordId: emoteDiscordId });
             }
         } catch (error: unknown) {
-            // Skip reactions for deleted messages or other API errors
             if (error && typeof error === "object" && "code" in error) {
                 const apiError = error as { code: number };
                 if (apiError.code === 10008) {
@@ -72,7 +65,6 @@ async function collectReactionData(discordMessage: Message) {
                     continue;
                 }
             }
-            // Re-throw unexpected errors
             throw error;
         }
     }
@@ -127,16 +119,15 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                 const existingMessages = new Map(existingMessagesArray.map(m => [m.id, m]));
                 console.log(`🗨️ Fetched ${discordMessages.length} messages from #${name}`);
 
-                // Filter to only valid messages (exclude DMs, ephemeral messages, etc.)
                 const validDiscordMessages = discordMessages.filter(validMessage);
                 console.log(`🗨️ ${validDiscordMessages.length} valid messages in #${name}`);
 
-                // Step 1: Collect all reaction data from Discord messages
+                // Collect all reaction data from Discord messages for batch processing
                 const allReactionData = await Promise.all(validDiscordMessages.map(collectReactionData));
                 const allEmotes = allReactionData.flatMap(d => d.emotes);
                 const allReactions = allReactionData.flatMap(d => d.reactions);
 
-                // Step 2: Batch create/fetch all unique emotes
+                // Batch create/fetch all unique emotes to minimize database round trips
                 let emoteCache: Map<string, { id: number }> = new Map();
                 if (allEmotes.length > 0) {
                     emoteCache = await unitOfWork.execute(async repos => {
@@ -144,7 +135,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                     });
                 }
 
-                // Step 3: Categorize messages into new, updated, or unchanged
+                // Categorize messages into new, updated, or unchanged
                 const messagesToCreate: CreateMessageData[] = [];
                 const messagesToUpdate: Array<{ id: string; content: string }> = [];
                 let newMessageCount = 0;
@@ -158,7 +149,6 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                     const existingMsg = existingMessages.get(messageId);
 
                     if (!existingMsg) {
-                        // New message
                         const referencedMessageId = discordMessage.reference ? discordMessage.reference.messageId : undefined;
                         messagesToCreate.push({
                             id: messageId,
@@ -171,12 +161,11 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                         });
                         newMessageCount++;
                     } else if (existingMsg.content !== discordMessage.content) {
-                        // Updated message
                         messagesToUpdate.push({ id: messageId, content: discordMessage.content });
                     }
                 }
 
-                // Step 4: Build target reaction state with emote IDs
+                // Build target reaction state with emote IDs from cache
                 const targetReactions = allReactions.map(r => {
                     const emoteKey = `${r.emoteName}:${r.emoteDiscordId}`;
                     const emote = emoteCache.get(emoteKey);
@@ -192,23 +181,20 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                     };
                 });
 
-                // Step 5: Get existing reactions and calculate diff
+                // Calculate diff between target and existing reactions using set operations
                 const existingReactions = Array.from(existingMessages.values()).flatMap(m => m.reactions);
 
-                // Create sets for efficient comparison
                 const makeKey = (r: { giverId: string; receiverId: string; channelId: string; messageId: string; emoteId: number }) => `${r.giverId}:${r.receiverId}:${r.channelId}:${r.messageId}:${r.emoteId}`;
 
                 const targetSet = new Set(targetReactions.map(makeKey));
                 const existingSet = new Set(existingReactions.map(makeKey));
 
-                // Calculate what to add and remove
                 const reactionsToAdd = targetReactions.filter(r => !existingSet.has(makeKey(r)));
                 const reactionsToRemove = existingReactions.filter(r => !targetSet.has(makeKey(r)));
 
-                // Step 6: Execute batch operations in smaller chunks to avoid large transactions
+                // Execute batch operations in smaller chunks to avoid large transactions
                 const BATCH_SIZE = 100;
 
-                // Process messages in batches
                 for (let i = 0; i < messagesToCreate.length; i += BATCH_SIZE) {
                     const batch = messagesToCreate.slice(i, i + BATCH_SIZE);
                     await unitOfWork.execute(async repos => {
@@ -216,7 +202,6 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                     });
                 }
 
-                // Process message updates in batches
                 for (let i = 0; i < messagesToUpdate.length; i += BATCH_SIZE) {
                     const batch = messagesToUpdate.slice(i, i + BATCH_SIZE);
                     await unitOfWork.execute(async repos => {
@@ -224,7 +209,6 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                     });
                 }
 
-                // Process reaction removals in batches
                 for (let i = 0; i < reactionsToRemove.length; i += BATCH_SIZE) {
                     const batch = reactionsToRemove.slice(i, i + BATCH_SIZE);
                     await unitOfWork.execute(async repos => {
@@ -232,7 +216,6 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                     });
                 }
 
-                // Process reaction additions in batches
                 for (let i = 0; i < reactionsToAdd.length; i += BATCH_SIZE) {
                     const batch = reactionsToAdd.slice(i, i + BATCH_SIZE);
                     await unitOfWork.execute(async repos => {
@@ -276,9 +259,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
         const messagesToDelete: string[] = [];
         const batchSize = 10;
 
-        // Process each channel's messages
         for (const [channelId, channelMessages] of messagesByChannel) {
-            // Fetch channel once for all messages in this channel
             let channel: TextChannel | null = null;
             try {
                 const fetchedChannel = await guild.channels.fetch(channelId);
@@ -286,7 +267,6 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                     channel = fetchedChannel as TextChannel;
                 }
             } catch {
-                // Channel doesn't exist or bot doesn't have access - mark all messages for deletion
                 console.log(`Channel ${channelId} not found, marking ${channelMessages.length} messages for deletion`);
                 messagesToDelete.push(...channelMessages.map(m => m.id));
                 continue;
@@ -297,16 +277,11 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                 continue;
             }
 
-            // If we have many messages to check in this channel, fetch all messages in bulk
-            // Otherwise, check individually (more efficient for small counts)
+            // Use bulk fetch for many messages, individual fetches for few (more efficient for small counts)
             if (channelMessages.length > 20) {
-                // Fetch all messages from channel in bulk (100 at a time)
                 const existingIds = new Set<string>();
                 let lastId: string | undefined;
 
-                // For deletion checking, we need to be thorough and check all messages
-                // The DB query already filters by year, so we only check a limited set
-                // But we need to fetch all Discord messages to verify they exist
                 while (true) {
                     try {
                         const fetched = await channel.messages.fetch({ limit: 100, before: lastId });
@@ -315,21 +290,18 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                         fetched.forEach(msg => existingIds.add(msg.id));
                         lastId = fetched.last()?.id;
 
-                        // If we fetched less than 100, we've reached the end
                         if (fetched.size < 100) break;
                     } catch {
                         break;
                     }
                 }
 
-                // Check which of our messages don't exist
                 for (const message of channelMessages) {
                     if (!existingIds.has(message.id)) {
                         messagesToDelete.push(message.id);
                     }
                 }
             } else {
-                // For small counts, individual fetches are more efficient
                 for (let i = 0; i < channelMessages.length; i += batchSize) {
                     const batch = channelMessages.slice(i, i + batchSize);
 
@@ -344,7 +316,6 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
                         })
                     );
 
-                    // Collect IDs of messages that don't exist
                     for (const result of results) {
                         if (!result.exists) {
                             messagesToDelete.push(result.id);
@@ -356,7 +327,6 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
 
         console.log(`🔍 Found ${messagesToDelete.length} messages to delete`);
 
-        // Batch delete all non-existent messages
         if (messagesToDelete.length > 0) {
             for (const id of messagesToDelete) {
                 await messageRepository.delete({ id });
@@ -405,7 +375,6 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
         try {
             await messageRepository.delete({ id: message.id });
         } catch (e: unknown) {
-            // Ignore "Message does not exist" errors - the message is already not in the DB
             if (e instanceof Error && e.message === "Message does not exist") {
                 return;
             }

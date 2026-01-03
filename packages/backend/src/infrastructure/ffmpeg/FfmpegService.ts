@@ -36,9 +36,7 @@ export type FfmpegService = {
 };
 
 export const createFfmpegService = (): FfmpegService => {
-    /**
-     * Create a fluent-ffmpeg command with optimized settings for real-time streaming
-     */
+    // Create a fluent-ffmpeg command with optimized settings for real-time streaming
     const createCommand = (inputStream: Readable, options?: { inputFormat?: string }): FfmpegCommand => {
         const cmd = ffmpeg(inputStream)
             // Real-time streaming optimizations
@@ -75,9 +73,7 @@ export const createFfmpegService = (): FfmpegService => {
         return cmd;
     };
 
-    /**
-     * Apply conversion options to a fluent-ffmpeg command
-     */
+    // Apply conversion options to a fluent-ffmpeg command
     const applyConvertOptions = (cmd: FfmpegCommand, options: FfmpegConvertOptions): FfmpegCommand => {
         if (options.codec) {
             cmd.audioCodec(options.codec);
@@ -101,10 +97,8 @@ export const createFfmpegService = (): FfmpegService => {
         return cmd;
     };
 
-    /**
-     * Legacy raw execution method for backward compatibility
-     * Kept for cases that need direct process access
-     */
+    // Legacy raw execution method for backward compatibility
+    // Kept for cases that need direct process access
     const run = (inputStream: Readable, args: string[]): ChildProcess => {
         const outputStream = new PassThrough();
         const cmd = ffmpeg(inputStream)
@@ -119,9 +113,7 @@ export const createFfmpegService = (): FfmpegService => {
         return process;
     };
 
-    /**
-     * Convert stream input to buffer output
-     */
+    // Convert stream input to buffer output
     const runStreamAsync = async (inputStream: Readable, args: string[]): Promise<Uint8Array> => {
         return new Promise((resolve, reject) => {
             const chunks: Uint8Array[] = [];
@@ -142,9 +134,7 @@ export const createFfmpegService = (): FfmpegService => {
         });
     };
 
-    /**
-     * Convert buffer input to stream output
-     */
+    // Convert buffer input to stream output
     const runAsyncStream = (input: Uint8Array, args: string[]): Readable => {
         const inputStream = Readable.from([input]);
         const outputStream = new PassThrough();
@@ -160,17 +150,13 @@ export const createFfmpegService = (): FfmpegService => {
         return outputStream;
     };
 
-    /**
-     * Convert buffer input to buffer output
-     */
+    // Convert buffer input to buffer output
     const runAsync = async (input: Uint8Array, args: string[]): Promise<Uint8Array> => {
         const inputStream = Readable.from([input]);
         return runStreamAsync(inputStream, args);
     };
 
-    /**
-     * Run FFmpeg with stderr capture
-     */
+    // Run FFmpeg with stderr capture
     const runAsyncWithStderr = async (input: Uint8Array, args: string[]): Promise<{ stdout: Uint8Array; stderr: string }> => {
         const inputStream = Readable.from([input]);
 
@@ -200,9 +186,7 @@ export const createFfmpegService = (): FfmpegService => {
         });
     };
 
-    /**
-     * Convert audio buffer with specified options
-     */
+    // Convert audio buffer with specified options
     const convertAudio = async (input: Uint8Array, options: FfmpegConvertOptions): Promise<Uint8Array> => {
         const inputStream = Readable.from([input]);
 
@@ -225,9 +209,7 @@ export const createFfmpegService = (): FfmpegService => {
         });
     };
 
-    /**
-     * Convert audio stream to buffer
-     */
+    // Convert audio stream to buffer
     const convertStreamToAudio = async (inputStream: Readable, options: FfmpegConvertOptions): Promise<Uint8Array> => {
         return new Promise((resolve, reject) => {
             const chunks: Uint8Array[] = [];
@@ -248,9 +230,7 @@ export const createFfmpegService = (): FfmpegService => {
         });
     };
 
-    /**
-     * Convert audio stream to stream (most commonly used for real-time processing)
-     */
+    // Convert audio stream to stream (most commonly used for real-time processing)
     const convertStreamToStream = (inputStream: Readable, options: FfmpegConvertOptions): Readable => {
         const outputStream = new PassThrough();
 
@@ -271,17 +251,13 @@ export const createFfmpegService = (): FfmpegService => {
         return outputStream;
     };
 
-    /**
-     * Convert audio buffer to stream
-     */
+    // Convert audio buffer to stream
     const convertAudioToStream = (input: Uint8Array, options: FfmpegConvertOptions): Readable => {
         const inputStream = Readable.from([input]);
         return convertStreamToStream(inputStream, options);
     };
 
-    /**
-     * Normalize audio stream in real-time using loudnorm filter
-     */
+    // Normalize audio stream in real-time using loudnorm filter
     const normalizeAudioStreamRealtime = (inputStream: Readable): Readable => {
         const outputStream = new PassThrough();
 
@@ -297,9 +273,7 @@ export const createFfmpegService = (): FfmpegService => {
         return outputStream;
     };
 
-    /**
-     * Two-pass audio normalization with measurement for better quality
-     */
+    // Two-pass audio normalization with measurement for better quality
     const normalizeAudio = async (input: Uint8Array, options: Partial<Pick<FfmpegConvertOptions, "channels" | "sampleRate">>): Promise<Uint8Array> => {
         console.log("[FfmpegService] Starting two-pass audio normalization");
 

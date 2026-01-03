@@ -1,12 +1,14 @@
+import type { Config } from "@core/config/Config.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { parseAudioSource } from "@core/services/AudioFetcherService.js";
 import type { AudioProcessingService } from "@core/services/AudioProcessingService.js";
 import type { FileManager } from "@core/services/FileManager.js";
 import { createSoundService } from "@core/services/SoundService.js";
-import type { Config } from "@infrastructure/config/Config.js";
 import { Readable } from "stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { getTestConfig } from "../../../setup.js";
 
 // Mock parseAudioSource from AudioFetcherService
 vi.mock("@core/services/AudioFetcherService", async () => {
@@ -48,26 +50,7 @@ const mockSoundRepository: SoundRepository = {
     tryGetSoundsWithinDistance: vi.fn(),
 };
 
-const mockConfig: Config = {
-    server: { port: 3000, environment: "test" },
-    database: { url: "postgresql://test:test@localhost:5432/test" },
-    discord: {
-        token: "test-token",
-        clientId: "test-client-id",
-        serverId: "",
-        botChannelId: "",
-        defaultVoiceChannelId: "",
-        roleId: "",
-        skipChannelProcessingOnStartup: false,
-    },
-    sounds: { storagePath: "./sounds" },
-    cache: { audioDownloadPath: "./cache/audio", ttlHours: 24, maxSizeMb: 1000 },
-    ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
-    llm: {
-        apiKey: "",
-        instructionsPath: "",
-    },
-};
+const mockConfig: Config = getTestConfig();
 
 // Remove describe.concurrent - not worth the complexity for tests with module mocks
 describe("SoundService", () => {

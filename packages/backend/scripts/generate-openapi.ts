@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-import "@dotenvx/dotenvx/config";
 import { writeFileSync } from "fs";
 import { join } from "path";
 
 import { initializeV1Routes } from "../src/application/routes/v1/routes.js";
+import { loadEnvironment } from "../src/infrastructure/config/EnvLoader.js";
 import { generateOpenApiSpec } from "../src/infrastructure/http/OpenApiGenerator.js";
+
+await loadEnvironment();
 
 const generateOpenApiFile = (): void => {
     try {

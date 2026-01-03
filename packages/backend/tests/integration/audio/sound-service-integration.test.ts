@@ -5,7 +5,6 @@ import type { Sound } from "@core/entities/Sound.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { createSoundService } from "@core/services/SoundService.js";
-import type { Config } from "@infrastructure/config/Config.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { createFileManager } from "@infrastructure/filestore/FileManager.js";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "fs";
@@ -13,6 +12,8 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { Readable } from "stream";
 import { describe, expect, it, vi } from "vitest";
+
+import { getTestConfig } from "../../setup.js";
 
 describe.concurrent("SoundService Integration Tests", () => {
     // Use a factory function to create isolated test context for each test
@@ -74,25 +75,11 @@ describe.concurrent("SoundService Integration Tests", () => {
         };
 
         // Create test config with unique temp directory
-        const testConfig: Config = {
-            server: { port: 3000, environment: "test" },
-            database: { url: "postgresql://test:test@localhost:5432/test" },
-            discord: {
-                token: "test-token",
-                clientId: "test-client-id",
-                serverId: "",
-                botChannelId: "",
-                defaultVoiceChannelId: "",
-                roleId: "",
-                skipChannelProcessingOnStartup: false,
-            },
+        const baseConfig = getTestConfig();
+        const testConfig = {
+            ...baseConfig,
             sounds: { storagePath: tempDir },
-            cache: { audioDownloadPath: join(tempDir, "cache"), ttlHours: 24, maxSizeMb: 1000 },
-            ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
-            llm: {
-                apiKey: "",
-                instructionsPath: "",
-            },
+            cache: { ...baseConfig.cache, audioDownloadPath: join(tempDir, "cache") },
         };
 
         // Create services
@@ -125,7 +112,8 @@ describe.concurrent("SoundService Integration Tests", () => {
         }
     };
 
-    it("should successfully add and retrieve a sound from URL", async () => {
+    it("should successfully add and retrieve a sound from URL", testAddAndRetrieveSoundFromUrl, 30000);
+    async function testAddAndRetrieveSoundFromUrl() {
         const ctx = createTestContext();
         try {
             const testUrl = "https://example.com/test-audio.mp3";
@@ -161,9 +149,10 @@ describe.concurrent("SoundService Integration Tests", () => {
         } finally {
             await cleanupTestContext(ctx.tempDir);
         }
-    }, 30000); // Increase timeout for FFmpeg processing
+    }
 
-    it("should list sounds correctly", async () => {
+    it("should list sounds correctly", testListSounds, 45000);
+    async function testListSounds() {
         const ctx = createTestContext();
         try {
             const soundName1 = "test-sound-1";
@@ -190,9 +179,10 @@ describe.concurrent("SoundService Integration Tests", () => {
         } finally {
             await cleanupTestContext(ctx.tempDir);
         }
-    }, 45000);
+    }
 
-    it("should delete sounds correctly", async () => {
+    it("should delete sounds correctly", testDeleteSounds, 30000);
+    async function testDeleteSounds() {
         const ctx = createTestContext();
         try {
             const soundName = "test-delete-sound";
@@ -215,9 +205,10 @@ describe.concurrent("SoundService Integration Tests", () => {
         } finally {
             await cleanupTestContext(ctx.tempDir);
         }
-    }, 30000);
+    }
 
-    it("should handle URL audio streams with processing", async () => {
+    it("should handle URL audio streams with processing", testHandleUrlAudioStreams, 30000);
+    async function testHandleUrlAudioStreams() {
         const ctx = createTestContext();
         try {
             const testUrl = "https://example.com/streaming-audio.mp3";
@@ -237,9 +228,10 @@ describe.concurrent("SoundService Integration Tests", () => {
         } finally {
             await cleanupTestContext(ctx.tempDir);
         }
-    }, 30000);
+    }
 
-    it("should handle errors gracefully", async () => {
+    it("should handle errors gracefully", testHandleErrors);
+    async function testHandleErrors() {
         const ctx = createTestContext();
         try {
             // Test with invalid URL
@@ -253,5 +245,5 @@ describe.concurrent("SoundService Integration Tests", () => {
         } finally {
             await cleanupTestContext(ctx.tempDir);
         }
-    });
+    }
 });

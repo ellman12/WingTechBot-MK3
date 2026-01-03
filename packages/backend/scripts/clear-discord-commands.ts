@@ -1,5 +1,9 @@
 import { REST, Routes } from "discord.js";
 
+import { loadEnvironment } from "../src/infrastructure/config/EnvLoader.js";
+
+await loadEnvironment();
+
 const clearCommands = async () => {
     const token = process.env.DISCORD_TOKEN;
     const clientId = process.env.DISCORD_CLIENT_ID;

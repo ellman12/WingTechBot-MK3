@@ -1,12 +1,11 @@
+import { getConfig } from "@adapters/config/ConfigAdapter.js";
 import { config } from "@dotenvx/dotenvx";
-import { getConfig, resetConfig } from "@infrastructure/config/Config.js";
 import type { DiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { Client, Partials } from "discord.js";
 import path from "path";
 
 //Used with WTB MK3's integration tests. Sends messages, adds reactions, etc.
 export const createTesterDiscordBot = async (): Promise<DiscordBot> => {
-    resetConfig();
     config({ path: path.resolve(__dirname, ".env.test"), strict: false, override: true });
     const testerConfig = getConfig("tester");
 

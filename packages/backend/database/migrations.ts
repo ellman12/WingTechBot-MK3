@@ -6,8 +6,17 @@ import { join } from "path";
 import { Pool } from "pg";
 import { pathToFileURL } from "url";
 
-export const getKyselyForMigrations = (): Kysely<DB> => {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const getKyselyForMigrations = (schemaName?: string): Kysely<DB> => {
+    const connectionString = process.env.DATABASE_URL;
+    const sanitizedSchema = schemaName?.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
+
+    const pool = new Pool({ connectionString });
+
+    if (sanitizedSchema) {
+        pool.on("connect", client => {
+            return client.query(`SET search_path TO ${sanitizedSchema}`);
+        });
+    }
 
     return new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
 };
@@ -44,9 +53,14 @@ const migrationProvider = {
     },
 };
 
-export const runMigrations = async (): Promise<void> => {
-    const db = getKyselyForMigrations();
-    const migrator = new Migrator({ db, provider: migrationProvider });
+export const runMigrations = async (schemaName?: string): Promise<void> => {
+    const db = getKyselyForMigrations(schemaName);
+
+    const sanitizedSchema = schemaName?.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
+
+    const migratorConfig = sanitizedSchema ? { db, provider: migrationProvider, migrationTableSchema: sanitizedSchema } : { db, provider: migrationProvider };
+
+    const migrator = new Migrator(migratorConfig);
 
     try {
         const { error, results } = await migrator.migrateToLatest();

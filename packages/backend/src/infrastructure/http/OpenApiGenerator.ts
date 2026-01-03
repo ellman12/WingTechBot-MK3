@@ -1,16 +1,14 @@
 import { OpenAPIRegistry, OpenApiGeneratorV3 } from "@asteasolutions/zod-to-openapi";
 import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
+import type { Config } from "@core/config/Config.js";
 import type { Application } from "express";
 import swaggerUi from "swagger-ui-express";
 import { z } from "zod/v4";
 
-import { getConfig } from "../config/Config.js";
 import { getAllRoutes } from "./api/RouteRegistry.js";
 import type { RouteRegistryEntry } from "./api/types.js";
 
 extendZodWithOpenApi(z);
-
-const config = getConfig();
 
 let registryInstance: OpenAPIRegistry | null = null;
 
@@ -21,7 +19,7 @@ const getRegistry = (): OpenAPIRegistry => {
     return registryInstance;
 };
 
-const generateServers = (): Array<{ url: string; description: string }> => {
+const generateServers = (config: Config): Array<{ url: string; description: string }> => {
     return [{ url: `http://localhost:${config.server.port}`, description: "Development server" }];
 };
 
@@ -223,7 +221,7 @@ const pathToSchemaName = (path: string): string => {
         .join("");
 };
 
-export const generateOpenApiSpec = (): Record<string, unknown> => {
+export const generateOpenApiSpec = (config: Config): Record<string, unknown> => {
     const routes = getAllRoutes();
 
     registerRouteSchemas(routes);
@@ -238,7 +236,7 @@ export const generateOpenApiSpec = (): Record<string, unknown> => {
             version: "1.0.0",
             description: "API for WingTechBot MK3 Discord bot",
         },
-        servers: generateServers(),
+        servers: generateServers(config),
         tags: generateTags(routes),
     });
 
@@ -248,8 +246,8 @@ export const generateOpenApiSpec = (): Record<string, unknown> => {
     return openApiSpec;
 };
 
-export const setupSwaggerUI = (app: Application): void => {
-    const spec = generateOpenApiSpec();
+export const setupSwaggerUI = (app: Application, config: Config): void => {
+    const spec = generateOpenApiSpec(config);
 
     app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(spec, { explorer: true }));
 

@@ -1,34 +1,40 @@
 import { sleep } from "@core/utils/timeUtils.js";
 import type { Message, TextChannel } from "discord.js";
 
-import { getApp } from "@/main";
-
-import { cleanupAllTestChannels, createTemporaryTestChannel, deleteTestChannel, getTestingChannel, recreateDatabase, setUpIntegrationTest } from "../../utils/testUtils.js";
+import { getTestConfig } from "../../setup.js";
+import { type MinimalTestBot, createMinimalTestBot } from "../../utils/createMinimalTestBot.js";
+import { cleanupAllTestChannels, createTemporaryTestChannel, createTestSchema, deleteTestChannel, dropTestSchema } from "../../utils/testUtils.js";
+import { createTesterDiscordBot } from "../testBot/TesterDiscordBot.js";
 
 const timeout = 360 * 1000;
 const delay = 6000;
+const schemaName = "test_processAllChannels";
 
 describe("processAllChannels", async () => {
     let testChannel: TextChannel | null = null;
+    let minimalBot: MinimalTestBot | null = null;
+    let testerBot: Awaited<ReturnType<typeof createTesterDiscordBot>> | null = null;
 
     beforeAll(async () => {
+        const testConfig = getTestConfig();
+
+        await createTestSchema(schemaName, testConfig.database.url);
+
+        minimalBot = await createMinimalTestBot(testConfig, schemaName, {
+            messageArchiveService: true,
+        });
+
+        await minimalBot.bot.start();
         await sleep(delay);
 
-        const bot = getApp().discordBot;
-        const channel = await getTestingChannel(bot);
-        await channel.send("Starting processAllChannels tests");
-    });
-
-    beforeEach(async () => {
-        await sleep(delay);
-        await recreateDatabase();
-    });
+        testerBot = await createTesterDiscordBot();
+    }, timeout);
 
     afterEach(async () => {
-        if (testChannel) {
+        if (testChannel && minimalBot) {
+            minimalBot.allowedChannels.delete(testChannel.id);
             // Re-fetch the channel from the current bot's client to ensure we have a valid token
-            const bot = getApp().discordBot;
-            const guild = await bot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+            const guild = await minimalBot.bot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
             const currentChannel = (await guild.channels.fetch(testChannel.id)) as TextChannel;
             if (currentChannel) {
                 await deleteTestChannel(currentChannel);
@@ -39,17 +45,35 @@ describe("processAllChannels", async () => {
     });
 
     afterAll(async () => {
-        const bot = getApp().discordBot;
-        await cleanupAllTestChannels(bot);
+        if (minimalBot) {
+            // cleanupAllTestChannels already checks if bot is ready, so safe to call
+            await cleanupAllTestChannels(minimalBot.bot);
+            // Only stop if still ready (cleanupAllTestChannels might have skipped if not ready)
+            if (minimalBot.bot.isReady()) {
+                await minimalBot.bot.stop();
+            }
+            await minimalBot.db.destroy();
+
+            const testConfig = getTestConfig();
+            await dropTestSchema(schemaName, testConfig.database.url);
+        }
+        if (testerBot) {
+            await testerBot.client.destroy();
+        }
     });
 
+    it("should read all messages and reactions on load", testReadAllMessagesAndReactionsOnLoad, timeout);
     //prettier-ignore
-    it("should read all messages and reactions on load", async () => {
-        const { bot, testerBot, db } = await setUpIntegrationTest();
-        const app = (await import("@/main")).getApp();
+    async function testReadAllMessagesAndReactionsOnLoad() {
+        if (!minimalBot || !testerBot) throw new Error("Test setup incomplete");
 
-        // Create temporary channel for this test
+        const bot = minimalBot.bot;
+        const db = minimalBot.db;
+        const messageArchiveService = minimalBot.messageArchiveService;
+        if (!messageArchiveService) throw new Error("messageArchiveService not available");
+
         testChannel = await createTemporaryTestChannel(bot);
+        minimalBot.addChannel(testChannel.id);
         const testerChannel = await testerBot.client.channels.fetch(testChannel.id) as TextChannel;
 
         async function stopBot() {
@@ -59,12 +83,11 @@ describe("processAllChannels", async () => {
 
         async function startBot() {
             await bot.start();
-            // Manually process channels since SKIP_CHANNEL_PROCESSING_ON_STARTUP is enabled for tests
             const guild = await bot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-            if (!testChannel) throw new Error("Test channel not initialized");
-            await app.messageArchiveService.processAllChannels(guild, undefined, [testChannel.id]);
-            await app.messageArchiveService.removeDeletedMessages(guild);
-            await sleep(2000); // Wait for processing to complete
+            if (!testChannel || !messageArchiveService) throw new Error("Test channel or messageArchiveService not initialized");
+            await messageArchiveService.processAllChannels(guild, undefined, [testChannel.id]);
+            await messageArchiveService.removeDeletedMessages(guild);
+            await sleep(2000);
         }
 
         async function getAllMessages() {
@@ -76,7 +99,6 @@ describe("processAllChannels", async () => {
             expect(reactions).toHaveLength(expected);
         }
 
-        //Go offline and send messages for bot to process later.
         await stopBot();
 
         const newMessages: Message[] = [];
@@ -101,14 +123,12 @@ describe("processAllChannels", async () => {
             await checkReactionsAmount(message.id, 2);
         }
 
-        //Delete these new messages and make sure bot handles them properly on reload.
         await stopBot();
 
         for (const message of newMessages) {
             await message.delete();
         }
 
-        // Wait a bit for Discord to process the deletions
         await sleep(2000);
 
         await startBot();
@@ -118,5 +138,5 @@ describe("processAllChannels", async () => {
             expect(existingMessages.find(m => m.id === message.id)).toBeUndefined();
             // Reactions are automatically deleted via CASCADE when message is deleted
         }
-    }, timeout);
+    }
 });

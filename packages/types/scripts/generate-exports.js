@@ -9,9 +9,7 @@ const __dirname = path.dirname(__filename);
 const SRC_DIR = path.join(__dirname, "../src");
 const PACKAGE_JSON_PATH = path.join(__dirname, "../package.json");
 
-/**
- * Recursively find all TypeScript files in a directory
- */
+// Recursively find all TypeScript files in a directory
 function findTsFiles(dir, baseDir = dir) {
     const files = [];
     const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -32,9 +30,7 @@ function findTsFiles(dir, baseDir = dir) {
     return files;
 }
 
-/**
- * Generate exports object for package.json
- */
+// Generate exports object for package.json
 function generateExports(tsFiles) {
     const exports = { ".": { types: "./dist/index.d.ts", import: "./dist/index.js" } };
 
@@ -49,9 +45,7 @@ function generateExports(tsFiles) {
     return exports;
 }
 
-/**
- * Update package.json with generated exports
- */
+// Update package.json with generated exports
 function updatePackageJson(exports) {
     const packageJson = JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, "utf8"));
 
@@ -65,9 +59,7 @@ function updatePackageJson(exports) {
     console.log("📦 Generated exports for", Object.keys(exports).length, "modules");
 }
 
-/**
- * Main function
- */
+// Main function
 function main() {
     try {
         console.log("🔍 Scanning TypeScript files...");

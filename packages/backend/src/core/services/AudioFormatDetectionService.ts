@@ -9,21 +9,12 @@ import type { AudioFormatInfo } from "../entities/AudioFormatInfo.js";
 import { isValidAudioFormat } from "../entities/AudioFormatInfo.js";
 import { CorruptedAudioError, FormatDetectionError, UnsupportedFormatError } from "../errors/AudioErrors.js";
 
-/**
- * Detects audio format using ffprobe before processing to prevent FFmpeg inference errors.
- * Supports files, URLs, and streams (with buffering).
- */
+// Detects audio format using ffprobe before processing to prevent FFmpeg inference errors.
+// Supports files, URLs, and streams (with buffering).
 export class AudioFormatDetectionService {
     constructor(private readonly ffprobeService: FfprobeService) {}
 
-    /**
-     * Detect audio format from a file path.
-     *
-     * @param filePath - Absolute path to audio file
-     * @returns Complete audio format information
-     * @throws FormatDetectionError if file has no audio stream
-     * @throws CorruptedAudioError if file is corrupted
-     */
+    // Detect audio format from a file path.
     async detectFromFile(filePath: string): Promise<AudioFormatInfo> {
         console.log("[AudioFormatDetection] Detecting format from file", { filePath });
 
@@ -39,14 +30,7 @@ export class AudioFormatDetectionService {
         }
     }
 
-    /**
-     * Detect audio format from a URL.
-     *
-     * @param url - HTTP(S) URL to audio file
-     * @param timeout - Timeout in milliseconds (default: 30000)
-     * @returns Complete audio format information
-     * @throws FormatDetectionError if URL has no audio stream
-     */
+    // Detect audio format from a URL.
     async detectFromUrl(url: string, timeout: number = 30000): Promise<AudioFormatInfo> {
         console.log("[AudioFormatDetection] Detecting format from URL", { url });
 
@@ -62,18 +46,10 @@ export class AudioFormatDetectionService {
         }
     }
 
-    /**
-     * Detect audio format from a stream.
-     *
-     * NOTE: This method must buffer the stream to a temporary file to probe it,
-     * as ffprobe cannot probe streams directly. For large streams, consider
-     * using detectFromUrl if the source is a URL.
-     *
-     * @param stream - Readable stream containing audio data
-     * @param maxSizeBytes - Maximum bytes to buffer (default: 100MB)
-     * @returns Complete audio format information
-     * @throws FormatDetectionError if stream has no audio or is too large
-     */
+    // Detect audio format from a stream.
+    // NOTE: This method must buffer the stream to a temporary file to probe it,
+    // as ffprobe cannot probe streams directly. For large streams, consider
+    // using detectFromUrl if the source is a URL.
     async detectFromStream(stream: Readable, maxSizeBytes: number = 100 * 1024 * 1024): Promise<AudioFormatInfo> {
         console.log("[AudioFormatDetection] Detecting format from stream", { maxSizeBytes });
 
@@ -110,13 +86,8 @@ export class AudioFormatDetectionService {
         }
     }
 
-    /**
-     * Fast format detection using minimal data.
-     * Useful for quick validation before full processing.
-     *
-     * @param input - File path or URL
-     * @returns Basic format information (may be incomplete)
-     */
+    // Fast format detection using minimal data.
+    // Useful for quick validation before full processing.
     async detectFast(input: string): Promise<AudioFormatInfo> {
         console.log("[AudioFormatDetection] Fast format detection", { input });
 
@@ -128,10 +99,8 @@ export class AudioFormatDetectionService {
         }
     }
 
-    /**
-     * Parse ffprobe output into AudioFormatInfo.
-     * Validates that audio stream exists and extracts metadata.
-     */
+    // Parse ffprobe output into AudioFormatInfo.
+    // Validates that audio stream exists and extracts metadata.
     private parseFormatInfo(output: Awaited<ReturnType<FfprobeService["probe"]>>, context: { filePath?: string; url?: string }): AudioFormatInfo {
         // Find audio stream
         const audioStream = output.streams?.find(s => s.codec_type === "audio");
@@ -188,10 +157,8 @@ export class AudioFormatDetectionService {
         return formatInfo;
     }
 
-    /**
-     * Write stream to file with size limit.
-     * Throws if stream exceeds maxSizeBytes.
-     */
+    // Write stream to file with size limit.
+    // Throws if stream exceeds maxSizeBytes.
     private async writeStreamToFile(stream: Readable, filePath: string, maxSizeBytes: number): Promise<void> {
         return new Promise((resolve, reject) => {
             const writeStream = fs.createWriteStream(filePath);

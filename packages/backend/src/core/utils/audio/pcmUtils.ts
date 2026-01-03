@@ -1,10 +1,6 @@
-/**
- * Shared PCM audio utilities for reading, writing, and mixing 16-bit signed PCM samples
- */
+// Shared PCM audio utilities for reading, writing, and mixing 16-bit signed PCM samples
 
-/**
- * Reads a 16-bit signed PCM sample from a buffer (little-endian)
- */
+// Reads a 16-bit signed PCM sample from a buffer (little-endian)
 export function readPcmSample(buffer: Buffer, byteIndex: number): number {
     if (byteIndex + 1 >= buffer.length) {
         return 0; // Return silence if out of bounds
@@ -12,35 +8,24 @@ export function readPcmSample(buffer: Buffer, byteIndex: number): number {
     return buffer.readInt16LE(byteIndex);
 }
 
-/**
- * Clamps a sample value to the valid 16-bit signed range (-32768 to 32767)
- */
+// Clamps a sample value to the valid 16-bit signed range (-32768 to 32767)
 export function clampSample(value: number): number {
     return Math.max(-32768, Math.min(32767, value));
 }
 
-/**
- * Writes a 16-bit signed PCM sample to a buffer (little-endian)
- * Automatically clamps the value to prevent clipping
- */
+// Writes a 16-bit signed PCM sample to a buffer (little-endian)
+// Automatically clamps the value to prevent clipping
 export function writePcmSample(buffer: Buffer, byteIndex: number, value: number): void {
     const clampedValue = clampSample(Math.round(value));
     buffer.writeInt16LE(clampedValue, byteIndex);
 }
 
-/**
- * Calculates the byte index for a specific sample and channel
- */
+// Calculates the byte index for a specific sample and channel
 export function getSampleByteIndex(sampleIndex: number, channel: number, bytesPerSample: number): number {
     return sampleIndex * bytesPerSample + channel * 2; // 2 bytes per 16-bit sample
 }
 
-/**
- * Mixes multiple PCM samples together with optional volume scaling
- * @param samples - Array of sample values to mix
- * @param volumes - Optional array of volume multipliers (0.0 to 1.0)
- * @returns The mixed sample value (clamped to 16-bit range)
- */
+// Mixes multiple PCM samples together with optional volume scaling
 export function mixSamples(samples: number[], volumes?: number[]): number {
     const mixed = samples.reduce((sum, sample, i) => {
         const volume = volumes?.[i] ?? 1.0;

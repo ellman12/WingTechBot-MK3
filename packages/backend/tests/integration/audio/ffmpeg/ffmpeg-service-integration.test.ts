@@ -21,50 +21,48 @@ describe.concurrent("FfmpegService Integration Tests", () => {
     // Note: These tests require ffmpeg to be installed
     // They may be skipped in CI environments without ffmpeg
 
-    it.skipIf(process.env.CI)(
-        "should convert audio format",
-        async () => {
-            // Check if ffmpeg is available first
-            if (!(await isFfmpegAvailable())) {
-                console.log("⏭️ Skipping test: ffmpeg not available");
-                return;
-            }
+    it.skipIf(process.env.CI)("should convert audio format", testConvertAudioFormat, 10000);
+    async function testConvertAudioFormat() {
+        // Check if ffmpeg is available first
+        if (!(await isFfmpegAvailable())) {
+            console.log("⏭️ Skipping test: ffmpeg not available");
+            return;
+        }
 
-            // Create a simple PCM audio buffer (sine wave)
-            const sampleRate = 48000;
-            const duration = 0.1; // 100ms
-            const samples = sampleRate * duration;
-            const inputBuffer = new Uint8Array(samples * 2); // 16-bit samples
+        // Create a simple PCM audio buffer (sine wave)
+        const sampleRate = 48000;
+        const duration = 0.1; // 100ms
+        const samples = sampleRate * duration;
+        const inputBuffer = new Uint8Array(samples * 2); // 16-bit samples
 
-            // Generate a simple sine wave
-            for (let i = 0; i < samples; i++) {
-                const sample = Math.sin((2 * Math.PI * 440 * i) / sampleRate) * 32767;
-                const index = i * 2;
-                inputBuffer[index] = sample & 0xff;
-                inputBuffer[index + 1] = (sample >> 8) & 0xff;
-            }
+        // Generate a simple sine wave
+        for (let i = 0; i < samples; i++) {
+            const sample = Math.sin((2 * Math.PI * 440 * i) / sampleRate) * 32767;
+            const index = i * 2;
+            inputBuffer[index] = sample & 0xff;
+            inputBuffer[index + 1] = (sample >> 8) & 0xff;
+        }
 
-            try {
-                const result = await ffmpegService.convertAudio(inputBuffer, {
-                    inputFormat: "s16le",
-                    outputFormat: "wav",
-                    codec: "pcm_s16le",
-                    sampleRate: 48000,
-                    channels: 1,
-                });
+        try {
+            const result = await ffmpegService.convertAudio(inputBuffer, {
+                inputFormat: "s16le",
+                outputFormat: "wav",
+                codec: "pcm_s16le",
+                sampleRate: 48000,
+                channels: 1,
+            });
 
-                expect(result).toBeInstanceOf(Uint8Array);
-                expect(result.length).toBeGreaterThan(0);
-            } catch (error) {
-                console.log(`⏭️ Skipping test due to ffmpeg error: ${error instanceof Error ? error.message : "Unknown error"}`);
-                // Don't fail the test, just skip it
-                return;
-            }
-        },
-        10000
-    );
+            expect(result).toBeInstanceOf(Uint8Array);
+            expect(result.length).toBeGreaterThan(0);
+        } catch (error) {
+            console.log(`⏭️ Skipping test due to ffmpeg error: ${error instanceof Error ? error.message : "Unknown error"}`);
+            // Don't fail the test, just skip it
+            return;
+        }
+    }
 
-    it("should handle invalid input gracefully", async () => {
+    it("should handle invalid input gracefully", testHandleInvalidInput, 10000);
+    async function testHandleInvalidInput() {
         const invalidInput = new Uint8Array([1, 2, 3, 4]);
 
         await expect(
@@ -74,10 +72,11 @@ describe.concurrent("FfmpegService Integration Tests", () => {
                 codec: "libmp3lame",
             })
         ).rejects.toThrow();
-    }, 10000);
+    }
 
     // Test for ffmpeg process failures
-    it("should handle ffmpeg process spawn failures", async () => {
+    it("should handle ffmpeg process spawn failures", testHandleFfmpegProcessSpawnFailures, 10000);
+    async function testHandleFfmpegProcessSpawnFailures() {
         // Test with invalid input that causes ffmpeg to fail
         const testInput = new Uint8Array([1, 2, 3, 4]);
 
@@ -87,5 +86,5 @@ describe.concurrent("FfmpegService Integration Tests", () => {
                 codec: "pcm_s16le",
             })
         ).rejects.toThrow(/ffmpeg exited|Audio conversion failed/);
-    }, 10000);
+    }
 });

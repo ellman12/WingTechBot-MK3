@@ -47,9 +47,7 @@ import type { RouteGroup } from "../../../infrastructure/http/api/types.js";
 import "../../contracts/v1/requests.js";
 import "../../contracts/v1/responses.js";
 
-/**
- * Feature routes configuration for API v1
- */
+// Feature routes configuration for API v1
 export const createFeatureRoutes = (db: Kysely<DB>): RouteGroup => ({
     name: "feature",
     basePath: "/feature",

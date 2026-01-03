@@ -12,13 +12,7 @@ export interface Repositories {
 
 // Business logic layer interface for database transactions
 export interface UnitOfWork {
-    /**
-     * Execute a function within a transactional context.
-     * All repository operations within the work function will be committed atomically.
-     *
-     * @param work - Function containing repository operations to execute transactionally
-     * @returns The result of the work function
-     * @throws Error if the transaction fails or is rolled back
-     */
+    // Execute a function within a transactional context.
+    // All repository operations within the work function will be committed atomically.
     execute<T>(work: (repositories: Repositories) => Promise<T>): Promise<T>;
 }

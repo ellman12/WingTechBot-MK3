@@ -4,6 +4,8 @@ export function randomInt(min: number, max: number): number {
 }
 
 export function oneIn(chance: number): boolean {
+    if (chance === 0) return false;
+    if (chance === 1) return true;
     return Math.floor(Math.random() * chance) === 0;
 }
 

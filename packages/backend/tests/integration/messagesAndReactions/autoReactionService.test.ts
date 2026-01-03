@@ -2,31 +2,39 @@ import { reactionScoldMessages } from "@core/services/AutoReactionService.js";
 import { sleep } from "@core/utils/timeUtils.js";
 import type { TextChannel } from "discord.js";
 
-import { getApp } from "@/main";
-
-import { cleanupAllTestChannels, createTemporaryTestChannel, deleteTestChannel, getTestingChannel, recreateDatabase, setUpIntegrationTest } from "../../utils/testUtils.js";
+import { getTestConfig } from "../../setup.js";
+import { type MinimalTestBot, createMinimalTestBot } from "../../utils/createMinimalTestBot.js";
+import { cleanupAllTestChannels, createTemporaryTestChannel, createTestSchema, deleteTestChannel, dropTestSchema, getTestingEmotes, waitForBotScoldMessage } from "../../utils/testUtils.js";
+import { createTesterDiscordBot } from "../testBot/TesterDiscordBot.js";
 
 const timeout = 120 * 1000;
+const schemaName = "test_autoReactionService";
 
 //prettier-ignore
 describe("Messages and Reactions integration tests", async () => {
     let testChannel: TextChannel | null = null;
+    let minimalBot: MinimalTestBot | null = null;
+    let testerBot: Awaited<ReturnType<typeof createTesterDiscordBot>> | null = null;
 
     beforeAll(async () => {
+        const testConfig = getTestConfig();
+
+        await createTestSchema(schemaName, testConfig.database.url);
+
+        minimalBot = await createMinimalTestBot(testConfig, schemaName, {
+            autoReactionService: true,
+            reactionArchiveService: true,
+        });
+
+        await minimalBot.bot.start();
         await sleep(2000);
 
-        const bot = getApp().discordBot;
-        const channel = await getTestingChannel(bot);
-        await channel.send("Starting AutoReactionService tests");
-    });
-
-    beforeEach(async () => {
-        await sleep(5000);
-        await recreateDatabase();
-    });
+        testerBot = await createTesterDiscordBot();
+    }, timeout);
 
     afterEach(async () => {
-        if (testChannel) {
+        if (testChannel && minimalBot) {
+            minimalBot.allowedChannels.delete(testChannel.id);
             await deleteTestChannel(testChannel);
             testChannel = null;
             await sleep(3000); // Allow bot operations to complete after channel deletion
@@ -34,39 +42,51 @@ describe("Messages and Reactions integration tests", async () => {
     });
 
     afterAll(async () => {
-        const bot = getApp().discordBot;
-        await cleanupAllTestChannels(bot);
+        if (minimalBot) {
+            await cleanupAllTestChannels(minimalBot.bot);
+            await minimalBot.bot.stop();
+            await minimalBot.db.destroy();
+            
+            const testConfig = getTestConfig();
+            await dropTestSchema(schemaName, testConfig.database.url);
+        }
+        if (testerBot) {
+            await testerBot.client.destroy();
+        }
     });
 
-    it("should scold self-reactions", async () => {
-        const { bot, emotes, testerBot } = await setUpIntegrationTest();
+    it("should scold self-reactions", testScoldSelfReactions, timeout);
+    async function testScoldSelfReactions() {
+        if (!minimalBot || !testerBot) throw new Error("Test setup incomplete");
 
-        // Create temporary channel for this test
+        const bot = minimalBot.bot;
+        const emotes = await getTestingEmotes(bot);
+
         testChannel = await createTemporaryTestChannel(bot);
+        minimalBot.addChannel(testChannel.id);
         const testerChannel = await testerBot.client.channels.fetch(testChannel.id) as TextChannel;
 
         const message = await testerChannel.send("Reacting to this message");
 
-        // Test just one self-reaction instead of all three
-        const [emoteName, emoteId] = emotes[2]!; // Just test one emote
+        const [emoteName, emoteId] = emotes[2]!;
         await message.react(emoteId!);
-        await sleep(3000); 
-        const fetchedMessage = (await testerChannel.messages.fetch({ limit: 1 }))!.first()!;
+        
+        const botScoldMessage = await waitForBotScoldMessage(testerChannel, bot.client.user!.id, emoteName!);
 
+        expect(botScoldMessage).not.toBeUndefined();
         const possibleMessages = reactionScoldMessages[emoteName!]!;
-        const found = possibleMessages.find(m => fetchedMessage.content.includes(m));
+        const found = possibleMessages.find(m => botScoldMessage!.content.includes(m));
         expect(found).not.toBeUndefined();
+    }
 
-        await fetchedMessage.delete();
+    it("should reply 'Nice' when message contains funny substrings", testReplyNiceForFunnySubstrings, timeout);
+    async function testReplyNiceForFunnySubstrings() {
+        if (!minimalBot || !testerBot) throw new Error("Test setup incomplete");
 
-        await message.delete();
-    }, timeout);
+        const bot = minimalBot.bot;
 
-    it("should reply 'Nice' when message contains funny substrings", async () => {
-        const { bot, testerBot } = await setUpIntegrationTest();
-
-        // Create temporary channel for this test
         testChannel = await createTemporaryTestChannel(bot);
+        minimalBot.addChannel(testChannel.id);
         const testerChannel = await testerBot.client.channels.fetch(testChannel.id) as TextChannel;
 
         const message = await testerChannel.send("This number is 69420 lol");
@@ -79,28 +99,24 @@ describe("Messages and Reactions integration tests", async () => {
         expect(reply).toBeTruthy();
         expect(reply!.content).toMatch(/Nice/);
         expect(reply!.content).toMatch(/\*\*69420\*\*/);
+    }
 
-        for (const fetched of fetchedMessages.values()) {
-            await fetched.delete();
-        }
-    }, timeout);
+    it("should say 'I hardly even know 'er!' to sentences with the last word ending in 'er'", testHardlyKnowHer, timeout);
+    async function testHardlyKnowHer() {
+        if (!minimalBot || !testerBot) throw new Error("Test setup incomplete");
 
-    it("should say 'I hardly know her!' to sentences with the last word ending in 'er'", async () => {
-        const { bot, testerBot } = await setUpIntegrationTest();
+        const bot = minimalBot.bot;
 
-        // Create temporary channel for this test
         testChannel = await createTemporaryTestChannel(bot);
+        minimalBot.addChannel(testChannel.id);
         const testerChannel = await testerBot.client.channels.fetch(testChannel.id) as TextChannel;
 
-        const message = await testerChannel.send("This message is from WingTech Bot Tester");
+        await testerChannel.send("This message is from WingTech Bot Tester");
 
         await sleep(2000); 
 
         const fetchedMessage = (await testerChannel.messages.fetch({ limit: 1 }))!.first()!;
-        expect(fetchedMessage.content).toEqual("\"Tester\"? I hardly know her!");
-
-        await fetchedMessage.delete();
-        await message.delete();
-    }, timeout);
+        expect(fetchedMessage.content).toEqual("\"Tester\"? I hardly even know 'er!");
+    }
 
 }, timeout);

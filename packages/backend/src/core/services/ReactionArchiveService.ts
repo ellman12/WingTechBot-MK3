@@ -22,15 +22,16 @@ const isClientDestroyedError = (error: unknown): boolean => {
     return error instanceof Error && error.message.includes("Expected token to be set for this request");
 };
 
-//Archives all reactions added to all messages.
 export const createReactionArchiveService = ({ messageRepository, reactionRepository, emoteRepository }: ReactionArchiveServiceDeps): ReactionArchiveService => {
     console.log("[ReactionArchiveService] Creating reaction archive service");
 
     return {
         addReaction: async (reaction, user): Promise<void> => {
+            console.log(`[ReactionArchiveService] addReaction called - user: ${user.id}, emoji: ${reaction.emoji.name}`);
             try {
                 const message = await reaction.message.fetch();
                 const channel = message.channel;
+
                 const year = message.createdAt.getUTCFullYear();
 
                 if (year < new Date().getUTCFullYear()) {
@@ -44,8 +45,6 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
                     throw new Error("Missing reaction emoji name");
                 }
 
-                // Ensure the message exists in the database before adding a reaction
-                // This handles race conditions where a reaction arrives before the message is saved
                 const referencedMessageId = message.reference ? message.reference.messageId : undefined;
                 await messageRepository.create({
                     id: message.id,
@@ -61,17 +60,15 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
 
                 const data = { giverId: user.id, receiverId: message.author.id, channelId: channel.id, messageId: message.id, emoteId: reactionEmote.id };
                 await reactionRepository.create(data);
+                console.log(`[ReactionArchiveService] ✅ Successfully saved reaction - emoji: ${emoteName}, channel: ${channel.id}`);
             } catch (e: unknown) {
-                // Handle Discord API errors for deleted/unknown channels/messages
+                console.error(`[ReactionArchiveService] ❌ Error in addReaction - emoji: ${reaction.emoji.name}, error:`, e);
                 if (e && typeof e === "object" && "code" in e) {
                     const apiError = e as { code: number };
                     if (apiError.code === 10003 || apiError.code === 10008) {
-                        // 10003 = Unknown Channel, 10008 = Unknown Message
-                        // Silently skip - channel/message was deleted
                         return;
                     }
                 }
-                // Ignore errors when bot is being destroyed (token no longer available)
                 if (!isClientDestroyedError(e)) {
                     console.error("Error adding reaction to message", e);
                 }
@@ -82,6 +79,7 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
             try {
                 const message = await reaction.message.fetch();
                 const channel = message.channel;
+
                 const year = message.createdAt.getUTCFullYear();
 
                 if (year < new Date().getUTCFullYear()) {
@@ -105,7 +103,6 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
                 const data = { giverId: user.id, receiverId: message.author.id, channelId: channel.id, messageId: message.id, emoteId: reactionEmote.id };
                 await reactionRepository.delete(data);
             } catch (e: unknown) {
-                // Ignore errors when bot is being destroyed (token no longer available)
                 if (!isClientDestroyedError(e)) {
                     console.error("Error removing reaction from message", e);
                 }
@@ -115,6 +112,7 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
         removeReactionsForMessage: async (message): Promise<void> => {
             try {
                 await message.fetch();
+
                 const year = message.createdAt.getUTCFullYear();
 
                 if (year < new Date().getUTCFullYear()) {
@@ -124,7 +122,6 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
 
                 await reactionRepository.deleteReactionsForMessage(message.id);
             } catch (e: unknown) {
-                // Ignore errors when bot is being destroyed (token no longer available)
                 if (!isClientDestroyedError(e)) {
                     console.error("Error removing reaction from message", e);
                 }
@@ -134,6 +131,7 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
         removeReactionsForEmote: async (reaction): Promise<void> => {
             try {
                 await reaction.fetch();
+
                 const year = reaction.message.createdAt.getUTCFullYear();
                 const name = reaction.emoji.name;
 
@@ -154,7 +152,6 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
 
                 await reactionRepository.deleteReactionsForEmote(reaction.message.id, emote.id);
             } catch (e: unknown) {
-                // Ignore errors when bot is being destroyed (token no longer available)
                 if (!isClientDestroyedError(e)) {
                     console.error("Error removing reactions for emote", e);
                 }

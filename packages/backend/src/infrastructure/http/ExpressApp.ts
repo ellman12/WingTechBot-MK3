@@ -1,3 +1,4 @@
+import type { Config } from "@core/config/Config.js";
 import type { DB } from "@db/types.js";
 import { setupSwaggerUI } from "@infrastructure/http/OpenApiGenerator.js";
 import { initializeApiRouter, setupRoutes as setupApiRoutes } from "@infrastructure/http/api/ApiRouter.js";
@@ -16,6 +17,7 @@ export type ServerConfig = {
 export type ExpressAppDeps = {
     readonly db: Kysely<DB>;
     readonly config: ServerConfig;
+    readonly appConfig: Config;
 };
 
 export type ExpressApp = {
@@ -44,7 +46,7 @@ export const createExpressApp = (deps: ExpressAppDeps): ExpressApp => {
     };
 
     const setupDocumentation = (): void => {
-        setupSwaggerUI(app);
+        setupSwaggerUI(app, deps.appConfig);
     };
 
     const start = (): void => {

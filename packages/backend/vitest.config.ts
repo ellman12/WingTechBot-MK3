@@ -48,8 +48,14 @@ export default defineConfig({
                     test: {
                         ...baseTestConfig,
                         name: "discord-integration",
-                        include: ["tests/integration/messagesAndReactions/**/*.{test,spec}.{js,ts}"],
-                        fileParallelism: false,
+                        include: ["tests/integration/messagesAndReactions/**/*.{test,spec}.{js,ts}", "tests/integration/fullApplication.{test,spec}.{js,ts}"],
+                        fileParallelism: true,
+                        pool: "forks",
+                        poolOptions: {
+                            forks: {
+                                singleFork: false,
+                            },
+                        },
                     },
                 })
             ),

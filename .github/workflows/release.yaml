@@ -72,24 +72,13 @@ jobs:
                   services:
                     backend:
                       image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
+                      env_file:
+                        - .env
                       environment:
                         - NODE_ENV=production
                         - DATABASE_URL=postgresql://wingtechbot:wingtechbot_password@postgres:5432/wingtechbot
-                        - PORT=\${PORT:-3000}
-                        - CORS_ORIGIN=\${CORS_ORIGIN}
                         - SOUNDS_STORAGE_PATH=/app/sounds
                         - AUDIO_CACHE_PATH=/app/cache
-                        - AUDIO_CACHE_TTL_HOURS=\${AUDIO_CACHE_TTL_HOURS:-24}
-                        - AUDIO_CACHE_MAX_SIZE_MB=\${AUDIO_CACHE_MAX_SIZE_MB:-1000}
-                        - DISCORD_TOKEN=\${DISCORD_TOKEN}
-                        - DISCORD_CLIENT_ID=\${DISCORD_CLIENT_ID}
-                        - DISCORD_GUILD_ID=\${DISCORD_GUILD_ID}
-                        - DISCORD_BOT_CHANNEL_ID=\${DISCORD_BOT_CHANNEL_ID}
-                        - DISCORD_BOT_ROLE_ID=\${DISCORD_BOT_ROLE_ID}
-                        - DISCORD_ERROR_WEBHOOK_URL=\${DISCORD_ERROR_WEBHOOK_URL}
-                        - DEFAULT_VOICE_CHANNEL_ID=\${DEFAULT_VOICE_CHANNEL_ID}
-                        - LLM_API_KEY=\${LLM_API_KEY}
-                        - LLM_INSTRUCTIONS_PATH=\${LLM_INSTRUCTIONS_PATH}
                       ports:
                         - "3000:3000"
                       depends_on:
@@ -98,7 +87,6 @@ jobs:
                       volumes:
                         - sounds-data:/app/sounds
                         - /tmp/wingtechbot/cache:/app/cache
-                        - ./.env:/app/packages/backend/.env:ro
                         - ./llmInstructions/:/app/packages/backend/llmInstructions:ro
                       networks:
                         - app-network

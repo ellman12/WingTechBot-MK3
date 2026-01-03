@@ -1,7 +1,8 @@
 #!/usr/bin/env tsx
-import "@dotenvx/dotenvx/config";
-
 import { runMigrations } from "../database/migrations.js";
+import { loadEnvironment } from "../src/infrastructure/config/EnvLoader.js";
+
+await loadEnvironment();
 
 async function main() {
     try {
