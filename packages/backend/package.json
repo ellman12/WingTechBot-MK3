@@ -20,7 +20,7 @@
         "typecheck": "tsc --noEmit",
         "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
         "lint:fix": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" --fix",
-        "format": "prettier --write \"src/**/*.{ts,tsx,js,json}\" \"tests/**/*.{ts,tsx,js,json}\"",
+        "format": "prettier --write \"src/**/*.{ts,tsx,js,json}\" \"tests/**/*.{ts,tsx,js,json}\" && eslint \"src/**/*.ts\" \"tests/**/*.ts\" --fix",
         "format:check": "prettier --check \"src/**/*.{ts,tsx,js,json}\" \"tests/**/*.{ts,tsx,js,json}\"",
         "db:setup": "tsx scripts/setup-database.ts",
         "db:generate": "tsx scripts/generate-types.ts",

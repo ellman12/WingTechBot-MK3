@@ -1,5 +1,4 @@
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
-import type { Config } from "@core/config/Config.js";
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream.js";
 import { createAudioStreamWithFormat } from "@core/entities/AudioStream.js";
 import type { Sound } from "@core/entities/Sound.js";
@@ -13,6 +12,8 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { Readable } from "stream";
 import { describe, expect, it, vi } from "vitest";
+
+import { getTestConfig } from "../../setup.js";
 
 describe.concurrent("SoundService Integration Tests", () => {
     // Use a factory function to create isolated test context for each test
@@ -74,32 +75,11 @@ describe.concurrent("SoundService Integration Tests", () => {
         };
 
         // Create test config with unique temp directory
-        const testConfig: Config = {
-            server: { port: 3000, environment: "test" },
-            database: { url: "postgresql://test:test@localhost:5432/test" },
-            discord: {
-                token: "test-token",
-                clientId: "test-client-id",
-                serverId: "",
-                botChannelId: "",
-                defaultVoiceChannelId: "",
-                roleId: "",
-                skipChannelProcessingOnStartup: false,
-                skipCommandDeploymentOnStartup: false,
-            },
+        const baseConfig = getTestConfig();
+        const testConfig = {
+            ...baseConfig,
             sounds: { storagePath: tempDir },
-            cache: { audioDownloadPath: join(tempDir, "cache"), ttlHours: 24, maxSizeMb: 1000 },
-            ffmpeg: { ffmpegPath: undefined, ffprobePath: undefined },
-            llm: {
-                apiKey: "",
-                instructionsPath: "",
-                disabled: true,
-            },
-            autoReaction: {
-                funnySubstringsProbability: 10,
-                erJokeProbability: 50,
-                nekoizeProbability: 1000,
-            },
+            cache: { ...baseConfig.cache, audioDownloadPath: join(tempDir, "cache") },
         };
 
         // Create services
