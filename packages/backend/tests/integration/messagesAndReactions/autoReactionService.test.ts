@@ -55,7 +55,8 @@ describe("Messages and Reactions integration tests", async () => {
         }
     });
 
-    it("should scold self-reactions", async () => {
+    it("should scold self-reactions", testScoldSelfReactions, timeout);
+    async function testScoldSelfReactions() {
         if (!minimalBot || !testerBot) throw new Error("Test setup incomplete");
 
         const bot = minimalBot.bot;
@@ -76,9 +77,10 @@ describe("Messages and Reactions integration tests", async () => {
         const possibleMessages = reactionScoldMessages[emoteName!]!;
         const found = possibleMessages.find(m => botScoldMessage!.content.includes(m));
         expect(found).not.toBeUndefined();
-    }, timeout);
+    }
 
-    it("should reply 'Nice' when message contains funny substrings", async () => {
+    it("should reply 'Nice' when message contains funny substrings", testReplyNiceForFunnySubstrings, timeout);
+    async function testReplyNiceForFunnySubstrings() {
         if (!minimalBot || !testerBot) throw new Error("Test setup incomplete");
 
         const bot = minimalBot.bot;
@@ -97,9 +99,10 @@ describe("Messages and Reactions integration tests", async () => {
         expect(reply).toBeTruthy();
         expect(reply!.content).toMatch(/Nice/);
         expect(reply!.content).toMatch(/\*\*69420\*\*/);
-    }, timeout);
+    }
 
-    it("should say 'I hardly know her!' to sentences with the last word ending in 'er'", async () => {
+    it("should say 'I hardly know her!' to sentences with the last word ending in 'er'", testHardlyKnowHer, timeout);
+    async function testHardlyKnowHer() {
         if (!minimalBot || !testerBot) throw new Error("Test setup incomplete");
 
         const bot = minimalBot.bot;
@@ -114,6 +117,6 @@ describe("Messages and Reactions integration tests", async () => {
 
         const fetchedMessage = (await testerChannel.messages.fetch({ limit: 1 }))!.first()!;
         expect(fetchedMessage.content).toEqual("\"Tester\"? I hardly know her!");
-    }, timeout);
+    }
 
 }, timeout);

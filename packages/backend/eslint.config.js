@@ -10,7 +10,6 @@ export default [
         },
         rules: {
             "local/require-js-extension-for-path-aliases": "error",
-            "local/single-line-it-calls": "warn",
         },
     },
 ];

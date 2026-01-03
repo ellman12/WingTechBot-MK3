@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 const execAsync = promisify(exec);
 
 describe.concurrent("Audio Environment Prerequisites", () => {
-    it("should have FFmpeg installed", async () => {
+    it("should have FFmpeg installed", testFfmpegInstalled);
+    async function testFfmpegInstalled() {
         try {
             const { stdout } = await execAsync("ffmpeg -version");
             expect(stdout).toContain("ffmpeg version");
@@ -16,9 +17,10 @@ describe.concurrent("Audio Environment Prerequisites", () => {
             console.error("Windows: Download from https://ffmpeg.org/download.html");
             throw new Error("FFmpeg is required for integration tests but was not found");
         }
-    });
+    }
 
-    it.skipIf(process.env.CI)("should have yt-dlp installed for YouTube tests", async () => {
+    it.skipIf(process.env.CI)("should have yt-dlp installed for YouTube tests", testYtDlpInstalled);
+    async function testYtDlpInstalled() {
         try {
             const { stdout } = await execAsync("yt-dlp --version");
             expect(stdout.trim()).toMatch(/^\d+\.\d+\.\d+/); // Version format
@@ -27,9 +29,10 @@ describe.concurrent("Audio Environment Prerequisites", () => {
             console.warn("Install with: pip install yt-dlp");
             // Don't fail the test, just warn - yt-dlp tests are optional
         }
-    });
+    }
 
-    it("should be able to spawn FFmpeg process", () => {
+    it("should be able to spawn FFmpeg process", testSpawnFfmpegProcess);
+    function testSpawnFfmpegProcess() {
         return new Promise<void>((resolve, reject) => {
             const ffmpegProcess = spawn("ffmpeg", ["-version"]);
 
@@ -51,9 +54,10 @@ describe.concurrent("Audio Environment Prerequisites", () => {
                 reject(new Error(`Failed to spawn FFmpeg: ${error.message}`));
             });
         });
-    });
+    }
 
-    it("should have required Node.js modules for audio processing", async () => {
+    it("should have required Node.js modules for audio processing", testRequiredNodeModules);
+    async function testRequiredNodeModules() {
         // Verify that all required modules can be imported
         const modules = ["stream", "child_process", "fs", "path"];
 
@@ -62,5 +66,5 @@ describe.concurrent("Audio Environment Prerequisites", () => {
                 await import(moduleName);
             }).not.toThrow();
         }
-    });
+    }
 });

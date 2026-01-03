@@ -3,20 +3,7 @@ import type { TextChannel } from "discord.js";
 
 import { getTestConfig } from "../../setup.js";
 import { type MinimalTestBot, createMinimalTestBot } from "../../utils/createMinimalTestBot.js";
-import {
-    cleanupAllTestChannels,
-    createMessagesAndReactions,
-    createTemporaryTestChannel,
-    createTestSchema,
-    deleteTestChannel,
-    dropTestSchema,
-    getTestingEmotes,
-    verifyTesterReactions,
-    waitForAllReactionsRemoved,
-    waitForMessageDeleted,
-    waitForReactionsRemoved,
-    waitForTesterReactions,
-} from "../../utils/testUtils.js";
+import { cleanupAllTestChannels, createMessagesAndReactions, createTemporaryTestChannel, createTestSchema, deleteTestChannel, dropTestSchema, getTestingEmotes, verifyTesterReactions, waitForAllReactionsRemoved, waitForMessageDeleted, waitForReactionsRemoved, waitForTesterReactions } from "../../utils/testUtils.js";
 import { createTesterDiscordBot } from "../testBot/TesterDiscordBot.js";
 
 const timeout = 360 * 1000;
@@ -75,7 +62,8 @@ describe("Messages and Reactions integration tests", async () => {
         }
     });
 
-    it("sends messages, adds reactions, removes both, verifies DB entries", async () => {
+    it("sends messages, adds reactions, removes both, verifies DB entries", testCreateAndDeleteMessagesAndReactions, timeout);
+    async function testCreateAndDeleteMessagesAndReactions() {
         if (!minimalBot || !testerBot) throw new Error("Test setup incomplete");
 
         const totalMessages = 2;
@@ -125,5 +113,5 @@ describe("Messages and Reactions integration tests", async () => {
         await waitForAllReactionsRemoved(db);
         foundReactions = await db.selectFrom("reactions").selectAll().execute();
         expect(foundReactions).toHaveLength(0);
-    }, timeout);
+    }
 });

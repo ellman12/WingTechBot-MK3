@@ -62,8 +62,9 @@ describe("processAllChannels", async () => {
         }
     });
 
+    it("should read all messages and reactions on load", testReadAllMessagesAndReactionsOnLoad, timeout);
     //prettier-ignore
-    it("should read all messages and reactions on load", async () => {
+    async function testReadAllMessagesAndReactionsOnLoad() {
         if (!minimalBot || !testerBot) throw new Error("Test setup incomplete");
 
         const bot = minimalBot.bot;
@@ -137,5 +138,5 @@ describe("processAllChannels", async () => {
             expect(existingMessages.find(m => m.id === message.id)).toBeUndefined();
             // Reactions are automatically deleted via CASCADE when message is deleted
         }
-    }, timeout);
+    }
 });
