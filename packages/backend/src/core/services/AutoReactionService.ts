@@ -62,6 +62,7 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         { probabilityDenominator: config.autoReaction.funnySubstringsProbability, handler: checkForFunnySubstrings },
         { probabilityDenominator: config.autoReaction.erJokeProbability, handler: tryToSayErJoke },
         { probabilityDenominator: config.autoReaction.nekoizeProbability, handler: tryToNekoizeMessage },
+        { probabilityDenominator: config.autoReaction.eliottReminderProbability, handler: tryEliottReminder },
     ];
 
     const botId = config.discord.clientId;
@@ -93,9 +94,14 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
 
         if (!lastWord) return;
 
-        lastWord = lastWord.replace(/[.,!?;:]+$/, "");
+        lastWord = lastWord.replace(/\W+$/, "");
 
-        if (/er$/i.test(lastWord)) {
+        // Word must be at least 4 characters (to avoid single/double letter words)
+        if (lastWord.length < 4) {
+            return undefined;
+        }
+
+        if (lastWord.toLowerCase().endsWith("er")) {
             return lastWord;
         }
 
@@ -107,7 +113,7 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
 
         const erWord = findLastWordEndingWithEr(message.content);
         if (erWord) {
-            await message.reply(`"${erWord}"? I hardly know her!`);
+            await message.reply(`"${erWord}"? I hardly even know 'er!`);
             return true;
         }
 
@@ -130,6 +136,26 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         } finally {
             controller.abort();
         }
+    }
+
+    async function tryEliottReminder(message: Message): Promise<boolean> {
+        if (message.author.id === botId) return false;
+
+        // If the message contains the word "Elliot", reply with 't' to remind that Elliott has 2 "t"s
+
+        const regex = new RegExp(`\\b(?:\\w+\\b\\W+){0,3}\\w*(elliott(?!t))\\w*(?:\\W+\\b\\w+\\b){0,3}`, "gi");
+        const matches = message.content.match(regex);
+        if (matches) {
+            const match = matches[0];
+
+            const highlightRegex = new RegExp(`(elliott(?!t))`, "gi");
+            const highlighted = match.replace(highlightRegex, "**$1**");
+
+            await message.reply(`> ${highlighted}\nt`);
+            return true;
+        }
+
+        return false;
     }
 
     return {
