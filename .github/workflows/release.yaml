@@ -16,8 +16,10 @@ env:
     IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-    build-and-push:
+    setup:
         runs-on: ubuntu-latest
+        outputs:
+            version: ${{ steps.meta.outputs.version }}
         permissions:
             contents: write
             packages: write
@@ -25,6 +27,39 @@ jobs:
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
+
+            - name: Extract metadata
+              id: meta
+              uses: docker/metadata-action@v5
+              with:
+                  images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+                  tags: |
+                      type=semver,pattern={{version}}
+                      type=semver,pattern={{major}}.{{minor}}
+
+    build-and-push:
+        needs: setup
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            packages: write
+
+        strategy:
+            matrix:
+                image:
+                    - name: backend
+                      context: .
+                      dockerfile: packages/backend/Dockerfile
+                    - name: backup
+                      context: ./packages/backup
+                      dockerfile: packages/backup/Dockerfile
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Normalize image name
+              run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3
@@ -36,29 +71,16 @@ jobs:
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Extract metadata
-              id: meta
-              uses: docker/metadata-action@v5
-              with:
-                  images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-                  tags: |
-                      type=semver,pattern={{version}}
-                      type=semver,pattern={{major}}.{{minor}}
-
-            - name: Normalize image name
-              run: |
-                  echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
-
-            - name: Build and push Backend image
+            - name: Build and push ${{ matrix.image.name }} image
               uses: docker/build-push-action@v6
               with:
-                  context: .
-                  file: packages/backend/Dockerfile
+                  context: ${{ matrix.image.context }}
+                  file: ${{ matrix.image.dockerfile }}
                   push: true
-                  tags: |
-                      ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ steps.meta.outputs.version }}
-                      ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
                   platforms: linux/amd64,linux/arm64
+                  tags: |
+                      ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.image.name }}:${{ needs.setup.outputs.version }}
+                      ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.image.name }}:latest
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
                   labels: |
@@ -66,84 +88,19 @@ jobs:
                       org.opencontainers.image.revision=${{ github.sha }}
                       org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
 
+    generate-compose:
+        needs: build-and-push
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+
+        steps:
+            # Needed to get the generate-compose.sh script.
+            - name: Checkout code
+              uses: actions/checkout@v4
+
             - name: Generate Docker Compose for production
-              run: |
-                  cat > compose.yaml << EOF
-                  services:
-                    backend:
-                      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
-                      env_file:
-                        - .env
-                      environment:
-                        - NODE_ENV=production
-                        - DATABASE_URL=postgresql://wingtechbot:wingtechbot_password@postgres:5432/wingtechbot
-                        - SOUNDS_STORAGE_PATH=/app/sounds
-                        - AUDIO_CACHE_PATH=/app/cache
-                      ports:
-                        - "3000:3000"
-                      depends_on:
-                        postgres:
-                          condition: service_healthy
-                      volumes:
-                        - sounds-data:/app/sounds
-                        - /tmp/wingtechbot/cache:/app/cache
-                        - ./llmInstructions/:/app/packages/backend/llmInstructions:ro
-                      networks:
-                        - app-network
-                      restart: unless-stopped
-
-                    postgres:
-                      image: postgres:16-alpine
-                      environment:
-                        - POSTGRES_DB=wingtechbot
-                        - POSTGRES_USER=wingtechbot
-                        - POSTGRES_PASSWORD=wingtechbot_password
-                        - POSTGRES_HOST_AUTH_METHOD=md5
-                      volumes:
-                        - postgres_data:/var/lib/postgresql/data
-                      networks:
-                        - app-network
-                      healthcheck:
-                        test: ["CMD-SHELL", "pg_isready -U wingtechbot -d wingtechbot"]
-                        interval: 5s
-                        timeout: 5s
-                        retries: 5
-                      restart: unless-stopped
-
-                    backup:
-                      build:
-                        dockerfile: packages/backup/Dockerfile
-                      depends_on:
-                        - postgres
-                      environment:
-                        - DATABASE_NAME=wingtechbot
-                        - DATABASE_HOST=postgres
-                        - DATABASE_USER=wingtechbot
-                        - PGPASSWORD=wingtechbot_password
-                        - BACKUP_RETENTION_DAYS=7
-                      volumes:
-                        - wtb_backups:/backups
-
-                    watchtower:
-                      image: nickfedor/watchtower
-                      volumes:
-                        - /var/run/docker.sock:/var/run/docker.sock
-                      environment:
-                        - WATCHTOWER_POLL_INTERVAL=60
-                        - WATCHTOWER_CLEANUP="true"
-                        - WATCHTOWER_REGISTRY_AUTH="true"
-                        - DOCKER_USERNAME=\${GHCR_USERNAME}
-                        - DOCKER_PASSWORD=\${GHCR_TOKEN}
-                      restart: unless-stopped
-
-                  volumes:
-                    postgres_data:
-                    sounds-data:
-
-                  networks:
-                    app-network:
-                      driver: bridge
-                  EOF
+              run: ./scripts/generate-compose.sh
 
             - name: Upload compose.yaml to GitHub Release
               uses: softprops/action-gh-release@v2
