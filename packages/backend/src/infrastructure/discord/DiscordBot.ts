@@ -57,7 +57,26 @@ export type DiscordBot = {
     readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
 };
 
-export const createDiscordBot = async ({ config, voiceEventSoundsRepository, soundRepository, soundService, soundTagService, reactionRepository, emoteRepository, reactionArchiveService, messageArchiveService, discordChatService, geminiLlmService, llmConversationService, soundboardThreadService, autoReactionService, voiceEventSoundsService, voiceService, commandChoicesService, eventFilter }: DiscordBotDeps): Promise<DiscordBot> => {
+export const createDiscordBot = async ({
+    config,
+    voiceEventSoundsRepository,
+    soundRepository,
+    soundService,
+    soundTagService,
+    reactionRepository,
+    emoteRepository,
+    reactionArchiveService,
+    messageArchiveService,
+    discordChatService,
+    geminiLlmService,
+    llmConversationService,
+    soundboardThreadService,
+    autoReactionService,
+    voiceEventSoundsService,
+    voiceService,
+    commandChoicesService,
+    eventFilter,
+}: DiscordBotDeps): Promise<DiscordBot> => {
     let client: Client;
     let isReadyState = false;
     let isClientDestroyed = false;
@@ -65,7 +84,15 @@ export const createDiscordBot = async ({ config, voiceEventSoundsRepository, sou
 
     const createClient = (): Client => {
         return new Client({
-            intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.DirectMessages, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessageReactions],
+            intents: [
+                GatewayIntentBits.Guilds,
+                GatewayIntentBits.GuildMessages,
+                GatewayIntentBits.MessageContent,
+                GatewayIntentBits.GuildMembers,
+                GatewayIntentBits.DirectMessages,
+                GatewayIntentBits.GuildVoiceStates,
+                GatewayIntentBits.GuildMessageReactions,
+            ],
             partials: [Partials.User, Partials.GuildMember, Partials.ThreadMember, Partials.Channel, Partials.Message, Partials.Reaction],
         });
     };
@@ -102,7 +129,20 @@ export const createDiscordBot = async ({ config, voiceEventSoundsRepository, sou
                 try {
                     console.log("⏱️  Deploying Discord commands...");
                     const deployStart = Date.now();
-                    await deployCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, config.discord.token, config.discord.clientId, config.discord.serverId);
+                    await deployCommands(
+                        voiceEventSoundsRepository,
+                        soundRepository,
+                        soundService,
+                        soundTagService,
+                        voiceService,
+                        reactionRepository,
+                        emoteRepository,
+                        discordChatService,
+                        commandChoicesService,
+                        config.discord.token,
+                        config.discord.clientId,
+                        config.discord.serverId
+                    );
                     console.log(`✅ Commands deployed in ${Date.now() - deployStart}ms`);
                 } catch (error) {
                     console.warn("⚠️ Failed to deploy commands automatically:", error);
