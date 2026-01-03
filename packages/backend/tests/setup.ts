@@ -30,6 +30,7 @@ export const getTestConfig = (): Config => {
             funnySubstringsProbability: 1,
             erJokeProbability: 1,
             nekoizeProbability: 1,
+            elliottReminderProbability: 1,
         },
     };
 };

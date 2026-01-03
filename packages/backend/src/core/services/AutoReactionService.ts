@@ -62,25 +62,31 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         { probabilityDenominator: config.autoReaction.funnySubstringsProbability, handler: checkForFunnySubstrings },
         { probabilityDenominator: config.autoReaction.erJokeProbability, handler: tryToSayErJoke },
         { probabilityDenominator: config.autoReaction.nekoizeProbability, handler: tryToNekoizeMessage },
-        { probabilityDenominator: config.autoReaction.eliottReminderProbability, handler: tryEliottReminder },
+        { probabilityDenominator: config.autoReaction.elliottReminderProbability, handler: tryElliottReminder },
     ];
 
     const botId = config.discord.clientId;
+
+    async function quoteAndHighlightMatch(message: Message, matchRegex: RegExp, highlightPattern: string): Promise<string | undefined> {
+        const matches = message.content.match(matchRegex);
+        if (!matches) return undefined;
+
+        const match = matches[0];
+        const highlightRegex = new RegExp(highlightPattern, "gi");
+        const highlighted = match.replace(highlightRegex, "**$1**");
+
+        return highlighted;
+    }
 
     async function checkForFunnySubstrings(message: Message): Promise<boolean> {
         if (message.author.id === botId) return false;
 
         const substrings = ["69420", "69", "420"];
+        const matchRegex = new RegExp(`\\b(?:\\w+\\b\\W+){0,3}\\w*(${substrings.join("|")})\\w*(?:\\W+\\b\\w+\\b){0,3}`, "gi");
+        const highlightPattern = `(${substrings.join("|")})`;
 
-        const regex = new RegExp(`\\b(?:\\w+\\b\\W+){0,3}\\w*(${substrings.join("|")})\\w*(?:\\W+\\b\\w+\\b){0,3}`, "gi");
-        const matches = message.content.match(regex);
-
-        if (matches) {
-            const match = matches[0];
-
-            const highlightRegex = new RegExp(`(${substrings.join("|")})`, "gi");
-            const highlighted = match.replace(highlightRegex, "**$1**");
-
+        const highlighted = await quoteAndHighlightMatch(message, matchRegex, highlightPattern);
+        if (highlighted) {
             await message.reply(`> ${highlighted}\nNice`);
             return true;
         }
@@ -138,20 +144,22 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         }
     }
 
-    async function tryEliottReminder(message: Message): Promise<boolean> {
+    async function tryElliottReminder(message: Message): Promise<boolean> {
         if (message.author.id === botId) return false;
 
-        // If the message contains the word "Elliot", reply with 't' to remind that Elliott has 2 "t"s
+        // If the message contains misspellings of "Elliott" (like "elliot", "eliott", or "eliot"),
+        const matchRegex = new RegExp(`\\b(?:\\w+\\b\\W+){0,3}\\w*(elliot(?!t)|eliott?)\\w*(?:\\W+\\b\\w+\\b){0,3}`, "gi");
+        const highlightPattern = `(elliot(?!t)|eliott?)`;
 
-        const regex = new RegExp(`\\b(?:\\w+\\b\\W+){0,3}\\w*(elliott(?!t))\\w*(?:\\W+\\b\\w+\\b){0,3}`, "gi");
-        const matches = message.content.match(regex);
-        if (matches) {
-            const match = matches[0];
+        const highlighted = await quoteAndHighlightMatch(message, matchRegex, highlightPattern);
+        if (highlighted) {
+            // Detect if the elliott is missing an l and/or a t
+            const missingL = /eliot/i.test(highlighted);
+            const missingT = /elliot/i.test(highlighted);
 
-            const highlightRegex = new RegExp(`(elliott(?!t))`, "gi");
-            const highlighted = match.replace(highlightRegex, "**$1**");
-
-            await message.reply(`> ${highlighted}\nt`);
+            const insertBold = (text: string) => `**${text}**`;
+            const reply = `El${missingL ? insertBold("l") : ""}iot${missingT ? insertBold("t") : ""}`;
+            await message.reply(`> ${highlighted}\n${reply}`);
             return true;
         }
 
