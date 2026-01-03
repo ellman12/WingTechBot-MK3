@@ -66,6 +66,23 @@ jobs:
                       org.opencontainers.image.revision=${{ github.sha }}
                       org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
 
+            - name: Build and push Backup image
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./packages/backup
+                  file: packages/backup/Dockerfile
+                  push: true
+                  tags: |
+                      ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backup:${{ steps.meta.outputs.version }}
+                      ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backup:latest
+                  platforms: linux/amd64,linux/arm64
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+                  labels: |
+                      org.opencontainers.image.source=${{ github.repositoryUrl }}
+                      org.opencontainers.image.revision=${{ github.sha }}
+                      org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+
             - name: Generate Docker Compose for production
               run: |
                   cat > compose.yaml << EOF
@@ -111,18 +128,21 @@ jobs:
                       restart: unless-stopped
 
                     backup:
-                      build:
-                        dockerfile: packages/backup/Dockerfile
-                      depends_on:
-                        - postgres
+                      image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backup:latest
+                      env_file:
+                        - .env
                       environment:
                         - DATABASE_NAME=wingtechbot
                         - DATABASE_HOST=postgres
                         - DATABASE_USER=wingtechbot
                         - PGPASSWORD=wingtechbot_password
                         - BACKUP_RETENTION_DAYS=7
+                      depends_on:
+                        postgres:
+                          condition: service_healthy
                       volumes:
                         - wtb_backups:/backups
+                      restart: unless-stopped
 
                     watchtower:
                       image: nickfedor/watchtower
