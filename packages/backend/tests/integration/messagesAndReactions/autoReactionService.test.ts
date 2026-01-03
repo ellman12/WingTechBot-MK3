@@ -101,7 +101,7 @@ describe("Messages and Reactions integration tests", async () => {
         expect(reply!.content).toMatch(/\*\*69420\*\*/);
     }
 
-    it("should say 'I hardly know her!' to sentences with the last word ending in 'er'", testHardlyKnowHer, timeout);
+    it("should say 'I hardly even know 'er!' to sentences with the last word ending in 'er'", testHardlyKnowHer, timeout);
     async function testHardlyKnowHer() {
         if (!minimalBot || !testerBot) throw new Error("Test setup incomplete");
 
@@ -116,7 +116,7 @@ describe("Messages and Reactions integration tests", async () => {
         await sleep(2000); 
 
         const fetchedMessage = (await testerChannel.messages.fetch({ limit: 1 }))!.first()!;
-        expect(fetchedMessage.content).toEqual("\"Tester\"? I hardly know her!");
+        expect(fetchedMessage.content).toEqual("\"Tester\"? I hardly even know 'er!");
     }
 
 }, timeout);
