@@ -139,6 +139,7 @@ jobs:
                   volumes:
                     postgres_data:
                     sounds-data:
+                    wtb_backups:
 
                   networks:
                     app-network:
