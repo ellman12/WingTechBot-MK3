@@ -67,6 +67,11 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
 
     const botId = config.discord.clientId;
 
+    function createWordContextRegex(pattern: string): RegExp {
+        // Matches pattern with up to 3 words of context on each side
+        return new RegExp(`\\b(?:\\w+\\b\\W+){0,3}\\w*${pattern}\\w*(?:\\W+\\b\\w+\\b){0,3}`, "gi");
+    }
+
     function quoteAndHighlightMatch(content: string, matchRegex: RegExp, highlightPattern: string): string | undefined {
         const matches = content.match(matchRegex);
         if (!matches) return undefined;
@@ -80,8 +85,8 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         if (message.author.id === botId) return false;
 
         const substrings = ["69420", "69", "420"];
-        const matchRegex = new RegExp(`\\b(?:\\w+\\b\\W+){0,3}\\w*(${substrings.join("|")})\\w*(?:\\W+\\b\\w+\\b){0,3}`, "gi");
         const highlightPattern = `(${substrings.join("|")})`;
+        const matchRegex = createWordContextRegex(highlightPattern);
 
         const highlighted = quoteAndHighlightMatch(message.content, matchRegex, highlightPattern);
         if (highlighted) {
@@ -142,78 +147,70 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         }
     }
 
-    function detectElliottMisspellings(name: string): { missingL: boolean; missingT: boolean } {
-        return {
-            missingL: /^eliot/i.test(name),
-            missingT: /ell?iot(?!t)$/i.test(name),
-        };
-    }
-
-    function applyCaseMapping(original: string, target: string, hasInsertedL: boolean): string {
+    function applyCaseFromOriginal(original: string, target: string): string {
+        const hasOneL = /^eliot/i.test(original);
         let result = "";
-        const lastOrigChar = original.length > 0 ? original[original.length - 1]! : "e";
+        let origIndex = 0;
 
         for (let i = 0; i < target.length; i++) {
             const targetChar = target[i];
             if (!targetChar) continue;
 
-            let origChar: string;
-            if (i < 2) {
-                origChar = original[i] ?? lastOrigChar;
-            } else if (hasInsertedL && i === 2) {
-                origChar = original[1] ?? lastOrigChar;
+            // Position mapping: if we inserted an 'l' at position 2, adjust indices
+            if (hasOneL && i === 2) {
+                // Use case from first 'l' (position 1)
+                origIndex = 1;
+            } else if (hasOneL && i > 2) {
+                // Shift back after inserted 'l'
+                origIndex = i - 1;
             } else {
-                const adjustedIndex = hasInsertedL ? i - 1 : i;
-                origChar = adjustedIndex < original.length ? (original[adjustedIndex] ?? lastOrigChar) : lastOrigChar;
+                origIndex = i;
             }
 
-            const shouldBeUpper = origChar === origChar.toUpperCase() && origChar !== origChar.toLowerCase();
-            result += shouldBeUpper ? targetChar.toUpperCase() : targetChar.toLowerCase();
+            const origChar = original[origIndex] ?? original[original.length - 1] ?? targetChar;
+            const isUpper = origChar === origChar.toUpperCase() && origChar !== origChar.toLowerCase();
+            result += isUpper ? targetChar.toUpperCase() : targetChar.toLowerCase();
         }
+
         return result;
-    }
-
-    function buildElliottReply(correctedWithCase: string, missingL: boolean, missingT: boolean): string {
-        const insertBold = (text: string) => `**${text}**`;
-        let reply = correctedWithCase.slice(0, 2); // "El"
-
-        if (missingL && correctedWithCase[2]) {
-            reply += insertBold(correctedWithCase[2]); // **"l"**
-        } else if (correctedWithCase[2]) {
-            reply += correctedWithCase[2]; // "l"
-        }
-
-        reply += correctedWithCase.slice(3, 6); // "iot"
-
-        if (correctedWithCase[6]) {
-            reply += missingT ? insertBold(correctedWithCase[6]) : correctedWithCase[6]; // **"t"** or "t"
-        }
-
-        return reply;
     }
 
     async function tryElliottReminder(message: Message): Promise<boolean> {
         if (message.author.id === botId) return false;
 
-        const matchRegex = new RegExp(`\\b(?:\\w+\\b\\W+){0,3}\\w*(elliot(?!t)|eliott?)\\w*(?:\\W+\\b\\w+\\b){0,3}`, "gi");
-        const highlightPattern = `(elliot(?!t)|eliott?)`;
+        const ELLIOTT_PATTERN = `(elliot(?!t)|eliott?)`;
+        const matchRegex = createWordContextRegex(ELLIOTT_PATTERN);
 
         const matches = message.content.match(matchRegex);
         if (!matches) return false;
 
-        const match = matches[0];
-        const highlighted = quoteAndHighlightMatch(match, new RegExp(highlightPattern, "gi"), highlightPattern);
-        if (!highlighted) return false;
-
-        const nameMatch = match.match(new RegExp(highlightPattern, "i"));
+        const fullMatch = matches[0];
+        const nameMatch = fullMatch.match(new RegExp(ELLIOTT_PATTERN, "i"));
         if (!nameMatch) return false;
 
-        const originalName = nameMatch[0];
-        const { missingL, missingT } = detectElliottMisspellings(originalName);
+        const misspelling = nameMatch[0];
+        const missingL = /^eliot/i.test(misspelling);
+        const missingT = /ell?iot(?!t)$/i.test(misspelling);
 
-        const corrected = "elliot" + (missingT ? "t" : "tt");
-        const correctedWithCase = applyCaseMapping(originalName, corrected, missingL);
-        const reply = buildElliottReply(correctedWithCase, missingL, missingT);
+        // Build corrected name with case from misspelling
+        const corrected = applyCaseFromOriginal(misspelling, "elliott");
+
+        // Bold the missing letters
+        let reply = corrected.slice(0, 2);
+        if (missingL) {
+            reply += `**${corrected[2]}**`;
+        } else {
+            reply += corrected[2];
+        }
+        reply += corrected.slice(3, 6);
+        if (missingT) {
+            reply += `**${corrected[6]}**`;
+        } else {
+            reply += corrected[6];
+        }
+
+        const highlighted = quoteAndHighlightMatch(fullMatch, new RegExp(ELLIOTT_PATTERN, "gi"), ELLIOTT_PATTERN);
+        if (!highlighted) return false;
 
         await message.reply(`> ${highlighted}\n${reply}`);
         return true;
