@@ -91,6 +91,8 @@ jobs:
     generate-compose:
         needs: build-and-push
         runs-on: ubuntu-latest
+        permissions:
+            contents: write
 
         steps:
             # Needed to get the generate-compose.sh script.
@@ -99,3 +101,10 @@ jobs:
 
             - name: Generate Docker Compose for production
               run: ./scripts/generate-compose.sh
+
+            - name: Upload compose.yaml to GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: compose.yaml
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
