@@ -86,7 +86,7 @@ describe("processAllChannels", async () => {
             const guild = await bot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
             if (!testChannel || !messageArchiveService) throw new Error("Test channel or messageArchiveService not initialized");
             await messageArchiveService.processAllChannels(guild, undefined, [testChannel.id]);
-            await messageArchiveService.removeDeletedMessages(guild);
+            // Note: Deletion detection is now integrated into processAllChannels
             await sleep(2000);
         }
 

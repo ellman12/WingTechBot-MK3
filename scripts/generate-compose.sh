@@ -12,7 +12,7 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://wingtechbot:wingtechbot_password@postgres:5432/wingtechbot
       - SOUNDS_STORAGE_PATH=/app/sounds
-      - AUDIO_CACHE_PATH=/app/cache
+      - AUDIO_CACHE_PATH=/app/sounds/wtb-audio-cache
     ports:
       - "3000:3000"
     depends_on:
@@ -20,7 +20,6 @@ services:
         condition: service_healthy
     volumes:
       - sounds-data:/app/sounds
-      - /tmp/wingtechbot/cache:/app/cache
       - ./llmInstructions/:/app/packages/backend/llmInstructions:ro
     networks:
       - app-network
@@ -33,6 +32,8 @@ services:
       - POSTGRES_USER=wingtechbot
       - POSTGRES_PASSWORD=wingtechbot_password
       - POSTGRES_HOST_AUTH_METHOD=md5
+    ports:
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
