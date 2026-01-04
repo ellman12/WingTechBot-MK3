@@ -210,32 +210,27 @@ jobs:
               with:
                   version: ${{ env.PNPM_VERSION }}
 
-            - name: Cache FFmpeg packages
+            - name: Setup FFmpeg (with retry)
               if: matrix.package == 'backend'
-              id: cache-ffmpeg
-              uses: actions/cache@v4
+              uses: nick-fields/retry@v3
               with:
-                  path: ~/ffmpeg-cache
-                  key: ${{ runner.os }}-ffmpeg-packages-v2-${{ hashFiles('.github/workflows/ci.yaml') }}
+                  timeout_minutes: 3
+                  max_attempts: 2
+                  retry_on: error
+                  shell: bash
+                  command: |
+                      # Download and setup FFmpeg using the action's binary directly
+                      export RUNNER_TOOL_CACHE="${RUNNER_TOOL_CACHE:-$HOME/.setup-ffmpeg}"
+                      mkdir -p "$RUNNER_TOOL_CACHE"
 
-            - name: Download and install FFmpeg
-              if: matrix.package == 'backend' && steps.cache-ffmpeg.outputs.cache-hit != 'true'
-              run: |
-                  sudo apt-get update
-                  mkdir -p ~/ffmpeg-cache
-                  cd ~/ffmpeg-cache
-                  # Download ffmpeg and all its dependencies
-                  apt-get download ffmpeg $(apt-cache depends --recurse --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances ffmpeg | grep "^\w" | sort -u)
-                  # Install all downloaded packages
-                  sudo dpkg -i *.deb || true
-                  sudo apt-get install -f -y
+                      if command -v ffmpeg &> /dev/null && ffmpeg -version &> /dev/null; then
+                          echo "FFmpeg already installed and working"
+                          exit 0
+                      fi
 
-            - name: Install FFmpeg from cache
-              if: matrix.package == 'backend' && steps.cache-ffmpeg.outputs.cache-hit == 'true'
-              run: |
-                  cd ~/ffmpeg-cache
-                  sudo dpkg -i *.deb || true
-                  sudo apt-get install -f -y
+                      # Install via apt as fallback with proper dependencies
+                      sudo apt-get update -qq
+                      sudo apt-get install -y ffmpeg
 
             - name: Get pip cache dir
               if: matrix.package == 'backend'
