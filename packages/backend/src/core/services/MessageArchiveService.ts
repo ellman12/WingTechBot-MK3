@@ -296,7 +296,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
         console.log(`💬 Begin processing messages in ${channelIds ? `${channelIds.length} specified channel(s)` : "all channels"} ${endYear ? `for ${endYear}` : "for all years"}`);
         await guild.channels.fetch();
 
-        let textChannels = Array.from(guild.channels.cache.filter(c => c.type === ChannelType.GuildText).values());
+        let textChannels = Array.from(guild.channels.cache.filter(c => c.type === ChannelType.GuildText).values()).filter(c => (channelIds?.length ? channelIds.includes(c.id) : true)) as TextChannel[];
 
         // Filter to specific channels if provided
         if (channelIds && channelIds.length > 0) {
@@ -321,12 +321,10 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
             };
         }
 
-        // Process channels sequentially to enable progress tracking
-        for (const channel of textChannels) {
-            // Skip already completed channels
+        const processChannel = async (channel: TextChannel) => {
             if (progress.completedChannels.includes(channel.id)) {
                 console.log(`⏭️ Skipping already completed channel: #${channel.name}`);
-                continue;
+                return;
             }
 
             await syncChannel(channel, endYear);
@@ -334,7 +332,9 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
             // Save progress after each channel
             progress.completedChannels.push(channel.id);
             await saveProgress(progress);
-        }
+        };
+
+        await Promise.all(textChannels.map(processChannel));
 
         // Clean up progress file on successful completion
         await clearProgress(guild.id);

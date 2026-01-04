@@ -171,7 +171,6 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         }
 
         // Use Kysely's query builder with a CTE to batch update all messages in a single query
-        // Build the VALUES clause for the CTE including editedAt
         const values = messages.map(m => sql`(${m.id}, ${m.content}, ${m.editedAt})`);
         const valuesClause = sql.join(values, sql`, `);
 
