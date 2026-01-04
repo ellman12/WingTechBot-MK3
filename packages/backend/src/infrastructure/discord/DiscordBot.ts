@@ -225,6 +225,9 @@ export const createDiscordBot = async ({
                 if (isFirstRun) {
                     console.log("🔄 First run detected - performing full message sync (all years)");
                     await messageArchiveService.processAllChannels(guild);
+                } else if (config.discord.forceProcessAllChannels) {
+                    console.log("🔄 Forcibly performing full message sync (all years)");
+                    await messageArchiveService.processAllChannels(guild);
                 } else {
                     console.log(`🔄 Processing messages for ${currentYear} only`);
                     await messageArchiveService.processAllChannels(guild, currentYear);

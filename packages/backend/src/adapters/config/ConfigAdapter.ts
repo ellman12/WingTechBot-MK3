@@ -20,6 +20,7 @@ export const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
             errorWebhookUrl: process.env.DISCORD_ERROR_WEBHOOK_URL,
             skipChannelProcessingOnStartup: process.env.SKIP_CHANNEL_PROCESSING_ON_STARTUP,
             skipCommandDeploymentOnStartup: process.env.SKIP_COMMAND_DEPLOYMENT_ON_STARTUP,
+            forceProcessAllChannels: process.env.FORCE_PROCESS_ALL_CHANNELS,
         },
         sounds: {
             storagePath: process.env.SOUNDS_STORAGE_PATH,
