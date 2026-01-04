@@ -210,12 +210,26 @@ jobs:
               with:
                   version: ${{ env.PNPM_VERSION }}
 
-            - name: Setup FFmpeg
+            - name: Load cached FFmpeg
               if: matrix.package == 'backend'
-              uses: FedericoCarboni/setup-ffmpeg@v3
+              id: cache-ffmpeg
+              uses: actions/cache@v4
               with:
-                  ffmpeg-version: release
-                  github-token: ${{ github.server_url == 'https://github.com' && github.token || '' }}
+                  path: |
+                      /usr/local/bin/ffmpeg
+                      /usr/local/bin/ffprobe
+                  key: ${{ runner.os }}-ffmpeg-7.1
+
+            - name: Install FFmpeg if not cached
+              if: matrix.package == 'backend' && steps.cache-ffmpeg.outputs.cache-hit != 'true'
+              run: |
+                  wget --timeout=8 --tries=30 \
+                    https://www.johnvansickle.com/ffmpeg/old-releases/ffmpeg-7.1-amd64-static.tar.xz
+                  tar xf ffmpeg-7.1-amd64-static.tar.xz
+                  sudo mv ffmpeg-7.1-amd64-static/ffmpeg /usr/local/bin/
+                  sudo mv ffmpeg-7.1-amd64-static/ffprobe /usr/local/bin/
+                  sudo chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe
+                  rm -rf ffmpeg-7.1-amd64-static*
 
             - name: Get pip cache dir
               if: matrix.package == 'backend'
