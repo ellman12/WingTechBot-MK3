@@ -210,12 +210,33 @@ jobs:
               with:
                   version: ${{ env.PNPM_VERSION }}
 
-            - name: Cache and install FFmpeg
+            - name: Cache FFmpeg packages
               if: matrix.package == 'backend'
-              uses: awalsh128/cache-apt-pkgs-action@latest
+              id: cache-ffmpeg
+              uses: actions/cache@v4
               with:
-                  packages: ffmpeg
-                  version: 1.0
+                  path: |
+                      ~/ffmpeg-cache
+                  key: ${{ runner.os }}-ffmpeg-packages-v2-${{ hashFiles('.github/workflows/ci.yaml') }}
+
+            - name: Install FFmpeg
+              if: matrix.package == 'backend' && steps.cache-ffmpeg.outputs.cache-hit != 'true'
+              run: |
+                  sudo apt-get update
+                  mkdir -p ~/ffmpeg-cache
+                  cd ~/ffmpeg-cache
+                  # Download ffmpeg and all its dependencies
+                  apt-get download ffmpeg $(apt-cache depends --recurse --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances ffmpeg | grep "^\w" | sort -u)
+                  # Install all downloaded packages
+                  sudo dpkg -i *.deb || true
+                  sudo apt-get install -f -y
+
+            - name: Restore FFmpeg from cache
+              if: matrix.package == 'backend' && steps.cache-ffmpeg.outputs.cache-hit == 'true'
+              run: |
+                  cd ~/ffmpeg-cache
+                  sudo dpkg -i *.deb || true
+                  sudo apt-get install -f -y
 
             - name: Get pip cache dir
               if: matrix.package == 'backend'
