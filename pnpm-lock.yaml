@@ -96,6 +96,9 @@ importers:
             "@wingtechbot-mk3/types":
                 specifier: workspace:*
                 version: link:../types
+            commander:
+                specifier: ^14.0.2
+                version: 14.0.2
             compression:
                 specifier: ^1.8.1
                 version: 1.8.1

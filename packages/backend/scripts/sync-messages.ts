@@ -7,49 +7,22 @@ import { createMessageArchiveService } from "@core/services/MessageArchiveServic
 import { loadEnvironment } from "@infrastructure/config/EnvLoader.js";
 import { createDatabaseConnection } from "@infrastructure/database/DatabaseConnection.js";
 import { createFileManager } from "@infrastructure/filestore/FileManager.js";
+import { Command } from "commander";
 import { Client, GatewayIntentBits } from "discord.js";
 
-// Parse command-line arguments
-const args = process.argv.slice(2);
-const flags = {
-    year: args.includes("--year") ? parseInt(args[args.indexOf("--year") + 1]) : undefined,
-    resume: args.includes("--resume"),
-    channels: args.includes("--channels") ? args[args.indexOf("--channels") + 1].split(",") : undefined,
-    help: args.includes("--help") || args.includes("-h"),
-};
+// Parse command-line arguments with Commander
+const program = new Command();
 
-if (flags.help) {
-    console.log(`
-📦 Message Archive Sync Script
+program
+    .name("sync-messages")
+    .description("📦 Synchronizes Discord messages to the database. Can be run manually or scheduled via cron.")
+    .version("1.0.0")
+    .option("-y, --year <year>", "Only sync messages from specified year (e.g., 2024)", parseInt)
+    .option("-c, --channels <ids>", "Comma-separated list of channel IDs to sync", value => value.split(","))
+    .option("-r, --resume", "Resume from previous interrupted sync", false)
+    .parse(process.argv);
 
-Synchronizes Discord messages to the database. This script can be run manually
-or scheduled via cron for periodic syncing.
-
-Usage:
-  pnpm sync-messages [options]
-
-Options:
-  --year <year>          Only sync messages from specified year (e.g., 2024)
-  --channels <ids>       Comma-separated list of channel IDs to sync
-  --resume               Resume from previous interrupted sync
-  --help, -h             Show this help message
-
-Examples:
-  pnpm sync-messages                           # Sync all messages from all channels
-  pnpm sync-messages --year 2024               # Sync only 2024 messages
-  pnpm sync-messages --resume                  # Resume interrupted sync
-  pnpm sync-messages --channels 123,456        # Sync specific channels
-  pnpm sync-messages --year 2024 --channels 123  # Combine options
-
-Cron Examples:
-  # Daily at 3 AM
-  0 3 * * * cd /path/to/WingTechBot-MK3 && pnpm sync-messages --year $(date +%Y)
-
-  # Every 6 hours
-  0 */6 * * * cd /path/to/WingTechBot-MK3 && pnpm sync-messages --year $(date +%Y)
-`);
-    process.exit(0);
-}
+const flags = program.opts();
 
 const syncMessages = async () => {
     console.log("🚀 Starting message archive sync...\n");
