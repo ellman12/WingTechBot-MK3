@@ -2,6 +2,7 @@ import type { CreateMessageData, Message as DBMessage } from "@core/entities/Mes
 import type { MessageRepository } from "@core/repositories/MessageRepository.js";
 import type { UnitOfWork } from "@core/repositories/UnitOfWork.js";
 import type { FileManager } from "@core/services/FileManager.js";
+import { executeBatchWithAdaptiveSize } from "@core/utils/batchUtils.js";
 import { ChannelType, Collection, type FetchMessagesOptions, type Guild, type Message, MessageFlags, type OmitPartialGroupDMChannel, type PartialMessage, type TextChannel } from "discord.js";
 
 export type MessageArchiveService = {
@@ -219,9 +220,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
         const reactionsToAdd = targetReactions.filter(r => !existingSet.has(makeKey(r)));
         const reactionsToRemove = existingReactions.filter(r => !targetSet.has(makeKey(r)));
 
-        // Execute batch operations in smaller chunks to avoid large transactions
-        const BATCH_SIZE = 100;
-
+        // Execute batch operations with adaptive sizing
         // Delete messages first (this will cascade delete reactions)
         if (messagesToDelete.length > 0) {
             for (const id of messagesToDelete) {
@@ -230,33 +229,53 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
             console.log(`🗑️ Deleted ${messagesToDelete.length} messages from #${name}`);
         }
 
-        for (let i = 0; i < messagesToCreate.length; i += BATCH_SIZE) {
-            const batch = messagesToCreate.slice(i, i + BATCH_SIZE);
-            await unitOfWork.execute(async repos => {
-                await repos.messageRepository.batchCreate(batch);
-            });
-        }
+        // Create messages: 7 params (id, authorId, channelId, content, referencedMessageId, createdAt, editedAt)
+        await executeBatchWithAdaptiveSize(
+            messagesToCreate,
+            async batch => {
+                await unitOfWork.execute(async repos => {
+                    await repos.messageRepository.batchCreate(batch);
+                });
+            },
+            `Create Messages (#${name})`,
+            7
+        );
 
-        for (let i = 0; i < messagesToUpdate.length; i += BATCH_SIZE) {
-            const batch = messagesToUpdate.slice(i, i + BATCH_SIZE);
-            await unitOfWork.execute(async repos => {
-                await repos.messageRepository.batchUpdate(batch);
-            });
-        }
+        // Update messages: 3 params (id, content, editedAt)
+        await executeBatchWithAdaptiveSize(
+            messagesToUpdate,
+            async batch => {
+                await unitOfWork.execute(async repos => {
+                    await repos.messageRepository.batchUpdate(batch);
+                });
+            },
+            `Update Messages (#${name})`,
+            3
+        );
 
-        for (let i = 0; i < reactionsToRemove.length; i += BATCH_SIZE) {
-            const batch = reactionsToRemove.slice(i, i + BATCH_SIZE);
-            await unitOfWork.execute(async repos => {
-                await repos.reactionRepository.batchDelete(batch);
-            });
-        }
+        // Delete reactions: 5 params (giverId, receiverId, channelId, messageId, emoteId)
+        await executeBatchWithAdaptiveSize(
+            reactionsToRemove,
+            async batch => {
+                await unitOfWork.execute(async repos => {
+                    await repos.reactionRepository.batchDelete(batch);
+                });
+            },
+            `Delete Reactions (#${name})`,
+            5
+        );
 
-        for (let i = 0; i < reactionsToAdd.length; i += BATCH_SIZE) {
-            const batch = reactionsToAdd.slice(i, i + BATCH_SIZE);
-            await unitOfWork.execute(async repos => {
-                await repos.reactionRepository.batchCreate(batch);
-            });
-        }
+        // Create reactions: 5 params (giverId, receiverId, channelId, messageId, emoteId)
+        await executeBatchWithAdaptiveSize(
+            reactionsToAdd,
+            async batch => {
+                await unitOfWork.execute(async repos => {
+                    await repos.reactionRepository.batchCreate(batch);
+                });
+            },
+            `Create Reactions (#${name})`,
+            5
+        );
 
         // Log summary
         const changes = [];
