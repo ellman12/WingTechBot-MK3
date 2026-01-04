@@ -66,7 +66,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - WATCHTOWER_POLL_INTERVAL=60
+      - WATCHTOWER_POLL_INTERVAL=300
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_REGISTRY_AUTH=true
       - DOCKER_USERNAME=\${GHCR_USERNAME}
