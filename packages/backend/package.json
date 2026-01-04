@@ -28,6 +28,7 @@
         "db:migrate:rollback": "tsx scripts/rollback-migrations.ts",
         "db:migrate:clear": "tsx scripts/clear-migration-state.ts",
         "discord:clear-commands": "tsx scripts/clear-discord-commands.ts",
+        "discord:sync-messages": "tsx scripts/sync-messages.ts",
         "docker:up": "docker compose -f compose.yaml up --build",
         "docker:up:detached": "docker compose -f compose.yaml up --build -d",
         "docker:down": "docker compose -f compose.yaml down",

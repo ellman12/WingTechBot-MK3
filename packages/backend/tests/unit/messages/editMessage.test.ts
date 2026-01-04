@@ -9,16 +9,17 @@ describe.concurrent("editMessage", () => {
 
         await db.insertInto("messages").values({ id: "m1", author_id: "a1", channel_id: "c1", content: "old" }).execute();
 
-        const updated = await repo.edit({ id: "m1", content: "new" });
+        const editedAt = new Date();
+        const updated = await repo.edit({ id: "m1", content: "new", editedAt });
         expect(updated.id).toEqual("m1");
         expect(updated.content).toEqual("new");
-        expect(updated.editedAt).not.toBeNull();
+        expect(updated.editedAt).toEqual(editedAt);
     });
 
     it("should throw if message does not exist", async () => {
         const db = await createTestDb();
         const repo = createMessageRepository(db);
 
-        await expect(repo.edit({ id: "mX", content: "test" })).rejects.toThrow("Message does not exist");
+        await expect(repo.edit({ id: "mX", content: "test", editedAt: new Date() })).rejects.toThrow("Message does not exist");
     });
 });

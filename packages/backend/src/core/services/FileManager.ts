@@ -10,4 +10,11 @@ export type FileManager = {
     readonly fileExists: (path: string) => Promise<boolean>;
     readonly listFiles: (directory: string) => Promise<string[]>;
     readonly getFileStats: (path: string) => Promise<fs.Stats>;
+
+    // Temp cache management
+    readonly getCachePath: (filename: string) => string;
+    readonly readCache: <T>(filename: string) => Promise<T | null>;
+    readonly writeCache: <T>(filename: string, data: T) => Promise<void>;
+    readonly deleteCache: (filename: string) => Promise<void>;
+    readonly clearAllCache: () => Promise<void>;
 };

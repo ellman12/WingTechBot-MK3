@@ -68,6 +68,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
     const messageRepository = createMessageRepository(db);
     const reactionRepository = createReactionRepository(db);
     const emoteRepository = createReactionEmoteRepository(db);
+    const fileManager = createFileManager();
 
     const allowedChannels = new Set<string>();
 
@@ -91,11 +92,11 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
         messageArchiveService = createMessageArchiveService({
             unitOfWork,
             messageRepository,
+            fileManager,
         });
     }
 
     if (options.autoReactionService || options.llmConversationService) {
-        const fileManager = createFileManager();
         const llmInstructionRepo = createLlmInstructionRepository({ config, fileManager });
         discordChatService = createDiscordChatService({ config });
         geminiLlmService = createGeminiLlmService({ config });
@@ -221,7 +222,6 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
         messageArchiveService: messageArchiveService || {
             fetchAllMessages: vi.fn().mockResolvedValue([]),
             processAllChannels: vi.fn().mockResolvedValue(undefined),
-            removeDeletedMessages: vi.fn().mockResolvedValue(undefined),
             messageCreated: vi.fn().mockResolvedValue(undefined),
             messageDeleted: vi.fn().mockResolvedValue(undefined),
             messageEdited: vi.fn().mockResolvedValue(undefined),

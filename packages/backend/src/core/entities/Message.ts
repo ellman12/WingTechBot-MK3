@@ -13,4 +13,4 @@ export type Message = {
 
 export type CreateMessageData = Omit<Message, "reactions">;
 export type DeleteMessageData = Pick<Message, "id">;
-export type EditMessageData = Pick<Message, "id" | "content">;
+export type EditMessageData = Pick<Message, "id" | "content" | "editedAt">;

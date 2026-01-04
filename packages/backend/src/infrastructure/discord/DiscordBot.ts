@@ -230,7 +230,7 @@ export const createDiscordBot = async ({
                     await messageArchiveService.processAllChannels(guild, currentYear);
                 }
 
-                await messageArchiveService.removeDeletedMessages(guild, isFirstRun ? undefined : currentYear);
+                // Note: Deletion detection is now integrated into processAllChannels
             }
 
             await soundboardThreadService.findOrCreateSoundboardThread(guild);
