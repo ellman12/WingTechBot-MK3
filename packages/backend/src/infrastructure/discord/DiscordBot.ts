@@ -219,21 +219,14 @@ export const createDiscordBot = async ({
             console.log(`✅ Karma emotes created in ${Date.now() - emotesStart}ms`);
 
             if (!config.discord.skipChannelProcessingOnStartup) {
-                const isFirstRun = !(await messageArchiveService.hasAnyMessages());
                 const currentYear = new Date().getUTCFullYear();
-
-                if (isFirstRun) {
-                    console.log("🔄 First run detected - performing full message sync (all years)");
-                    await messageArchiveService.processAllChannels(guild);
-                } else {
-                    console.log(`🔄 Processing messages for ${currentYear} only`);
-                    await messageArchiveService.processAllChannels(guild, currentYear);
-                }
-
-                // Note: Deletion detection is now integrated into processAllChannels
+                console.log(`🔄 Processing messages for ${currentYear}`);
+                await messageArchiveService.processAllChannels(guild, currentYear);
             }
 
             await soundboardThreadService.findOrCreateSoundboardThread(guild);
+
+            setupEventHandlers();
 
             client.user!.setStatus(PresenceUpdateStatus.Online);
 
@@ -271,9 +264,6 @@ export const createDiscordBot = async ({
     };
 
     const isReady = (): boolean => isReadyState;
-
-    client = createClient();
-    setupEventHandlers();
 
     return {
         get client() {
