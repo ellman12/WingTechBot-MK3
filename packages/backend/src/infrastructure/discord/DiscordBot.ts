@@ -191,7 +191,6 @@ export const createDiscordBot = async ({
             if (!client || isClientDestroyed) {
                 client = createClient();
                 isClientDestroyed = false;
-                setupEventHandlers();
             }
             console.log(`✅ Client created in ${Date.now() - botStartTime}ms`);
 
