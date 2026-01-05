@@ -4,6 +4,21 @@ import type { UnitOfWork } from "@core/repositories/UnitOfWork.js";
 import type { FileManager } from "@core/services/FileManager.js";
 import { executeBatchWithAdaptiveSize } from "@core/utils/batchUtils.js";
 import { ChannelType, type Guild, type Message, MessageFlags, type PartialMessage, type TextChannel } from "discord.js";
+import pRetry from "p-retry";
+
+// Helper function to retry Discord API calls that may fail with network errors like EAI_AGAIN
+async function retryDiscordFetch<T>(fn: () => Promise<T>, context: string): Promise<T> {
+    return pRetry(fn, {
+        retries: 3,
+        minTimeout: 1000, // Start with 1 second
+        maxTimeout: 5000, // Max 5 seconds between retries
+        factor: 2, // Exponential backoff factor
+        onFailedAttempt: error => {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.warn(`[MessageArchiveService] ${context} failed (attempt ${error.attemptNumber}/${error.retriesLeft + error.attemptNumber}): ${errorMessage}`);
+        },
+    });
+}
 
 export type MessageArchiveService = {
     readonly fetchAllMessages: (channel: TextChannel, endYear?: number) => Promise<Message[]>;
@@ -64,7 +79,7 @@ async function collectReactionData(discordMessage: Message) {
                 const name = reaction.emoji.name!;
                 const emoteDiscordId = reaction.emoji.id ?? "";
 
-                await reaction.users.fetch();
+                await retryDiscordFetch(() => reaction.users.fetch(), `Fetching users for reaction ${name} on message ${messageId}`);
                 const reactions = [...reaction.users.cache.values()].map(user => ({
                     giverId: String(user.id),
                     receiverId: authorId,
@@ -208,7 +223,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
                 const batchResults = await Promise.all(
                     batch.map(async cachedMsg => {
                         try {
-                            const msg = await channel.messages.fetch(cachedMsg.id);
+                            const msg = await retryDiscordFetch(() => channel.messages.fetch(cachedMsg.id), `Fetching message ${cachedMsg.id} from #${channelName}`);
                             const { reactions, emotes } = await collectReactionData(msg);
                             return { messageId: cachedMsg.id, reactions, emotes };
                         } catch (error: unknown) {
@@ -244,7 +259,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
 
         const fetchBatch = async (beforeId: string | null = null): Promise<{ messages: Message[]; hasMore: boolean }> => {
             const options = { limit: 100, ...(beforeId && { before: beforeId }) };
-            const messages = await channel.messages.fetch(options);
+            const messages = await retryDiscordFetch(() => channel.messages.fetch(options), `Fetching message batch from #${channel.name}${beforeId ? ` before ${beforeId}` : ""}`);
 
             const filteredMessages = [...messages.values()].filter(message => endYear === undefined || message.createdAt.getUTCFullYear() === endYear);
 
