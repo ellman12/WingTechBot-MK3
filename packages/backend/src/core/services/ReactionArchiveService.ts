@@ -31,14 +31,6 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
             try {
                 const message = await reaction.message.fetch();
                 const channel = message.channel;
-
-                const year = message.createdAt.getUTCFullYear();
-
-                if (year < new Date().getUTCFullYear()) {
-                    console.warn("🚫 Ignoring added reaction older than this year.");
-                    return;
-                }
-
                 const emoteName = reaction.emoji.name;
 
                 if (!emoteName) {
@@ -69,6 +61,7 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
                         return;
                     }
                 }
+
                 if (!isClientDestroyedError(e)) {
                     console.error("Error adding reaction to message", e);
                 }
@@ -79,14 +72,6 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
             try {
                 const message = await reaction.message.fetch();
                 const channel = message.channel;
-
-                const year = message.createdAt.getUTCFullYear();
-
-                if (year < new Date().getUTCFullYear()) {
-                    console.warn("🚫 Ignoring removed reaction older than this year.");
-                    return;
-                }
-
                 const emoteName = reaction.emoji.name;
 
                 if (!emoteName) {
@@ -112,14 +97,6 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
         removeReactionsForMessage: async (message): Promise<void> => {
             try {
                 await message.fetch();
-
-                const year = message.createdAt.getUTCFullYear();
-
-                if (year < new Date().getUTCFullYear()) {
-                    console.warn("🚫 Ignoring removed reactions from message older than this year.");
-                    return;
-                }
-
                 await reactionRepository.deleteReactionsForMessage(message.id);
             } catch (e: unknown) {
                 if (!isClientDestroyedError(e)) {
@@ -131,14 +108,7 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
         removeReactionsForEmote: async (reaction): Promise<void> => {
             try {
                 await reaction.fetch();
-
-                const year = reaction.message.createdAt.getUTCFullYear();
                 const name = reaction.emoji.name;
-
-                if (year < new Date().getUTCFullYear()) {
-                    console.warn(`🚫 Ignoring removed reaction for emote ${name} older than this year.`);
-                    return;
-                }
 
                 if (!name) {
                     throw new Error("Missing emoji name in removeReactionsForEmote");
