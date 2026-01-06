@@ -84,11 +84,13 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
     async function checkForFunnySubstrings(message: Message): Promise<boolean> {
         if (message.author.id === botId) return false;
 
+        const content = await discordChatService.replaceUserAndRoleMentions(message);
+
         const substrings = ["69420", "69", "420"];
         const highlightPattern = `(${substrings.join("|")})`;
         const matchRegex = createWordContextRegex(highlightPattern);
 
-        const highlighted = quoteAndHighlightMatch(message.content, matchRegex, highlightPattern);
+        const highlighted = quoteAndHighlightMatch(content, matchRegex, highlightPattern);
         if (highlighted) {
             await message.reply(`> ${highlighted}\nNice`);
             return true;
