@@ -32,6 +32,8 @@ services:
       - POSTGRES_USER=wingtechbot
       - POSTGRES_PASSWORD=wingtechbot_password
       - POSTGRES_HOST_AUTH_METHOD=md5
+    ports:
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
