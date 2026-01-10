@@ -96,8 +96,14 @@ async function collectReactionData(discordMessage: Message) {
             } catch (error: unknown) {
                 if (error && typeof error === "object" && "code" in error) {
                     const apiError = error as { code: number };
+
                     if (apiError.code === 10008) {
                         console.log(`[MessageArchiveService] Skipping reactions for deleted message: ${messageId}`);
+                        return { reactions: [], emote: null };
+                    }
+
+                    if (apiError.code === 10014) {
+                        console.log(`[MessageArchiveService] Skipping reactions for deleted emoji: ${reaction.emoji.id}, ${reaction.emoji.name}`);
                         return { reactions: [], emote: null };
                     }
                 }
