@@ -39,6 +39,11 @@ const mockFileManager: FileManager = {
     writeFile: vi.fn(),
     listFiles: vi.fn(),
     getFileStats: vi.fn(),
+    getCachePath: vi.fn(),
+    readCache: vi.fn(),
+    writeCache: vi.fn(),
+    deleteCache: vi.fn(),
+    clearAllCache: vi.fn(),
 };
 
 const mockSoundRepository: SoundRepository = {

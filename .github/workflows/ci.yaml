@@ -210,12 +210,27 @@ jobs:
               with:
                   version: ${{ env.PNPM_VERSION }}
 
-            - name: Setup FFmpeg
+            - name: Setup FFmpeg (with retry)
               if: matrix.package == 'backend'
-              uses: FedericoCarboni/setup-ffmpeg@v3
+              uses: nick-fields/retry@v3
               with:
-                  ffmpeg-version: release
-                  github-token: ${{ github.server_url == 'https://github.com' && github.token || '' }}
+                  timeout_minutes: 3
+                  max_attempts: 2
+                  retry_on: error
+                  shell: bash
+                  command: |
+                      # Download and setup FFmpeg using the action's binary directly
+                      export RUNNER_TOOL_CACHE="${RUNNER_TOOL_CACHE:-$HOME/.setup-ffmpeg}"
+                      mkdir -p "$RUNNER_TOOL_CACHE"
+
+                      if command -v ffmpeg &> /dev/null && ffmpeg -version &> /dev/null; then
+                          echo "FFmpeg already installed and working"
+                          exit 0
+                      fi
+
+                      # Install via apt as fallback with proper dependencies
+                      sudo apt-get update -qq
+                      sudo apt-get install -y ffmpeg
 
             - name: Get pip cache dir
               if: matrix.package == 'backend'

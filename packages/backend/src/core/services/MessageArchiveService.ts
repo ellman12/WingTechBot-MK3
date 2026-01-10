@@ -1,20 +1,35 @@
 import type { CreateMessageData, Message as DBMessage } from "@core/entities/Message.js";
 import type { MessageRepository } from "@core/repositories/MessageRepository.js";
 import type { UnitOfWork } from "@core/repositories/UnitOfWork.js";
-import { ChannelType, Collection, type FetchMessagesOptions, type Guild, type Message, MessageFlags, type OmitPartialGroupDMChannel, type PartialMessage, type TextChannel } from "discord.js";
+import type { FileManager } from "@core/services/FileManager.js";
+import { executeBatchWithAdaptiveSize } from "@core/utils/batchUtils.js";
+import { ChannelType, type Guild, type Message, MessageFlags, type PartialMessage, type TextChannel } from "discord.js";
+import pRetry from "p-retry";
+
+// Helper function to retry Discord API calls that may fail with network errors like EAI_AGAIN
+async function retryDiscordFetch<T>(fn: () => Promise<T>, context: string): Promise<T> {
+    return pRetry(fn, {
+        retries: 3,
+        minTimeout: 1000, // Start with 1 second
+        maxTimeout: 5000, // Max 5 seconds between retries
+        factor: 2, // Exponential backoff factor
+        onFailedAttempt: error => {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.warn(`[MessageArchiveService] ${context} failed (attempt ${error.attemptNumber}/${error.retriesLeft + error.attemptNumber}): ${errorMessage}`);
+        },
+    });
+}
 
 export type MessageArchiveService = {
     readonly fetchAllMessages: (channel: TextChannel, endYear?: number) => Promise<Message[]>;
 
-    readonly processAllChannels: (guild: Guild, endYear?: number, channelIds?: string[]) => Promise<void>;
-
-    readonly removeDeletedMessages: (guild: Guild, endYear?: number) => Promise<void>;
+    readonly processAllChannels: (guild: Guild, endYear?: number, channelIds?: string[], resume?: boolean) => Promise<void>;
 
     readonly messageCreated: (message: Message) => Promise<void>;
 
-    readonly messageDeleted: (message: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>) => Promise<void>;
+    readonly messageDeleted: (message: Message | PartialMessage) => Promise<void>;
 
-    readonly messageEdited: (oldMessage: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, newMessage: OmitPartialGroupDMChannel<Message<boolean>>) => Promise<void>;
+    readonly messageEdited: (oldMessage: Message | PartialMessage, newMessage: Message) => Promise<void>;
 
     readonly getAllDBMessages: (year?: number) => Promise<DBMessage[]>;
 
@@ -23,51 +38,85 @@ export type MessageArchiveService = {
     readonly hasAnyMessages: () => Promise<boolean>;
 };
 
+type SyncProgress = {
+    guildId: string;
+    endYear?: number;
+    channelIds?: string[];
+    completedChannels: string[];
+    startedAt: string;
+    lastUpdatedAt: string;
+};
+
+type ChannelFetchCache = {
+    discordMessages: Array<{
+        id: string;
+        authorId: string;
+        channelId: string;
+        content: string;
+        createdAt: Date;
+        editedAt: Date | null;
+        reactions: Array<{ giverId: string; receiverId: string; emoteName: string; emoteDiscordId: string }>;
+    }>;
+    emotes: Array<{ name: string; discordId: string }>;
+    fetchedAt: string;
+};
+
 export type MessageArchiveServiceDeps = {
     unitOfWork: UnitOfWork;
     messageRepository: MessageRepository;
+    fileManager: FileManager;
 };
 
 // Collects reaction data for batch processing to minimize database round trips.
 async function collectReactionData(discordMessage: Message) {
-    const messageId = discordMessage.id;
-    const authorId = discordMessage.author.id;
-    const channelId = discordMessage.channelId;
+    const messageId = String(discordMessage.id);
+    const authorId = String(discordMessage.author.id);
+    const channelId = String(discordMessage.channelId);
 
-    const emotes: Array<{ name: string; discordId: string }> = [];
-    const reactions: Array<{ giverId: string; receiverId: string; channelId: string; messageId: string; emoteName: string; emoteDiscordId: string }> = [];
+    const reactionResults = await Promise.all(
+        [...discordMessage.reactions.cache.values()].map(async reaction => {
+            try {
+                const name = reaction.emoji.name!;
+                const emoteDiscordId = reaction.emoji.id ?? "";
 
-    for (const reaction of discordMessage.reactions.cache.values()) {
-        try {
-            const name = reaction.emoji.name!;
-            const emoteDiscordId = reaction.emoji.id ?? "";
-
-            await reaction.users.fetch();
-            for (const user of reaction.users.cache.values()) {
-                reactions.push({
-                    giverId: user.id,
+                await retryDiscordFetch(() => reaction.users.fetch(), `Fetching users for reaction ${name} on message ${messageId}`);
+                const reactions = [...reaction.users.cache.values()].map(user => ({
+                    giverId: String(user.id),
                     receiverId: authorId,
                     channelId,
                     messageId,
                     emoteName: name,
                     emoteDiscordId,
-                });
-            }
+                }));
 
-            if (!emotes.some(e => e.name === name && e.discordId === emoteDiscordId)) {
-                emotes.push({ name, discordId: emoteDiscordId });
-            }
-        } catch (error: unknown) {
-            if (error && typeof error === "object" && "code" in error) {
-                const apiError = error as { code: number };
-                if (apiError.code === 10008) {
-                    console.log(`[MessageArchiveService] Skipping reactions for deleted message: ${messageId}`);
-                    continue;
+                return {
+                    reactions,
+                    emote: { name, discordId: emoteDiscordId },
+                };
+            } catch (error: unknown) {
+                if (error && typeof error === "object" && "code" in error) {
+                    const apiError = error as { code: number };
+
+                    if (apiError.code === 10008) {
+                        console.log(`[MessageArchiveService] Skipping reactions for deleted message: ${messageId}`);
+                        return { reactions: [], emote: null };
+                    }
+
+                    if (apiError.code === 10014) {
+                        console.log(`[MessageArchiveService] Skipping reactions for deleted emoji: ${reaction.emoji.id}, ${reaction.emoji.name}`);
+                        return { reactions: [], emote: null };
+                    }
                 }
+                throw error;
             }
-            throw error;
-        }
-    }
+        })
+    );
+
+    const reactions = reactionResults.flatMap(r => r.reactions);
+    const emotes = reactionResults
+        .map(r => r.emote)
+        .filter((e): e is { name: string; discordId: string } => e !== null)
+        .filter((emote, index, self) => self.findIndex(e => e.name === emote.name && e.discordId === emote.discordId) === index);
 
     return { emotes, reactions };
 }
@@ -76,265 +125,555 @@ function validMessage(message: Message): boolean {
     return message.channel.type !== ChannelType.DM && !message.flags.has(MessageFlags.Ephemeral);
 }
 
-export const createMessageArchiveService = ({ unitOfWork, messageRepository }: MessageArchiveServiceDeps): MessageArchiveService => {
+export const createMessageArchiveService = ({ unitOfWork, messageRepository, fileManager }: MessageArchiveServiceDeps): MessageArchiveService => {
     console.log("[MessageArchiveService] Creating message archive service");
 
-    async function fetchAllMessages(channel: TextChannel, endYear?: number) {
-        const allMessages: Message[] = [];
-        let messages = new Collection<string, Message>();
-        let lastId: string | null = null;
+    const getChannelFetchCacheFilename = (channelId: string) => `channel-fetch-cache-${channelId}.json`;
 
-        do {
-            const options: FetchMessagesOptions = { limit: 100, before: lastId ?? undefined };
-            messages = await channel.messages.fetch(options);
-            lastId = messages.last()?.id ?? null;
-            for (const message of messages.values()) {
-                if (endYear !== undefined && message.createdAt.getUTCFullYear() !== endYear) break;
-
-                allMessages.push(message);
-            }
-        } while (messages.size > 0);
-
-        return allMessages;
+    async function loadChannelFetchCache(channelId: string): Promise<ChannelFetchCache | null> {
+        return await fileManager.readCache<ChannelFetchCache>(getChannelFetchCacheFilename(channelId));
     }
 
-    async function processAllChannels(guild: Guild, endYear?: number, channelIds?: string[]): Promise<void> {
-        console.log(`💬 Begin processing messages in ${channelIds ? `${channelIds.length} specified channel(s)` : "all channels"} ${endYear ? `for ${endYear}` : "for all years"}`);
-        await guild.channels.fetch();
+    async function saveChannelFetchCache(channelId: string, cache: ChannelFetchCache): Promise<void> {
+        await fileManager.writeCache(getChannelFetchCacheFilename(channelId), cache);
+    }
 
-        let textChannels = Array.from(guild.channels.cache.filter(c => c.type === ChannelType.GuildText).values());
+    async function clearChannelFetchCache(channelId: string): Promise<void> {
+        await fileManager.deleteCache(getChannelFetchCacheFilename(channelId));
+    }
 
-        // Filter to specific channels if provided
-        if (channelIds && channelIds.length > 0) {
-            textChannels = textChannels.filter(c => channelIds.includes(c.id));
+    const getProgressFilename = (guildId: string) => `sync-progress-${guildId}.json`;
+
+    const chunkArray = <T>(items: T[], size: number): T[][] => {
+        const chunks: T[][] = [];
+        for (let i = 0; i < items.length; i += size) {
+            chunks.push(items.slice(i, i + size));
         }
+        return chunks;
+    };
 
-        await Promise.all(
-            textChannels.map(async channel => {
-                const name = channel.name;
-                console.log(`🗨️ Begin processing messages in #${name}`);
+    async function loadProgress(guildId: string): Promise<SyncProgress | null> {
+        return await fileManager.readCache<SyncProgress>(getProgressFilename(guildId));
+    }
 
-                const discordMessages = await fetchAllMessages(channel, endYear);
-                const existingMessagesArray = await messageRepository.getMessagesForChannel(channel.id, endYear);
-                const existingMessages = new Map(existingMessagesArray.map(m => [m.id, m]));
-                console.log(`🗨️ Fetched ${discordMessages.length} messages from #${name}`);
+    async function saveProgress(progress: SyncProgress): Promise<void> {
+        progress.lastUpdatedAt = new Date().toISOString();
+        await fileManager.writeCache(getProgressFilename(progress.guildId), progress);
+    }
 
-                const validDiscordMessages = discordMessages.filter(validMessage);
-                console.log(`🗨️ ${validDiscordMessages.length} valid messages in #${name}`);
+    async function clearProgress(guildId: string): Promise<void> {
+        await fileManager.deleteCache(getProgressFilename(guildId));
+    }
 
-                // Collect all reaction data from Discord messages for batch processing
-                const allReactionData = await Promise.all(validDiscordMessages.map(collectReactionData));
-                const allEmotes = allReactionData.flatMap(d => d.emotes);
-                const allReactions = allReactionData.flatMap(d => d.reactions);
+    // Helper to fetch reactions in batches with progress tracking
+    async function fetchReactionsInBatches(messages: Message[], channelName: string) {
+        console.log(`⚡ Fetching reactions for ${messages.length} messages from #${channelName}...`);
+        const REACTION_PROGRESS_INTERVAL = 500;
+        const PARALLEL_BATCH_SIZE = 10;
 
-                // Batch create/fetch all unique emotes to minimize database round trips
-                let emoteCache: Map<string, { id: number }> = new Map();
-                if (allEmotes.length > 0) {
-                    emoteCache = await unitOfWork.execute(async repos => {
-                        return await repos.emoteRepository.batchFindOrCreate(allEmotes);
+        type ReactionData = {
+            messageId: string;
+            reactions: Array<{ giverId: string; receiverId: string; emoteName: string; emoteDiscordId: string }>;
+            emotes: Array<{ name: string; discordId: string }>;
+        };
+
+        const batches = chunkArray(messages, PARALLEL_BATCH_SIZE);
+
+        const { data } = await batches.reduce<Promise<{ data: ReactionData[]; total: number }>>(
+            async (accPromise, batch, batchIndex) => {
+                const acc = await accPromise;
+
+                const batchResults = await Promise.all(
+                    batch.map(async msg => {
+                        const { reactions, emotes } = await collectReactionData(msg);
+                        return { messageId: String(msg.id), reactions, emotes };
+                    })
+                );
+
+                const totalReactionsFetched = acc.total + batchResults.reduce((sum, r) => sum + r.reactions.length, 0);
+                const processedMessages = Math.min((batchIndex + 1) * PARALLEL_BATCH_SIZE, messages.length);
+
+                if (totalReactionsFetched > 0 && (totalReactionsFetched % REACTION_PROGRESS_INTERVAL === 0 || processedMessages === messages.length)) {
+                    console.log(`⚡ Progress: ${totalReactionsFetched} reactions from ${processedMessages}/${messages.length} messages`);
+                }
+
+                return {
+                    data: [...acc.data, ...batchResults],
+                    total: totalReactionsFetched,
+                };
+            },
+            Promise.resolve({ data: [], total: 0 })
+        );
+
+        return data;
+    }
+
+    // Fetch reactions for cached messages by refetching only the specific message IDs
+    async function fetchReactionsForCachedMessages(channel: TextChannel, cachedMessages: ChannelFetchCache["discordMessages"], channelName: string) {
+        console.log(`⚡ Fetching reactions for ${cachedMessages.length} cached messages from #${channelName}...`);
+        const REACTION_PROGRESS_INTERVAL = 500;
+        const PARALLEL_BATCH_SIZE = 10;
+
+        type ReactionData = {
+            messageId: string;
+            reactions: Array<{ giverId: string; receiverId: string; emoteName: string; emoteDiscordId: string }>;
+            emotes: Array<{ name: string; discordId: string }>;
+        };
+
+        const batches = chunkArray(cachedMessages, PARALLEL_BATCH_SIZE);
+
+        const { data } = await batches.reduce<Promise<{ data: ReactionData[]; total: number; processed: number }>>(
+            async (accPromise, batch, batchIndex) => {
+                const acc = await accPromise;
+
+                const batchResults = await Promise.all(
+                    batch.map(async cachedMsg => {
+                        try {
+                            const msg = await retryDiscordFetch(() => channel.messages.fetch(cachedMsg.id), `Fetching message ${cachedMsg.id} from #${channelName}`);
+                            const { reactions, emotes } = await collectReactionData(msg);
+                            return { messageId: cachedMsg.id, reactions, emotes };
+                        } catch (error: unknown) {
+                            if (error && typeof error === "object" && "code" in error && (error as { code: number }).code === 10008) {
+                                return { messageId: cachedMsg.id, reactions: [], emotes: [] };
+                            }
+                            throw error;
+                        }
+                    })
+                );
+
+                const totalReactionsFetched = acc.total + batchResults.reduce((sum, r) => sum + r.reactions.length, 0);
+                const processedMessages = Math.min((batchIndex + 1) * PARALLEL_BATCH_SIZE, cachedMessages.length);
+
+                if (totalReactionsFetched > 0 && (totalReactionsFetched % REACTION_PROGRESS_INTERVAL === 0 || processedMessages === cachedMessages.length)) {
+                    console.log(`⚡ Progress: ${totalReactionsFetched} reactions from ${processedMessages}/${cachedMessages.length} messages`);
+                }
+
+                return {
+                    data: [...acc.data, ...batchResults],
+                    total: totalReactionsFetched,
+                    processed: processedMessages,
+                };
+            },
+            Promise.resolve({ data: [], total: 0, processed: 0 })
+        );
+
+        return data;
+    }
+
+    async function fetchAllMessages(channel: TextChannel, endYear?: number): Promise<Message[]> {
+        const PROGRESS_INTERVAL = 5000;
+
+        const fetchBatch = async (beforeId: string | null = null): Promise<{ messages: Message[]; hasMore: boolean }> => {
+            const options = { limit: 100, ...(beforeId && { before: beforeId }) };
+            const messages = await retryDiscordFetch(() => channel.messages.fetch(options), `Fetching message batch from #${channel.name}${beforeId ? ` before ${beforeId}` : ""}`);
+
+            const filteredMessages = [...messages.values()].filter(message => endYear === undefined || message.createdAt.getUTCFullYear() === endYear);
+
+            return {
+                messages: filteredMessages,
+                hasMore: messages.size > 0,
+            };
+        };
+
+        const fetchAllRecursive = async (beforeId: string | null, accumulated: Message[]): Promise<Message[]> => {
+            const { messages, hasMore } = await fetchBatch(beforeId);
+            const newAccumulated = [...accumulated, ...messages];
+
+            // Log progress
+            if (newAccumulated.length % PROGRESS_INTERVAL === 0 && newAccumulated.length > 0) {
+                console.log(`📥 Fetched ${newAccumulated.length} messages from #${channel.name}`);
+            }
+
+            if (!hasMore || messages.length === 0) {
+                return newAccumulated;
+            }
+
+            const lastMessage = messages[messages.length - 1];
+            const lastId = lastMessage ? String(lastMessage.id) : null;
+            return fetchAllRecursive(lastId, newAccumulated);
+        };
+
+        return fetchAllRecursive(null, []);
+    }
+
+    // Unified function that syncs a single channel: creates, updates, deletions, and reactions
+    async function syncChannel(channel: TextChannel, endYear?: number): Promise<void> {
+        const name = channel.name;
+        const channelId = String(channel.id);
+        console.log(`🗨️ Begin syncing #${name}`);
+
+        // Try to load cached Discord data
+        const cachedFetch = await loadChannelFetchCache(channelId);
+
+        let discordMessages: ChannelFetchCache["discordMessages"];
+        let allEmotes: Array<{ name: string; discordId: string }>;
+        let allReactions: Array<{ giverId: string; receiverId: string; channelId: string; messageId: string; emoteName: string; emoteDiscordId: string }>;
+
+        // Use cache if available, otherwise fetch from Discord
+        if (cachedFetch) {
+            console.log(`📦 Using cached data for #${name} (${cachedFetch.discordMessages.length} messages from ${cachedFetch.fetchedAt})`);
+
+            // Deserialize dates from JSON strings back to Date objects
+            discordMessages = cachedFetch.discordMessages.map(msg => ({
+                ...msg,
+                createdAt: new Date(msg.createdAt),
+                editedAt: msg.editedAt ? new Date(msg.editedAt) : null,
+            }));
+
+            allEmotes = cachedFetch.emotes;
+
+            // Reconstruct full reaction list from cached messages
+            allReactions = discordMessages.flatMap(msg =>
+                msg.reactions.map(r => ({
+                    giverId: r.giverId,
+                    receiverId: r.receiverId,
+                    channelId: msg.channelId,
+                    messageId: msg.id,
+                    emoteName: r.emoteName,
+                    emoteDiscordId: r.emoteDiscordId,
+                }))
+            );
+
+            // Check if we need to fetch reactions (cache might only have messages)
+            const hasReactions = allReactions.length > 0 || allEmotes.length > 0;
+            if (!hasReactions) {
+                console.log(`⚠️ Cache has messages but no reactions, fetching reactions now...`);
+
+                // Fetch reactions only for the cached message IDs instead of re-fetching all messages
+                const allReactionDataByMessage = await fetchReactionsForCachedMessages(channel, discordMessages, name);
+
+                // Build emote set (deduplicated)
+                const emoteSet = new Map<string, { name: string; discordId: string }>();
+                allReactionDataByMessage.forEach(data => {
+                    data.emotes.forEach(emote => {
+                        const key = `${emote.name}:${emote.discordId}`;
+                        emoteSet.set(key, emote);
                     });
-                }
+                });
+                allEmotes = [...emoteSet.values()];
 
-                // Categorize messages into new, updated, or unchanged
-                const messagesToCreate: CreateMessageData[] = [];
-                const messagesToUpdate: Array<{ id: string; content: string }> = [];
-                let newMessageCount = 0;
-
-                for (const discordMessage of validDiscordMessages) {
-                    if (discordMessage.partial) {
-                        await discordMessage.fetch();
-                    }
-
-                    const messageId = discordMessage.id;
-                    const existingMsg = existingMessages.get(messageId);
-
-                    if (!existingMsg) {
-                        const referencedMessageId = discordMessage.reference ? discordMessage.reference.messageId : undefined;
-                        messagesToCreate.push({
-                            id: messageId,
-                            authorId: discordMessage.author.id,
-                            channelId: discordMessage.channelId,
-                            content: discordMessage.content,
-                            referencedMessageId,
-                            createdAt: discordMessage.createdAt,
-                            editedAt: discordMessage.editedAt,
-                        });
-                        newMessageCount++;
-                    } else if (existingMsg.content !== discordMessage.content) {
-                        messagesToUpdate.push({ id: messageId, content: discordMessage.content });
-                    }
-                }
-
-                // Build target reaction state with emote IDs from cache
-                const targetReactions = allReactions.map(r => {
-                    const emoteKey = `${r.emoteName}:${r.emoteDiscordId}`;
-                    const emote = emoteCache.get(emoteKey);
-                    if (!emote) {
-                        throw new Error(`Emote not found in cache: ${emoteKey}`);
-                    }
+                // Update messages with reactions
+                discordMessages = discordMessages.map(msg => {
+                    const messageReactionData = allReactionDataByMessage.find(r => r.messageId === msg.id);
                     return {
-                        giverId: r.giverId,
-                        receiverId: r.receiverId,
-                        channelId: r.channelId,
-                        messageId: r.messageId,
-                        emoteId: emote.id,
+                        ...msg,
+                        reactions: messageReactionData?.reactions || [],
                     };
                 });
 
-                // Calculate diff between target and existing reactions using set operations
-                const existingReactions = Array.from(existingMessages.values()).flatMap(m => m.reactions);
+                // Build full reaction list for database operations
+                allReactions = discordMessages.flatMap(msg =>
+                    msg.reactions.map(r => ({
+                        giverId: r.giverId,
+                        receiverId: msg.authorId,
+                        channelId: msg.channelId,
+                        messageId: msg.id,
+                        emoteName: r.emoteName,
+                        emoteDiscordId: r.emoteDiscordId,
+                    }))
+                );
 
-                const makeKey = (r: { giverId: string; receiverId: string; channelId: string; messageId: string; emoteId: number }) => `${r.giverId}:${r.receiverId}:${r.channelId}:${r.messageId}:${r.emoteId}`;
+                console.log(`✅ Fetched reactions: ${allReactions.length} total reactions, ${allEmotes.length} emotes`);
 
-                const targetSet = new Set(targetReactions.map(makeKey));
-                const existingSet = new Set(existingReactions.map(makeKey));
+                // Update cache with reactions
+                await saveChannelFetchCache(channelId, {
+                    discordMessages,
+                    emotes: allEmotes,
+                    fetchedAt: new Date().toISOString(),
+                });
+                const cachePath = fileManager.getCachePath(getChannelFetchCacheFilename(channelId));
+                console.log(`💾 Updated cache with reactions: ${cachePath}`);
+            } else {
+                console.log(`✅ Loaded from cache: ${discordMessages.length} messages, ${allReactions.length} reactions, ${allEmotes.length} emotes`);
+            }
+        } else {
+            // Fetch all messages from Discord
+            console.log(`📥 Fetching messages from Discord for #${name}...`);
+            const freshMessages = await fetchAllMessages(channel, endYear);
 
-                const reactionsToAdd = targetReactions.filter(r => !existingSet.has(makeKey(r)));
-                const reactionsToRemove = existingReactions.filter(r => !targetSet.has(makeKey(r)));
+            // Save messages immediately to cache (before expensive reaction fetching)
+            // This allows crash recovery - if reactions fail, we don't need to refetch messages
+            const messagesWithoutReactions = freshMessages.map(msg => ({
+                id: String(msg.id),
+                authorId: String(msg.author.id),
+                channelId: String(msg.channelId),
+                content: msg.content,
+                createdAt: msg.createdAt,
+                editedAt: msg.editedAt,
+                reactions: [], // Will be populated after reaction fetch
+            }));
 
-                // Execute batch operations in smaller chunks to avoid large transactions
-                const BATCH_SIZE = 100;
+            await saveChannelFetchCache(channelId, {
+                discordMessages: messagesWithoutReactions,
+                emotes: [],
+                fetchedAt: new Date().toISOString(),
+            });
+            console.log(`💾 Cached ${freshMessages.length} messages (reactions pending...)`);
 
-                for (let i = 0; i < messagesToCreate.length; i += BATCH_SIZE) {
-                    const batch = messagesToCreate.slice(i, i + BATCH_SIZE);
-                    await unitOfWork.execute(async repos => {
-                        await repos.messageRepository.batchCreate(batch);
-                    });
+            // Use the helper function to fetch reactions
+            const allReactionDataByMessage = await fetchReactionsInBatches(freshMessages, name);
+
+            // Build emote set (deduplicated)
+            const emoteSet = new Map<string, { name: string; discordId: string }>();
+            allReactionDataByMessage.forEach(data => {
+                data.emotes.forEach(emote => {
+                    const key = `${emote.name}:${emote.discordId}`;
+                    emoteSet.set(key, emote);
+                });
+            });
+            allEmotes = [...emoteSet.values()];
+
+            // Build messages with embedded reactions
+            discordMessages = freshMessages.map(msg => {
+                const messageReactionData = allReactionDataByMessage.find(r => r.messageId === String(msg.id));
+
+                return {
+                    id: String(msg.id),
+                    authorId: String(msg.author.id),
+                    channelId: String(msg.channelId),
+                    content: msg.content,
+                    createdAt: msg.createdAt,
+                    editedAt: msg.editedAt,
+                    reactions: messageReactionData?.reactions || [],
+                };
+            });
+
+            // Build full reaction list for database operations
+            allReactions = discordMessages.flatMap(msg =>
+                msg.reactions.map(r => ({
+                    giverId: r.giverId,
+                    receiverId: msg.authorId,
+                    channelId: msg.channelId,
+                    messageId: msg.id,
+                    emoteName: r.emoteName,
+                    emoteDiscordId: r.emoteDiscordId,
+                }))
+            );
+
+            console.log(`✅ Fetched from Discord: ${discordMessages.length} messages, ${allReactions.length} reactions, ${allEmotes.length} emotes`);
+
+            // Save everything to cache
+            await saveChannelFetchCache(channelId, {
+                discordMessages,
+                emotes: allEmotes,
+                fetchedAt: new Date().toISOString(),
+            });
+            const cachePath = fileManager.getCachePath(getChannelFetchCacheFilename(channelId));
+            console.log(`💾 Saved to cache: ${cachePath}`);
+        }
+
+        // Get existing messages from database
+        const existingMessagesArray = await messageRepository.getMessagesForChannel(channelId, endYear);
+        const existingMessages = new Map(existingMessagesArray.map(m => [m.id, m]));
+
+        const validDiscordMessageIds = new Set(discordMessages.map(m => m.id));
+        const messagesToDelete = existingMessagesArray.filter(m => !validDiscordMessageIds.has(m.id)).map(m => m.id);
+
+        // Batch create/fetch all unique emotes to minimize database round trips
+        let emoteCache: Map<string, { id: number }> = new Map();
+        if (allEmotes.length > 0) {
+            emoteCache = await unitOfWork.execute(async repos => {
+                return await repos.emoteRepository.batchFindOrCreate(allEmotes);
+            });
+        }
+
+        // Categorize messages into new, updated, or unchanged
+        const { messagesToCreate, messagesToUpdate } = discordMessages.reduce<{
+            messagesToCreate: CreateMessageData[];
+            messagesToUpdate: Array<{ id: string; content: string; editedAt: Date | null }>;
+        }>(
+            (acc, discordMessage) => {
+                const messageId = discordMessage.id;
+                const existingMsg = existingMessages.get(messageId);
+
+                if (!existingMsg) {
+                    return {
+                        ...acc,
+                        messagesToCreate: [
+                            ...acc.messagesToCreate,
+                            {
+                                id: messageId,
+                                authorId: discordMessage.authorId,
+                                channelId: discordMessage.channelId,
+                                content: discordMessage.content,
+                                referencedMessageId: undefined, // Not stored in cache
+                                createdAt: discordMessage.createdAt,
+                                editedAt: discordMessage.editedAt,
+                            },
+                        ],
+                    };
                 }
 
-                for (let i = 0; i < messagesToUpdate.length; i += BATCH_SIZE) {
-                    const batch = messagesToUpdate.slice(i, i + BATCH_SIZE);
-                    await unitOfWork.execute(async repos => {
-                        await repos.messageRepository.batchUpdate(batch);
-                    });
+                // Check if message was edited - compare both content and editedAt timestamp
+                const contentChanged = existingMsg.content !== discordMessage.content;
+                const editedAtChanged =
+                    (existingMsg.editedAt === null && discordMessage.editedAt !== null) || (existingMsg.editedAt !== null && discordMessage.editedAt !== null && existingMsg.editedAt.getTime() !== discordMessage.editedAt.getTime());
+
+                if (contentChanged || editedAtChanged) {
+                    return {
+                        ...acc,
+                        messagesToUpdate: [
+                            ...acc.messagesToUpdate,
+                            {
+                                id: messageId,
+                                content: discordMessage.content,
+                                editedAt: discordMessage.editedAt,
+                            },
+                        ],
+                    };
                 }
 
-                for (let i = 0; i < reactionsToRemove.length; i += BATCH_SIZE) {
-                    const batch = reactionsToRemove.slice(i, i + BATCH_SIZE);
-                    await unitOfWork.execute(async repos => {
-                        await repos.reactionRepository.batchDelete(batch);
-                    });
-                }
-
-                for (let i = 0; i < reactionsToAdd.length; i += BATCH_SIZE) {
-                    const batch = reactionsToAdd.slice(i, i + BATCH_SIZE);
-                    await unitOfWork.execute(async repos => {
-                        await repos.reactionRepository.batchCreate(batch);
-                    });
-                }
-
-                if (newMessageCount > 0) {
-                    console.log(`💾 Added ${newMessageCount} messages to #${name}`);
-                }
-                if (messagesToUpdate.length > 0) {
-                    console.log(`✏️ Updated ${messagesToUpdate.length} messages in #${name}`);
-                }
-
-                console.log(`🗨️ Finish processing messages in #${name}`);
-            })
+                return acc;
+            },
+            { messagesToCreate: [], messagesToUpdate: [] }
         );
 
-        console.log("💬 Finish processing all messages in all channels");
+        // Build target reaction state with emote IDs from cache
+        const targetReactions = allReactions.map(r => {
+            const emoteKey = `${r.emoteName}:${r.emoteDiscordId}`;
+            const emote = emoteCache.get(emoteKey);
+            if (!emote) {
+                throw new Error(`Emote not found in cache: ${emoteKey}`);
+            }
+            return {
+                giverId: r.giverId,
+                receiverId: r.receiverId,
+                channelId: r.channelId,
+                messageId: r.messageId,
+                emoteId: emote.id,
+            };
+        });
+
+        // Calculate diff between target and existing reactions using set operations
+        const existingReactions = [...existingMessages.values()].flatMap(m => m.reactions);
+
+        const makeKey = (r: { giverId: string; receiverId: string; channelId: string; messageId: string; emoteId: number }) => `${r.giverId}:${r.receiverId}:${r.channelId}:${r.messageId}:${r.emoteId}`;
+
+        const targetSet = new Set(targetReactions.map(makeKey));
+        const existingSet = new Set(existingReactions.map(makeKey));
+
+        const reactionsToAdd = targetReactions.filter(r => !existingSet.has(makeKey(r)));
+        const reactionsToRemove = existingReactions.filter(r => !targetSet.has(makeKey(r)));
+
+        // Execute batch operations with adaptive sizing
+        // Delete messages first (this will cascade delete reactions)
+        if (messagesToDelete.length > 0) {
+            await Promise.all(messagesToDelete.map(id => messageRepository.delete({ id })));
+            console.log(`🗑️ Deleted ${messagesToDelete.length} messages from #${name}`);
+        }
+
+        // Create messages: 7 params (id, authorId, channelId, content, referencedMessageId, createdAt, editedAt)
+        await executeBatchWithAdaptiveSize(
+            messagesToCreate,
+            async batch => {
+                await unitOfWork.execute(async repos => {
+                    await repos.messageRepository.batchCreate(batch);
+                });
+            },
+            `Create Messages (#${name})`,
+            7
+        );
+
+        // Update messages: 3 params (id, content, editedAt)
+        await executeBatchWithAdaptiveSize(
+            messagesToUpdate,
+            async batch => {
+                await unitOfWork.execute(async repos => {
+                    await repos.messageRepository.batchUpdate(batch);
+                });
+            },
+            `Update Messages (#${name})`,
+            3
+        );
+
+        // Delete reactions: 5 params (giverId, receiverId, channelId, messageId, emoteId)
+        await executeBatchWithAdaptiveSize(
+            reactionsToRemove,
+            async batch => {
+                await unitOfWork.execute(async repos => {
+                    await repos.reactionRepository.batchDelete(batch);
+                });
+            },
+            `Delete Reactions (#${name})`,
+            5
+        );
+
+        // Create reactions: 5 params (giverId, receiverId, channelId, messageId, emoteId)
+        await executeBatchWithAdaptiveSize(
+            reactionsToAdd,
+            async batch => {
+                await unitOfWork.execute(async repos => {
+                    await repos.reactionRepository.batchCreate(batch);
+                });
+            },
+            `Create Reactions (#${name})`,
+            5
+        );
+
+        // Log summary
+        const changes = [
+            messagesToCreate.length > 0 && `+${messagesToCreate.length} messages`,
+            messagesToUpdate.length > 0 && `~${messagesToUpdate.length} updated`,
+            messagesToDelete.length > 0 && `-${messagesToDelete.length} deleted`,
+            reactionsToAdd.length > 0 && `+${reactionsToAdd.length} reactions`,
+            reactionsToRemove.length > 0 && `-${reactionsToRemove.length} reactions`,
+        ].filter(Boolean);
+
+        if (changes.length > 0) {
+            console.log(`✅ #${name}: ${changes.join(", ")}`);
+        } else {
+            console.log(`✅ #${name}: No changes`);
+        }
+
+        // Clear cache after successful sync so next run fetches fresh data
+        // Cache persists during sync for crash recovery, but is removed on success
+        await clearChannelFetchCache(channelId);
     }
 
-    async function removeDeletedMessages(guild: Guild, endYear?: number) {
+    async function processAllChannels(guild: Guild, endYear?: number, channelIds?: string[], resume = false): Promise<void> {
+        console.log(`💬 Begin processing messages in ${channelIds ? `${channelIds.length} specified channel(s)` : "all channels"} ${endYear ? `for ${endYear}` : "for all years"}`);
         await guild.channels.fetch();
 
-        const messages = await messageRepository.getAllMessages(endYear);
+        // Filter to text channels and optionally to specific channel IDs
+        const textChannels = [...guild.channels.cache.values()].filter(c => c.type === ChannelType.GuildText).filter(c => !channelIds?.length || channelIds.includes(c.id)) as TextChannel[];
 
-        if (messages.length === 0) {
-            return;
-        }
+        // Load or initialize progress
+        const guildId = String(guild.id);
+        let progress: SyncProgress;
+        const existingProgress = resume ? await loadProgress(guildId) : null;
 
-        console.log(`🔍 Checking ${messages.length} messages for deletions...`);
-
-        // Group messages by channel to minimize channel fetches
-        const messagesByChannel = new Map<string, DBMessage[]>();
-        for (const message of messages) {
-            const channelMessages = messagesByChannel.get(message.channelId) || [];
-            channelMessages.push(message);
-            messagesByChannel.set(message.channelId, channelMessages);
-        }
-
-        const messagesToDelete: string[] = [];
-        const batchSize = 10;
-
-        for (const [channelId, channelMessages] of messagesByChannel) {
-            let channel: TextChannel | null = null;
-            try {
-                const fetchedChannel = await guild.channels.fetch(channelId);
-                if (fetchedChannel && fetchedChannel.isTextBased()) {
-                    channel = fetchedChannel as TextChannel;
-                }
-            } catch {
-                console.log(`Channel ${channelId} not found, marking ${channelMessages.length} messages for deletion`);
-                messagesToDelete.push(...channelMessages.map(m => m.id));
-                continue;
-            }
-
-            if (!channel) {
-                messagesToDelete.push(...channelMessages.map(m => m.id));
-                continue;
-            }
-
-            // Use bulk fetch for many messages, individual fetches for few (more efficient for small counts)
-            if (channelMessages.length > 20) {
-                const existingIds = new Set<string>();
-                let lastId: string | undefined;
-
-                while (true) {
-                    try {
-                        const fetched = await channel.messages.fetch({ limit: 100, before: lastId });
-                        if (fetched.size === 0) break;
-
-                        fetched.forEach(msg => existingIds.add(msg.id));
-                        lastId = fetched.last()?.id;
-
-                        if (fetched.size < 100) break;
-                    } catch {
-                        break;
-                    }
-                }
-
-                for (const message of channelMessages) {
-                    if (!existingIds.has(message.id)) {
-                        messagesToDelete.push(message.id);
-                    }
-                }
-            } else {
-                for (let i = 0; i < channelMessages.length; i += batchSize) {
-                    const batch = channelMessages.slice(i, i + batchSize);
-
-                    const results = await Promise.all(
-                        batch.map(async message => {
-                            try {
-                                await channel!.messages.fetch(message.id);
-                                return { id: message.id, exists: true };
-                            } catch {
-                                return { id: message.id, exists: false };
-                            }
-                        })
-                    );
-
-                    for (const result of results) {
-                        if (!result.exists) {
-                            messagesToDelete.push(result.id);
-                        }
-                    }
-                }
-            }
-        }
-
-        console.log(`🔍 Found ${messagesToDelete.length} messages to delete`);
-
-        if (messagesToDelete.length > 0) {
-            for (const id of messagesToDelete) {
-                await messageRepository.delete({ id });
-            }
-            console.log(`🗑️ Removed ${messagesToDelete.length} deleted messages`);
+        if (existingProgress) {
+            console.log(`🔄 Resuming previous sync (${existingProgress.completedChannels.length}/${textChannels.length} channels completed)`);
+            progress = existingProgress;
         } else {
-            console.log(`✅ No deleted messages found`);
+            progress = {
+                guildId,
+                endYear,
+                channelIds,
+                completedChannels: [],
+                startedAt: new Date().toISOString(),
+                lastUpdatedAt: new Date().toISOString(),
+            };
         }
+
+        const processChannel = async (channel: TextChannel) => {
+            if (progress.completedChannels.includes(channel.id)) {
+                console.log(`⏭️ Skipping already completed channel: #${channel.name}`);
+                return;
+            }
+
+            await syncChannel(channel, endYear);
+
+            // Save progress after each channel
+            progress.completedChannels.push(channel.id);
+            await saveProgress(progress);
+        };
+
+        await Promise.all(textChannels.map(processChannel));
+
+        // Clean up progress file on successful completion
+        await clearProgress(guildId);
+        console.log("💬 Finish processing all messages in all channels");
     }
 
     async function messageCreated(message: Message): Promise<void> {
@@ -347,11 +686,11 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
         }
 
         try {
-            const referencedMessageId = message.reference ? message.reference.messageId : undefined;
+            const referencedMessageId = message.reference?.messageId ? String(message.reference.messageId) : undefined;
             const data: CreateMessageData = {
-                id: message.id,
-                authorId: message.author.id,
-                channelId: message.channelId,
+                id: String(message.id),
+                authorId: String(message.author.id),
+                channelId: String(message.channelId),
                 content: message.content,
                 referencedMessageId,
                 createdAt: message.createdAt,
@@ -363,7 +702,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
         }
     }
 
-    async function messageDeleted(message: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>): Promise<void> {
+    async function messageDeleted(message: Message | PartialMessage): Promise<void> {
         if (!validMessage(message as Message)) {
             return;
         }
@@ -373,7 +712,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
         }
 
         try {
-            await messageRepository.delete({ id: message.id });
+            await messageRepository.delete({ id: String(message.id) });
         } catch (e: unknown) {
             if (e instanceof Error && e.message === "Message does not exist") {
                 return;
@@ -382,7 +721,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
         }
     }
 
-    async function messageEdited(_oldMessage: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>, newMessage: OmitPartialGroupDMChannel<Message<boolean>>): Promise<void> {
+    async function messageEdited(_oldMessage: Message | PartialMessage, newMessage: Message): Promise<void> {
         if (!validMessage(newMessage)) {
             return;
         }
@@ -392,8 +731,11 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
         }
 
         try {
-            const id = newMessage.id;
-            await messageRepository.edit({ id, content: newMessage.content });
+            await messageRepository.edit({
+                id: String(newMessage.id),
+                content: newMessage.content,
+                editedAt: newMessage.editedAt,
+            });
         } catch (e: unknown) {
             console.error("Error updating content of message", e, newMessage.content);
         }
@@ -432,7 +774,6 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository }: M
     return {
         fetchAllMessages,
         processAllChannels,
-        removeDeletedMessages,
         messageCreated,
         messageDeleted,
         messageEdited,

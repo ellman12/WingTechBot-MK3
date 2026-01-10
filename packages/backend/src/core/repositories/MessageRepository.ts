@@ -11,5 +11,5 @@ export type MessageRepository = {
     getNewestMessages(limit: number, channelId?: string): Promise<Message[]>;
 
     batchCreate(messages: CreateMessageData[]): Promise<void>;
-    batchUpdate(messages: Array<{ id: string; content: string }>): Promise<void>;
+    batchUpdate(messages: Array<{ id: string; content: string; editedAt: Date | null }>): Promise<void>;
 };

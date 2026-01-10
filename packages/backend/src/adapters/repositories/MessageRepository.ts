@@ -66,14 +66,14 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
     };
 
     const editMessage = async (data: EditMessageData): Promise<Message> => {
-        const { id, content } = data;
+        const { id, content, editedAt } = data;
 
         const existing = await findMessageById(id);
         if (!existing) {
             throw new Error("Message does not exist");
         }
 
-        const updated = await db.updateTable("messages").set({ content, edited_at: new Date() }).where("id", "=", id).returningAll().executeTakeFirst();
+        const updated = await db.updateTable("messages").set({ content, edited_at: editedAt }).where("id", "=", id).returningAll().executeTakeFirst();
 
         if (!updated) {
             throw new Error("Failed to update message");
@@ -165,25 +165,22 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
             .execute();
     };
 
-    const batchUpdateMessages = async (messages: Array<{ id: string; content: string }>): Promise<void> => {
+    const batchUpdateMessages = async (messages: Array<{ id: string; content: string; editedAt: Date | null }>): Promise<void> => {
         if (messages.length === 0) {
             return;
         }
 
         // Use Kysely's query builder with a CTE to batch update all messages in a single query
-        const editedAt = new Date();
-
-        // Build the VALUES clause for the CTE
-        const values = messages.map(m => sql`(${m.id}, ${m.content})`);
+        const values = messages.map(m => sql`(${m.id}, ${m.content}, ${m.editedAt})`);
         const valuesClause = sql.join(values, sql`, `);
 
         await db
-            .with("updates(id, content)", () => sql`VALUES ${valuesClause}`)
+            .with("updates(id, content, edited_at)", () => sql`VALUES ${valuesClause}`)
             .updateTable("messages")
             .from("updates")
             .set({
                 content: sql.ref("updates.content"),
-                edited_at: editedAt,
+                edited_at: sql.ref("updates.edited_at"),
             })
             .whereRef("messages.id", "=", "updates.id")
             .execute();
