@@ -3,7 +3,7 @@ import type { Config } from "@core/config/Config.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
-import { ChannelType, type Message, MessageFlags, type TextChannel } from "discord.js";
+import { type Message, MessageFlags, type TextChannel } from "discord.js";
 
 export type LlmConversationService = {
     readonly handleMessageCreated: (message: Message) => Promise<void>;
@@ -26,7 +26,7 @@ export const createLlmConversationService = ({ config, discordChatService, messa
     }
 
     function validMessage(message: Message): boolean {
-        return message.channel.type !== ChannelType.DM && !message.flags.has(MessageFlags.Ephemeral);
+        return !message.flags.has(MessageFlags.Ephemeral);
     }
 
     //Responds to a new message when appropriate.
