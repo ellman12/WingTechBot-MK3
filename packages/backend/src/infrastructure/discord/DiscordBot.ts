@@ -1,3 +1,4 @@
+import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
 import { registerAutoReactionEvents } from "@application/eventHandlers/AutoReaction.js";
@@ -41,6 +42,7 @@ export type DiscordBotDeps = {
     readonly discordChatService: DiscordChatService;
     readonly geminiLlmService: GeminiLlmService;
     readonly llmConversationService: LlmConversationService;
+    readonly llmInstructionRepo: LlmInstructionRepository;
     readonly soundboardThreadService: SoundboardThreadService;
     readonly autoReactionService: AutoReactionService;
     readonly voiceEventSoundsService: VoiceEventSoundsService;
@@ -70,6 +72,7 @@ export const createDiscordBot = async ({
     discordChatService,
     geminiLlmService,
     llmConversationService,
+    llmInstructionRepo,
     soundboardThreadService,
     autoReactionService,
     voiceEventSoundsService,
@@ -230,7 +233,8 @@ export const createDiscordBot = async ({
             client.user!.setStatus(PresenceUpdateStatus.Online);
 
             if (config.server.environment === "production") {
-                const status = await geminiLlmService.generateMessage("", [], "discordStatus");
+                const systemInstruction = await llmInstructionRepo.getInstruction("discordStatus");
+                const status = await geminiLlmService.generateMessage("", [], systemInstruction);
                 console.log(`✏ Setting Discord status to: "${status}"`);
                 client.user!.setActivity(status);
 
