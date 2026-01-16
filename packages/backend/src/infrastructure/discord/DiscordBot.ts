@@ -83,7 +83,6 @@ export const createDiscordBot = async ({
     let client: Client;
     let isReadyState = false;
     let isClientDestroyed = false;
-    let readyResolver: (() => void) | null = null;
 
     const createClient = (): Client => {
         return new Client({
@@ -154,11 +153,6 @@ export const createDiscordBot = async ({
             } else {
                 console.log("⏩ Skipping command deployment (skipCommandDeploymentOnStartup = true)");
             }
-
-            if (readyResolver) {
-                readyResolver();
-                readyResolver = null;
-            }
         });
 
         client.on(Events.Error, (error: Error) => {
@@ -197,15 +191,10 @@ export const createDiscordBot = async ({
             }
             console.log(`✅ Client created in ${Date.now() - botStartTime}ms`);
 
-            const readyPromise = new Promise<void>(resolve => {
-                readyResolver = resolve;
-            });
-
             console.log("⏱️  Logging in to Discord...");
             const loginStart = Date.now();
             await client.login(config.discord.token);
 
-            await readyPromise;
             console.log(`✅ Discord login and ready in ${Date.now() - loginStart}ms`);
 
             console.log("⏱️  Fetching guild and channels...");
