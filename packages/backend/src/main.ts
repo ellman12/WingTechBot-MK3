@@ -114,6 +114,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
     const messageArchiveService = createMessageArchiveService({
         unitOfWork,
         messageRepository,
+        fileManager,
     });
     const geminiLlmService = createGeminiLlmService({ config });
     const voiceService = createDiscordVoiceService({ soundService });

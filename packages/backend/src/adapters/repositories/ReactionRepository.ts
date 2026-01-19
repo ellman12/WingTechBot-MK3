@@ -172,7 +172,6 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
             return;
         }
 
-        // Validate all reactions
         for (const data of reactions) {
             const ids = [data.giverId, data.receiverId, data.channelId, data.messageId];
             if (ids.some(i => !i || i === "0")) {
@@ -180,7 +179,6 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
             }
         }
 
-        // Batch insert
         const values = reactions.map(r => ({
             giver_id: r.giverId,
             receiver_id: r.receiverId,
@@ -201,8 +199,7 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
             return;
         }
 
-        // Delete in chunks to avoid generating extremely large WHERE clauses
-        // which could exceed database query size limits
+        // Delete in chunks to avoid generating extremely large WHERE clauses which could exceed database query size limits
         const CHUNK_SIZE = 200;
 
         for (let i = 0; i < reactions.length; i += CHUNK_SIZE) {

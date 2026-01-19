@@ -80,7 +80,6 @@ export const createDiscordBot = async ({
     let client: Client;
     let isReadyState = false;
     let isClientDestroyed = false;
-    let readyResolver: (() => void) | null = null;
 
     const createClient = (): Client => {
         return new Client({
@@ -151,11 +150,6 @@ export const createDiscordBot = async ({
             } else {
                 console.log("⏩ Skipping command deployment (skipCommandDeploymentOnStartup = true)");
             }
-
-            if (readyResolver) {
-                readyResolver();
-                readyResolver = null;
-            }
         });
 
         client.on(Events.Error, (error: Error) => {
@@ -191,19 +185,13 @@ export const createDiscordBot = async ({
             if (!client || isClientDestroyed) {
                 client = createClient();
                 isClientDestroyed = false;
-                setupEventHandlers();
             }
             console.log(`✅ Client created in ${Date.now() - botStartTime}ms`);
-
-            const readyPromise = new Promise<void>(resolve => {
-                readyResolver = resolve;
-            });
 
             console.log("⏱️  Logging in to Discord...");
             const loginStart = Date.now();
             await client.login(config.discord.token);
 
-            await readyPromise;
             console.log(`✅ Discord login and ready in ${Date.now() - loginStart}ms`);
 
             console.log("⏱️  Fetching guild and channels...");
@@ -219,21 +207,14 @@ export const createDiscordBot = async ({
             console.log(`✅ Karma emotes created in ${Date.now() - emotesStart}ms`);
 
             if (!config.discord.skipChannelProcessingOnStartup) {
-                const isFirstRun = !(await messageArchiveService.hasAnyMessages());
                 const currentYear = new Date().getUTCFullYear();
-
-                if (isFirstRun) {
-                    console.log("🔄 First run detected - performing full message sync (all years)");
-                    await messageArchiveService.processAllChannels(guild);
-                } else {
-                    console.log(`🔄 Processing messages for ${currentYear} only`);
-                    await messageArchiveService.processAllChannels(guild, currentYear);
-                }
-
-                await messageArchiveService.removeDeletedMessages(guild, isFirstRun ? undefined : currentYear);
+                console.log(`🔄 Processing messages for ${currentYear}`);
+                await messageArchiveService.processAllChannels(guild, currentYear);
             }
 
             await soundboardThreadService.findOrCreateSoundboardThread(guild);
+
+            setupEventHandlers();
 
             client.user!.setStatus(PresenceUpdateStatus.Online);
 
@@ -271,9 +252,6 @@ export const createDiscordBot = async ({
     };
 
     const isReady = (): boolean => isReadyState;
-
-    client = createClient();
-    setupEventHandlers();
 
     return {
         get client() {

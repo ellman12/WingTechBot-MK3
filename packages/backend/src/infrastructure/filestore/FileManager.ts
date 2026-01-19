@@ -1,9 +1,12 @@
 import type { FileManager } from "@core/services/FileManager.js";
 import fs from "fs";
+import os from "os";
 import path from "path";
 import type { Readable } from "stream";
 
 export const createFileManager = (): FileManager => {
+    const CACHE_DIR = path.join(os.tmpdir(), ".wtb-cache");
+
     const ensureDirectoryExists = async (filePath: string): Promise<void> => {
         const dir = path.dirname(filePath);
         try {
@@ -12,6 +15,14 @@ export const createFileManager = (): FileManager => {
             console.log(`[FileManager] Creating directory: ${dir}`);
             await fs.promises.mkdir(dir, { recursive: true });
             console.log(`[FileManager] Directory created successfully: ${dir}`);
+        }
+    };
+
+    const ensureCacheDir = async (): Promise<void> => {
+        try {
+            await fs.promises.access(CACHE_DIR, fs.constants.F_OK);
+        } catch {
+            await fs.promises.mkdir(CACHE_DIR, { recursive: true });
         }
     };
 
@@ -133,6 +144,45 @@ export const createFileManager = (): FileManager => {
                     }
                 });
             });
+        },
+
+        // Temp cache management
+        getCachePath: (filename: string) => {
+            return path.join(CACHE_DIR, filename);
+        },
+
+        readCache: async <T>(filename: string): Promise<T | null> => {
+            try {
+                const cachePath = path.join(CACHE_DIR, filename);
+                const data = await fs.promises.readFile(cachePath, "utf-8");
+                return JSON.parse(data) as T;
+            } catch {
+                return null;
+            }
+        },
+
+        writeCache: async <T>(filename: string, data: T): Promise<void> => {
+            await ensureCacheDir();
+            const cachePath = path.join(CACHE_DIR, filename);
+            await fs.promises.writeFile(cachePath, JSON.stringify(data, null, 2), "utf-8");
+        },
+
+        deleteCache: async (filename: string): Promise<void> => {
+            try {
+                const cachePath = path.join(CACHE_DIR, filename);
+                await fs.promises.unlink(cachePath);
+            } catch {
+                // Ignore if file doesn't exist
+            }
+        },
+
+        clearAllCache: async (): Promise<void> => {
+            try {
+                const files = await fs.promises.readdir(CACHE_DIR);
+                await Promise.all(files.map(file => fs.promises.unlink(path.join(CACHE_DIR, file))));
+            } catch {
+                // Ignore if directory doesn't exist
+            }
         },
     };
 };
