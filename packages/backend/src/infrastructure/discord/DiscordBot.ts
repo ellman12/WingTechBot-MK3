@@ -188,7 +188,9 @@ export const createDiscordBot = async ({
             if (!client || isClientDestroyed) {
                 client = createClient();
                 isClientDestroyed = false;
+                setupEventHandlers();
             }
+
             console.log(`✅ Client created in ${Date.now() - botStartTime}ms`);
 
             console.log("⏱️  Logging in to Discord...");
@@ -216,8 +218,6 @@ export const createDiscordBot = async ({
             }
 
             await soundboardThreadService.findOrCreateSoundboardThread(guild);
-
-            setupEventHandlers();
 
             client.user!.setStatus(PresenceUpdateStatus.Online);
 
