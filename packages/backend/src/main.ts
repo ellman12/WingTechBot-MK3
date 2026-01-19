@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { loadConfig } from "@adapters/config/ConfigAdapter.js";
+import { createBannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import { createUnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
 import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
@@ -83,6 +84,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
     const reactionRepository = createReactionRepository(db);
     const emoteRepository = createReactionEmoteRepository(db);
     const llmInstructionRepo = createLlmInstructionRepository({ config, fileManager });
+    const bannedFeaturesRepository = createBannedFeaturesRepository(db);
 
     if (!process.env.CI) {
         await llmInstructionRepo.validateInstructions();
@@ -119,7 +121,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
     const geminiLlmService = createGeminiLlmService({ config });
     const voiceService = createDiscordVoiceService({ soundService });
     const discordChatService = createDiscordChatService({ config });
-    const llmConversationService = createLlmConversationService({ config, discordChatService, geminiLlmService, messageArchiveService, llmInstructionRepo });
+    const llmConversationService = createLlmConversationService({ config, discordChatService, geminiLlmService, messageArchiveService, llmInstructionRepo, bannedFeaturesRepository });
     const soundboardThreadService = createSoundboardThreadService({ config, soundRepository, voiceService });
     const autoReactionService = createAutoReactionService({ config, discordChatService, geminiLlmService, llmInstructionRepo });
     const voiceEventSoundsService = createVoiceEventSoundsService({ config, voiceEventSoundsRepository, voiceService });
@@ -143,6 +145,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
         autoReactionService,
         voiceEventSoundsService,
         voiceService,
+        bannedFeaturesRepository,
         commandChoicesService,
     });
 

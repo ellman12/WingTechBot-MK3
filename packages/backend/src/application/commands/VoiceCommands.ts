@@ -1,3 +1,4 @@
+import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import { parseAudioSource } from "@core/services/AudioFetcherService.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { SoundService } from "@core/services/SoundService.js";
@@ -12,9 +13,10 @@ export type VoiceCommandDeps = {
     readonly voiceService: VoiceService;
     readonly soundService: SoundService;
     readonly commandChoicesService: CommandChoicesService;
+    readonly bannedFeaturesRepository: BannedFeaturesRepository;
 };
 
-export const createVoiceCommands = ({ voiceService, soundService, commandChoicesService }: VoiceCommandDeps): Record<string, Command> => {
+export const createVoiceCommands = ({ voiceService, soundService, commandChoicesService, bannedFeaturesRepository }: VoiceCommandDeps): Record<string, Command> => {
     const joinCommand: Command = {
         data: new SlashCommandBuilder()
             .setName("join")
@@ -113,6 +115,11 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
             .addBooleanOption(option => option.setName("shuffle").setDescription("Randomize which sound plays on each repeat (requires repeat-amount > 1)").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             console.log(`[VoiceCommands] Play command received from user ${interaction.user.username} in guild ${interaction.guildId}`);
+
+            if (await bannedFeaturesRepository.isUserBanned(interaction.user.id, "Soundboard")) {
+                await interaction.reply("You are not allowed to use this command");
+                return;
+            }
 
             if (!interaction.guildId) {
                 console.log(`[VoiceCommands] Play command rejected - not in guild`);
@@ -273,6 +280,11 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
             .setDescription("Stop audio playback (all or specific by ID)")
             .addStringOption(option => option.setName("id").setDescription("Audio ID to stop (e.g., 1, 2, 3). Leave empty to stop all.").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
+            if (await bannedFeaturesRepository.isUserBanned(interaction.user.id, "Soundboard")) {
+                await interaction.reply({ content: "You are not allowed to use this command", flags: MessageFlags.Ephemeral });
+                return;
+            }
+
             if (!interaction.guildId) {
                 await interaction.reply({ content: "This command can only be used in a server!", flags: MessageFlags.Ephemeral });
                 return;
@@ -334,6 +346,11 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                 return;
             }
 
+            if (await bannedFeaturesRepository.isUserBanned(interaction.user.id, "Soundboard")) {
+                await interaction.reply({ content: "You are not allowed to use this command", flags: MessageFlags.Ephemeral });
+                return;
+            }
+
             try {
                 const volumeLevel = interaction.options.getInteger("level");
 
@@ -357,6 +374,11 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
             try {
                 if (!interaction.guildId) {
                     await interaction.reply({ content: "This command can only be used in a server.", flags: MessageFlags.Ephemeral });
+                    return;
+                }
+
+                if (await bannedFeaturesRepository.isUserBanned(interaction.user.id, "Soundboard")) {
+                    await interaction.reply({ content: "You are not allowed to use this command", flags: MessageFlags.Ephemeral });
                     return;
                 }
 

@@ -13,7 +13,6 @@ import path from "path";
 import { Pool } from "pg";
 import { DataType, newDb } from "pg-mem";
 import { pathToFileURL } from "url";
-import { expect } from "vitest";
 
 import type { App } from "@/main";
 

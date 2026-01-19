@@ -1,7 +1,6 @@
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
-import { expect } from "vitest";
 
 import { invalidReactions, validReactions } from "../../testData/reactions.js";
 import { createTestDb } from "../../utils/testUtils.js";

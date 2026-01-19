@@ -1,5 +1,5 @@
+import { createBannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
-import { expect } from "vitest";
 
 import { validEmotes } from "../../testData/reactionEmotes.js";
 import { createFakeMessagesAndReactions, createTestDb } from "../../utils/testUtils.js";
@@ -9,36 +9,46 @@ describe.concurrent("getReactionsGiven", () => {
     const messages = 5;
     const reactionsPerMessage = 6;
 
-    it("returns the correct reactions when no receiverIds specified", async () => {
+    it("returns the correct reactions when no receiverIds specified, ignoring banned users", async () => {
         const db = await createTestDb();
         const reactions = createReactionRepository(db);
+        const banned = createBannedFeaturesRepository(db);
 
+        await banned.banFeature("bannedUser", "admin", "Reactions");
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
+        await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
 
         const emotes = await reactions.getReactionsGiven("301");
         expect(emotes).toHaveLength(1);
         emotes.forEach(e => expect(e.count).toEqual(messages));
     });
 
-    it("returns the correct reactions when receiverIds are specified", async () => {
+    it("returns the correct reactions when receiverIds are specified, ignoring banned users", async () => {
         const db = await createTestDb();
         const reactions = createReactionRepository(db);
+        const banned = createBannedFeaturesRepository(db);
 
+        await banned.banFeature("bannedUser", "admin", "Reactions");
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
+        await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
 
         const emotes = await reactions.getReactionsGiven("301", year, ["101", "102", "103"]);
         expect(emotes).toHaveLength(1);
+
         emotes.forEach(e => {
             expect(e.count).toEqual(3);
             expect(e.name === "👀" || e.name === "downvote").toBeTruthy();
         });
     });
 
-    it("returns self-reactions when specified for giverId", async () => {
+    it("returns self-reactions when specified for giverId, ignoring banned users", async () => {
         const db = await createTestDb();
         const reactions = createReactionRepository(db);
+        const banned = createBannedFeaturesRepository(db);
 
+        await banned.banFeature("bannedUser", "admin", "Reactions");
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
+        await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
 
         const emotes = await reactions.getReactionsGiven("101", year, ["101"]);
         expect(emotes).toHaveLength(reactionsPerMessage);
@@ -48,8 +58,11 @@ describe.concurrent("getReactionsGiven", () => {
     it("returns empty array for nonexistent users", async () => {
         const db = await createTestDb();
         const reactions = createReactionRepository(db);
+        const banned = createBannedFeaturesRepository(db);
 
+        await banned.banFeature("bannedUser", "admin", "Reactions");
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
+        await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
 
         let emotes = await reactions.getReactionsGiven("111111111111");
         expect(emotes).toHaveLength(0);

@@ -1,4 +1,6 @@
+import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
+import { createBannedFeaturesCommands } from "@application/commands/BannedFeaturesCommands.js";
 import { createReactionCommands } from "@application/commands/ReactionCommands.js";
 import { createVoiceEventSoundsCommands } from "@application/commands/VoiceEventSoundsCommands.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
@@ -32,14 +34,16 @@ export const createCommands = (
     reactionRepository: ReactionRepository,
     emoteRepository: ReactionEmoteRepository,
     discordChatService: DiscordChatService,
-    commandChoicesService: CommandChoicesService
+    commandChoicesService: CommandChoicesService,
+    bannedFeaturesRepository: BannedFeaturesRepository
 ): Record<string, Command> => {
     const commandRecords = [
         createVoiceEventSoundsCommands({ voiceEventSoundsRepository, soundRepository, commandChoicesService }),
         createAudioCommands({ soundService, discordChatService, commandChoicesService }),
         createReactionCommands({ reactionRepository, emoteRepository, discordChatService }),
         createSoundTagCommands({ soundTagService, discordChatService, commandChoicesService }),
-        createVoiceCommands({ voiceService, soundService, commandChoicesService }),
+        createVoiceCommands({ voiceService, soundService, commandChoicesService, bannedFeaturesRepository }),
+        createBannedFeaturesCommands({ bannedFeaturesRepository, discordChatService }),
     ];
 
     // Assert that there are no duplicate command name in a way where we can have an arbitrary number of commands
@@ -73,6 +77,7 @@ export const deployCommands = async (
     emoteRepository: ReactionEmoteRepository,
     discordChatService: DiscordChatService,
     commandChoicesService: CommandChoicesService,
+    bannedFeaturesRepository: BannedFeaturesRepository,
     token: string,
     clientId: string,
     guildId?: string
@@ -80,7 +85,7 @@ export const deployCommands = async (
     try {
         console.log("🚀 Deploying Discord commands...");
 
-        const commandMap = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService);
+        const commandMap = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, bannedFeaturesRepository);
         const commands = Object.values(commandMap).map(command => command.data.toJSON());
 
         console.log(`📋 Deploying ${commands.length} commands:`);
@@ -116,11 +121,12 @@ export const registerCommands = (
     emoteRepository: ReactionEmoteRepository,
     discordChatService: DiscordChatService,
     commandChoicesService: CommandChoicesService,
+    bannedFeaturesRepository: BannedFeaturesRepository,
     registerEventHandler: DiscordBot["registerEventHandler"]
 ): void => {
     console.log("🔄 Registering commands...");
 
-    const commands = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService);
+    const commands = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, bannedFeaturesRepository);
     console.log(`✅ Registered ${Object.keys(commands).length} Commands:`);
     Object.keys(commands).forEach(command => {
         console.log(`- ${command}`);

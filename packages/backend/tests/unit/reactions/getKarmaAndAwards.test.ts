@@ -1,25 +1,25 @@
+import { createBannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 
 import { validEmotes } from "../../testData/reactionEmotes.js";
 import { createFakeMessagesAndReactions, createTestDb } from "../../utils/testUtils.js";
 
 describe.concurrent("getKarmaAndAwards", () => {
-    it("returns the correct karma and awards", async () => {
+    it("returns the correct karma and awards, ignoring banned users", async () => {
         const db = await createTestDb();
         const reactions = createReactionRepository(db);
+        const banned = createBannedFeaturesRepository(db);
 
+        await banned.banFeature("bannedUser", "admin", "Reactions");
         await createFakeMessagesAndReactions(db, 5, 6, validEmotes);
+        await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
 
         const emotes = await reactions.getKarmaAndAwards("101");
         expect(emotes).toHaveLength(5);
 
-        //This should ignore self-reactions
         emotes.forEach(e => {
-            if (e.name === "platinum") {
-                expect(e.count).toEqual(0);
-            } else {
-                expect(e.count).toEqual(1);
-            }
+            if (e.name === "platinum") expect(e.count).toEqual(0);
+            else expect(e.count).toEqual(1);
         });
     });
 

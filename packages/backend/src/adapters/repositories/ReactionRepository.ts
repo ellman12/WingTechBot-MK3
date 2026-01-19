@@ -6,7 +6,6 @@ import { type Kysely, type Selectable, sql } from "kysely";
 
 type UnformattedReactionQueryResult = { name: string; discordId: string; count: string | number | bigint; totalKarma: string | number | bigint };
 
-//Transform database reaction emote to domain reaction emote
 export const transformReaction = (dbReaction: Selectable<Reactions> | Reactions): Reaction => {
     return {
         giverId: dbReaction.giver_id,
@@ -17,7 +16,6 @@ export const transformReaction = (dbReaction: Selectable<Reactions> | Reactions)
     };
 };
 
-//Factory function to create ReactionRepository instance
 export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => {
     const reactions = db.selectFrom("reactions").selectAll();
 
@@ -39,10 +37,7 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         }
 
         const existing = await findReaction(data);
-        if (existing) {
-            // Reaction already exists, return it instead of attempting duplicate insert
-            return existing;
-        }
+        if (existing) return existing;
 
         const { giverId, receiverId, channelId, messageId, emoteId } = data;
         const [reaction] = await db.insertInto("reactions").values({ giver_id: giverId, receiver_id: receiverId, channel_id: channelId, message_id: messageId, emote_id: emoteId }).returningAll().execute();
@@ -92,7 +87,11 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
             .innerJoin("reactions as r", "r.message_id", "m.id")
             .innerJoin("reaction_emotes as re", "r.emote_id", "re.id")
             .select(eb => [eb.fn.countAll().as("count"), eb.fn.sum("re.karma_value").as("totalKarma")])
-            .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year));
+            .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year))
+
+            //Filter out reactions from banned users
+            .leftJoin("banned_features as bf", join => join.onRef("bf.user_id", "=", "r.giver_id").on("bf.feature", "=", "Reactions"))
+            .where("bf.user_id", "is", null);
 
     const getBaseReactionsQuery = (year?: number) => getBaseQuery(year).select(["re.name", "re.discord_id as discordId"]).groupBy(["re.name", "discordId"]).orderBy("count", "desc");
 
