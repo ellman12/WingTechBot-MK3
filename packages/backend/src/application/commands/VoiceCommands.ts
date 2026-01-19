@@ -281,7 +281,7 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
             .addStringOption(option => option.setName("id").setDescription("Audio ID to stop (e.g., 1, 2, 3). Leave empty to stop all.").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             if (await bannedFeaturesRepository.isUserBanned(interaction.user.id, "Soundboard")) {
-                await interaction.reply("You are not allowed to use this command");
+                await interaction.reply({ content: "You are not allowed to use this command", flags: MessageFlags.Ephemeral });
                 return;
             }
 
@@ -347,7 +347,7 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
             }
 
             if (await bannedFeaturesRepository.isUserBanned(interaction.user.id, "Soundboard")) {
-                await interaction.reply("You are not allowed to use this command");
+                await interaction.reply({ content: "You are not allowed to use this command", flags: MessageFlags.Ephemeral });
                 return;
             }
 
@@ -378,7 +378,7 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                 }
 
                 if (await bannedFeaturesRepository.isUserBanned(interaction.user.id, "Soundboard")) {
-                    await interaction.reply("You are not allowed to use this command");
+                    await interaction.reply({ content: "You are not allowed to use this command", flags: MessageFlags.Ephemeral });
                     return;
                 }
 
