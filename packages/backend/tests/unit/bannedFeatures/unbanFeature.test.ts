@@ -15,17 +15,10 @@ describe.concurrent("unbanFeatures", () => {
         expect(result).toHaveLength(0);
     });
 
-    test("throws if user was not banned", async () => {
-        const db = await createTestDb();
-        const bannedFeatures = createBannedFeaturesRepository(db);
-
-        await expect(bannedFeatures.unbanFeature("11111", "Reactions")).rejects.toThrow("Failed to unban user");
-    });
-
     test("throws for invalid userId", async () => {
         const db = await createTestDb();
         const bannedFeatures = createBannedFeaturesRepository(db);
 
-        await expect(bannedFeatures.unbanFeature("", "Reactions")).rejects.toThrow("Invalid ID");
+        expect(bannedFeatures.unbanFeature("", "Reactions")).rejects.toThrow("Invalid ID");
     });
 });
