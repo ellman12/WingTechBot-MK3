@@ -23,10 +23,15 @@ export const createBannedFeaturesCommands = ({ bannedFeaturesRepository, discord
             .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
         execute: async (interaction: ChatInputCommandInteraction) => {
             const user = interaction.options.getUser("user");
-            const feature = interaction.options.getString("feature");
+            const feature = interaction.options.getString("feature") as AvailableFeatures | null;
             if (!user || !feature) throw new Error("Missing data");
 
-            const result = await bannedFeaturesRepository.banFeature(user.id, interaction.user.id, feature as AvailableFeatures);
+            if (await bannedFeaturesRepository.isUserBanned(user.id, feature)) {
+                await interaction.reply({ content: `User is already banned for ${feature}`, flags: MessageFlags.Ephemeral });
+                return;
+            }
+
+            const result = await bannedFeaturesRepository.banFeature(user.id, interaction.user.id, feature);
             await interaction.reply({ content: `Banned ${result.feature} for ${user.displayName}`, flags: MessageFlags.Ephemeral });
         },
     };
