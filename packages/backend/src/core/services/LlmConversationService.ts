@@ -25,7 +25,7 @@ export const createLlmConversationService = ({ config, discordChatService, messa
 
         const banned = await bannedFeaturesRepository.isUserBanned(message.author.id, "LlmConversations");
         if (banned) {
-            await message.reply("You are forbidden to speak with me");
+            await message.author.send("You are forbidden to speak with me");
             return;
         }
 
