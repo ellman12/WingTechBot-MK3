@@ -69,6 +69,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
     const reactionRepository = createReactionRepository(db);
     const emoteRepository = createReactionEmoteRepository(db);
     const fileManager = createFileManager();
+    const llmInstructionRepo = createLlmInstructionRepository({ config, fileManager });
 
     const allowedChannels = new Set<string>();
 
@@ -97,7 +98,6 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
     }
 
     if (options.autoReactionService || options.llmConversationService) {
-        const llmInstructionRepo = createLlmInstructionRepository({ config, fileManager });
         discordChatService = createDiscordChatService({ config });
         geminiLlmService = createGeminiLlmService({ config });
 
@@ -244,6 +244,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
         llmConversationService: llmConversationService || {
             handleMessageCreated: vi.fn().mockResolvedValue(undefined),
         },
+        llmInstructionRepo,
         soundboardThreadService: createStubSoundboardThreadService(),
         autoReactionService: autoReactionService || {
             reactionAdded: vi.fn().mockResolvedValue(undefined),

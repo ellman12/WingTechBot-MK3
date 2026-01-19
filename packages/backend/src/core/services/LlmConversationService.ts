@@ -1,5 +1,5 @@
-import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import type { Config } from "@core/config/Config.js";
+import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";

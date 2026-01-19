@@ -1,16 +1,7 @@
 import type { Config } from "@core/config/Config.js";
+import { type InstructionType, type LlmInstructionRepository, instructionTypes } from "@core/repositories/LlmInstructionRepository.js";
 import type { FileManager } from "@core/services/FileManager.js";
 import { join } from "path";
-
-export const instructionTypes = ["generalChat", "nekoize", "discordStatus"] as const;
-export type InstructionType = (typeof instructionTypes)[number];
-
-export type LlmInstructionRepository = {
-    readonly getInstructionPath: (instructionType: InstructionType) => string;
-    readonly getInstruction: (instructionType: InstructionType) => Promise<string>;
-    readonly instructionExists: (instructionType: InstructionType) => Promise<boolean>;
-    readonly validateInstructions: () => Promise<void>;
-};
 
 export type LlmInstructionRepositoryDeps = {
     readonly config: Config;
