@@ -8,6 +8,9 @@ overrides:
     jws: ">=4.0.1"
     body-parser: ">=2.2.1"
     qs: ">=6.14.1"
+    diff@<8.0.3: ">=8.0.3"
+    undici@<6.23.0: ">=6.23.0"
+    tar@<=7.5.2: ">=7.5.3"
 
 importers:
     .:
@@ -630,6 +633,10 @@ packages:
     "@isaacs/cliui@8.0.2":
         resolution: { integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA== }
         engines: { node: ">=12" }
+
+    "@isaacs/fs-minipass@4.0.1":
+        resolution: { integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w== }
+        engines: { node: ">=18.0.0" }
 
     "@jridgewell/gen-mapping@0.3.13":
         resolution: { integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA== }
@@ -1436,9 +1443,9 @@ packages:
         resolution: { integrity: sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw== }
         engines: { node: ">= 8.10.0" }
 
-    chownr@2.0.0:
-        resolution: { integrity: sha512-bIomtDF5KGpdogkLd9VspvFzk9KfpyyGlS8YFVZl7TGPBHL5snIOnxeshwVgPteQ9b4Eydl+pVbIyE1DcvCWgQ== }
-        engines: { node: ">=10" }
+    chownr@3.0.0:
+        resolution: { integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g== }
+        engines: { node: ">=18" }
 
     cli-cursor@5.0.0:
         resolution: { integrity: sha512-aCj4O5wKyszjMmDT4tZj93kxyydN/K5zPWSCe6/0AV/AA1pqe5ZBIw0a2ZfPQV7lL5/yb5HsUreJ6UFAF1tEQw== }
@@ -1578,12 +1585,8 @@ packages:
         resolution: { integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ== }
         engines: { node: ">=8" }
 
-    diff@3.5.0:
-        resolution: { integrity: sha512-A46qtFgd+g7pDZinpnwiRJtxbC1hpgf0uzP3iG89scHk0AUC7A1TGxf5OiiOUv/JMZR8GOt8hL900hV0bOy5xA== }
-        engines: { node: ">=0.3.1" }
-
-    diff@4.0.2:
-        resolution: { integrity: sha512-58lmxKSA4BNyLz+HHMUzlOEpg09FV+ev6ZMe3vJihgdxzgcwZ8VoEEPmALCZG9LmqfVoNMMKpttIYTVG6uDY7A== }
+    diff@8.0.3:
+        resolution: { integrity: sha512-qejHi7bcSD4hQAZE0tNAawRK1ZtafHDmMTMkrrIGgSLl7hTnQHmKCeB45xAcbfTqK2zowkM3j3bHt/4b/ARbYQ== }
         engines: { node: ">=0.3.1" }
 
     dir-glob@3.0.1:
@@ -1861,10 +1864,6 @@ packages:
     fresh@2.0.0:
         resolution: { integrity: sha512-Rx/WycZ60HOaqLKAi6cHRKKI7zxWbJ31MhntmtwMoaTeF7XFH9hhBp8vITaMidfljRQ6eYWCKkaTK+ykVJHP2A== }
         engines: { node: ">= 0.8" }
-
-    fs-minipass@2.1.0:
-        resolution: { integrity: sha512-V/JgOLFCS+R6Vcq0slCuaeWEdNC3ouDlJMNIsacH2VtALiu9mV4LPrHc5cDl8k5aw6J8jwgWWpiTo5RYhmIzvg== }
-        engines: { node: ">= 8" }
 
     fs.realpath@1.0.0:
         resolution: { integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw== }
@@ -2415,26 +2414,13 @@ packages:
     minimist@1.2.8:
         resolution: { integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA== }
 
-    minipass@3.3.6:
-        resolution: { integrity: sha512-DxiNidxSEK+tHG6zOIklvNOwm3hvCrbUrdtzY74U6HKTJxvIDfOUL5W5P2Ghd3DTkhhKPYGqeNUIh5qcM4YBfw== }
-        engines: { node: ">=8" }
-
-    minipass@5.0.0:
-        resolution: { integrity: sha512-3FnjYuehv9k6ovOEbyOswadCDPX1piCfhV8ncmYtHOjuPwylVWsghTLo7rabjC3Rx5xD4HDx8Wm1xnMF7S5qFQ== }
-        engines: { node: ">=8" }
-
     minipass@7.1.2:
         resolution: { integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw== }
         engines: { node: ">=16 || 14 >=14.17" }
 
-    minizlib@2.1.2:
-        resolution: { integrity: sha512-bAxsR8BVfj60DWXHE3u30oHzfl4G7khkSuPW+qvpd7jFRHm7dLxOjUk1EHACJ/hxLY8phGJ0YhYHZo7jil7Qdg== }
-        engines: { node: ">= 8" }
-
-    mkdirp@1.0.4:
-        resolution: { integrity: sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw== }
-        engines: { node: ">=10" }
-        hasBin: true
+    minizlib@3.1.0:
+        resolution: { integrity: sha512-KZxYo1BUkWD2TVFLr0MQoM8vUUigWD3LlD83a/75BqC+4qE0Hb1Vo5v1FgcfaNXvfXzr+5EhQ6ing/CaBijTlw== }
+        engines: { node: ">= 18" }
 
     moment@2.30.1:
         resolution: { integrity: sha512-uEmtNhbDOrWPFS+hdjFCBfy9f2YoyzRpwcl+DqpC6taX21FzsTLQVbMV/W7PzNSX6x/bhC1zA3c2UQ5NzH6how== }
@@ -3160,9 +3146,9 @@ packages:
         resolution: { integrity: sha512-g9ljZiwki/LfxmQADO3dEY1CbpmXT5Hm2fJ+QaGKwSXUylMybePR7/67YW7jOrrvjEgL1Fmz5kzyAjWVWLlucg== }
         engines: { node: ">=6" }
 
-    tar@6.2.1:
-        resolution: { integrity: sha512-DZ4yORTwrbTj/7MZYq2w+/ZFdI6OZ/f9SFHR+71gIVUZhOQPHzVCLpvRnPgyaMpfWxxk/4ONva3GQSyNIKRv6A== }
-        engines: { node: ">=10" }
+    tar@7.5.3:
+        resolution: { integrity: sha512-ENg5JUHUm2rDD7IvKNFGzyElLXNjachNLp6RaGf4+JOgxXHkqA+gq81ZAMCUmtMtqBsoU62lcp6S27g1LCYGGQ== }
+        engines: { node: ">=18" }
 
     tinybench@2.9.0:
         resolution: { integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg== }
@@ -3259,9 +3245,9 @@ packages:
     undici-types@7.16.0:
         resolution: { integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw== }
 
-    undici@6.21.3:
-        resolution: { integrity: sha512-gBLkYIlEnSp8pFbT64yFgGE6UIB9tAkhukC23PmMDCe5Nd+cRqKxSjw5y54MK2AZMgZfJWMaNE4nYUHgi1XEOw== }
-        engines: { node: ">=18.17" }
+    undici@7.18.2:
+        resolution: { integrity: sha512-y+8YjDFzWdQlSE9N5nzKMT3g4a5UBX1HKowfdXh0uvAnTaqqwqB92Jt4UXBAeKekDs5IaDKyJFR4X1gYVCgXcw== }
+        engines: { node: ">=20.18.1" }
 
     unpipe@1.0.0:
         resolution: { integrity: sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ== }
@@ -3441,6 +3427,10 @@ packages:
 
     yallist@4.0.0:
         resolution: { integrity: sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A== }
+
+    yallist@5.0.0:
+        resolution: { integrity: sha512-YgvUTfwqyc7UXVMrB+SImsVYSmTS8X/tSrtdNZMImM+n7+QTriRXyXim0mBrTXNeqzVF0KWGgHPeiyViFFrNDw== }
+        engines: { node: ">=18" }
 
     yaml@2.8.1:
         resolution: { integrity: sha512-lcYcMxX2PO9XMGvAJkJ3OsNMw+/7FKes7/hgerGUYWIoWu5j/+YQqcZr5JnPZWzOsEBgMbSbiSTn/dv/69Mkpw== }
@@ -3640,7 +3630,7 @@ snapshots:
             npmlog: 5.0.1
             rimraf: 3.0.2
             semver: 7.7.3
-            tar: 6.2.1
+            tar: 7.5.3
         transitivePeerDependencies:
             - encoding
             - supports-color
@@ -3663,7 +3653,7 @@ snapshots:
             discord-api-types: 0.38.34
             magic-bytes.js: 1.12.1
             tslib: 2.8.1
-            undici: 6.21.3
+            undici: 7.18.2
 
     "@discordjs/util@1.2.0":
         dependencies:
@@ -3889,6 +3879,10 @@ snapshots:
             strip-ansi-cjs: strip-ansi@6.0.1
             wrap-ansi: 8.1.0
             wrap-ansi-cjs: wrap-ansi@7.0.0
+
+    "@isaacs/fs-minipass@4.0.1":
+        dependencies:
+            minipass: 7.1.2
 
     "@jridgewell/gen-mapping@0.3.13":
         dependencies:
@@ -4691,7 +4685,7 @@ snapshots:
         optionalDependencies:
             fsevents: 2.3.3
 
-    chownr@2.0.0: {}
+    chownr@3.0.0: {}
 
     cli-cursor@5.0.0:
         dependencies:
@@ -4806,9 +4800,7 @@ snapshots:
 
     detect-libc@2.1.2: {}
 
-    diff@3.5.0: {}
-
-    diff@4.0.2: {}
+    diff@8.0.3: {}
 
     dir-glob@3.0.1:
         dependencies:
@@ -4832,7 +4824,7 @@ snapshots:
             lodash.snakecase: 4.1.1
             magic-bytes.js: 1.12.1
             tslib: 2.8.1
-            undici: 6.21.3
+            undici: 7.18.2
         transitivePeerDependencies:
             - bufferutil
             - utf-8-validate
@@ -5161,10 +5153,6 @@ snapshots:
 
     fresh@2.0.0: {}
 
-    fs-minipass@2.1.0:
-        dependencies:
-            minipass: 3.3.6
-
     fs.realpath@1.0.0: {}
 
     fsevents@2.3.3:
@@ -5234,7 +5222,7 @@ snapshots:
     git-diff@2.0.6:
         dependencies:
             chalk: 2.4.2
-            diff: 3.5.0
+            diff: 8.0.3
             loglevel: 1.9.2
             shelljs: 0.8.5
             shelljs.exec: 1.1.8
@@ -5667,20 +5655,11 @@ snapshots:
 
     minimist@1.2.8: {}
 
-    minipass@3.3.6:
-        dependencies:
-            yallist: 4.0.0
-
-    minipass@5.0.0: {}
-
     minipass@7.1.2: {}
 
-    minizlib@2.1.2:
+    minizlib@3.1.0:
         dependencies:
-            minipass: 3.3.6
-            yallist: 4.0.0
-
-    mkdirp@1.0.4: {}
+            minipass: 7.1.2
 
     moment@2.30.1: {}
 
@@ -6306,14 +6285,13 @@ snapshots:
 
     tapable@2.3.0: {}
 
-    tar@6.2.1:
+    tar@7.5.3:
         dependencies:
-            chownr: 2.0.0
-            fs-minipass: 2.1.0
-            minipass: 5.0.0
-            minizlib: 2.1.2
-            mkdirp: 1.0.4
-            yallist: 4.0.0
+            "@isaacs/fs-minipass": 4.0.1
+            chownr: 3.0.0
+            minipass: 7.1.2
+            minizlib: 3.1.0
+            yallist: 5.0.0
 
     tinybench@2.9.0: {}
 
@@ -6356,7 +6334,7 @@ snapshots:
             acorn-walk: 8.3.4
             arg: 4.1.3
             create-require: 1.1.1
-            diff: 4.0.2
+            diff: 8.0.3
             make-error: 1.3.6
             typescript: 5.9.3
             v8-compile-cache-lib: 3.0.1
@@ -6408,7 +6386,7 @@ snapshots:
 
     undici-types@7.16.0: {}
 
-    undici@6.21.3: {}
+    undici@7.18.2: {}
 
     unpipe@1.0.0: {}
 
@@ -6547,6 +6525,8 @@ snapshots:
     yallist@3.1.1: {}
 
     yallist@4.0.0: {}
+
+    yallist@5.0.0: {}
 
     yaml@2.8.1: {}
 
