@@ -1,5 +1,4 @@
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
-import { expect } from "vitest";
 
 import { invalidEmotes, validEmotes } from "../../testData/reactionEmotes.js";
 import { createTestDb } from "../../utils/testUtils.js";
