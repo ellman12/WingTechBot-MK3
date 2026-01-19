@@ -1,3 +1,4 @@
+import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
 import { registerAutoReactionEvents } from "@application/eventHandlers/AutoReaction.js";
@@ -48,6 +49,7 @@ export type DiscordBotDeps = {
     readonly voiceEventSoundsService: VoiceEventSoundsService;
     readonly voiceService: VoiceService;
     readonly commandChoicesService: CommandChoicesService;
+    readonly bannedFeaturesRepository: BannedFeaturesRepository;
     readonly eventFilter?: EventFilter;
 };
 
@@ -78,6 +80,7 @@ export const createDiscordBot = async ({
     voiceEventSoundsService,
     voiceService,
     commandChoicesService,
+    bannedFeaturesRepository,
     eventFilter,
 }: DiscordBotDeps): Promise<DiscordBot> => {
     let client: Client;
@@ -141,6 +144,7 @@ export const createDiscordBot = async ({
                         emoteRepository,
                         discordChatService,
                         commandChoicesService,
+                        bannedFeaturesRepository,
                         config.discord.token,
                         config.discord.clientId,
                         config.discord.serverId
@@ -167,9 +171,8 @@ export const createDiscordBot = async ({
             console.log(`Global: ${rateLimitData.global}`);
         });
 
-        registerCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, registerEventHandler);
+        registerCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, bannedFeaturesRepository, registerEventHandler);
 
-        // Register message and reaction events
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
         registerReactionArchiveEvents(reactionArchiveService, registerEventHandler);
         registerLlmConversationServiceEventHandlers(llmConversationService, registerEventHandler);

@@ -1,3 +1,4 @@
+import { createBannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import { createUnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
 import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
@@ -70,6 +71,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
     const emoteRepository = createReactionEmoteRepository(db);
     const fileManager = createFileManager();
     const llmInstructionRepo = createLlmInstructionRepository({ config, fileManager });
+    const bannedFeaturesRepository = createBannedFeaturesRepository(db);
 
     const allowedChannels = new Set<string>();
 
@@ -117,6 +119,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
                 geminiLlmService,
                 messageArchiveService,
                 llmInstructionRepo,
+                bannedFeaturesRepository,
             });
         }
     }
@@ -245,6 +248,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
             handleMessageCreated: vi.fn().mockResolvedValue(undefined),
         },
         llmInstructionRepo,
+        bannedFeaturesRepository,
         soundboardThreadService: createStubSoundboardThreadService(),
         autoReactionService: autoReactionService || {
             reactionAdded: vi.fn().mockResolvedValue(undefined),
