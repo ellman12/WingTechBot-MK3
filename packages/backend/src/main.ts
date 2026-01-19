@@ -138,6 +138,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
         discordChatService,
         geminiLlmService,
         llmConversationService,
+        llmInstructionRepo,
         soundboardThreadService,
         autoReactionService,
         voiceEventSoundsService,

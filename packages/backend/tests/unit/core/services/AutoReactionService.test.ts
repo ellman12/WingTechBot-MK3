@@ -1,4 +1,4 @@
-import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
+import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
 import { createAutoReactionService } from "@core/services/AutoReactionService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";

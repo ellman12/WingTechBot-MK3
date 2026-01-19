@@ -8,6 +8,7 @@ import { registerReactionArchiveEvents } from "@application/eventHandlers/Reacti
 import { registerSoundboardThreadEventHandlers } from "@application/eventHandlers/SoundboardThreadService.js";
 import { registerVoiceEventSoundsEventHandlers } from "@application/eventHandlers/VoiceEventSounds.js";
 import type { Config } from "@core/config/Config.js";
+import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
@@ -41,6 +42,7 @@ export type DiscordBotDeps = {
     readonly discordChatService: DiscordChatService;
     readonly geminiLlmService: GeminiLlmService;
     readonly llmConversationService: LlmConversationService;
+    readonly llmInstructionRepo: LlmInstructionRepository;
     readonly soundboardThreadService: SoundboardThreadService;
     readonly autoReactionService: AutoReactionService;
     readonly voiceEventSoundsService: VoiceEventSoundsService;
@@ -70,6 +72,7 @@ export const createDiscordBot = async ({
     discordChatService,
     geminiLlmService,
     llmConversationService,
+    llmInstructionRepo,
     soundboardThreadService,
     autoReactionService,
     voiceEventSoundsService,
@@ -219,7 +222,8 @@ export const createDiscordBot = async ({
             client.user!.setStatus(PresenceUpdateStatus.Online);
 
             if (config.server.environment === "production") {
-                const status = await geminiLlmService.generateMessage("", [], "discordStatus");
+                const systemInstruction = await llmInstructionRepo.getInstruction("discordStatus");
+                const status = await geminiLlmService.generateMessage("", [], systemInstruction);
                 console.log(`✏ Setting Discord status to: "${status}"`);
                 client.user!.setActivity(status);
 

@@ -421,7 +421,7 @@ jobs:
               run: pnpm --filter backend db:generate
 
             - name: Check database migrations
-              run: pnpm --filter backend db:push --accept-data-loss
+              run: pnpm db:migrate
 
     # Docker build test for backend
     docker-build:
