@@ -1,3 +1,4 @@
+import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import type { Config } from "@core/config/Config.js";
 import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
@@ -15,11 +16,19 @@ export type LlmConversationServiceDeps = {
     readonly messageArchiveService: MessageArchiveService;
     readonly geminiLlmService: GeminiLlmService;
     readonly llmInstructionRepo: LlmInstructionRepository;
+    readonly bannedFeaturesRepository: BannedFeaturesRepository;
 };
 
-export const createLlmConversationService = ({ config, discordChatService, messageArchiveService, geminiLlmService, llmInstructionRepo }: LlmConversationServiceDeps): LlmConversationService => {
+export const createLlmConversationService = ({ config, discordChatService, messageArchiveService, geminiLlmService, llmInstructionRepo, bannedFeaturesRepository }: LlmConversationServiceDeps): LlmConversationService => {
     async function handleMessageCreated(message: Message) {
         if (config.llm.disabled) return;
+
+        const banned = await bannedFeaturesRepository.isUserBanned(message.author.id, "LlmConversations");
+        if (banned) {
+            await message.reply("You are forbidden to speak with me");
+            return;
+        }
+
         if (validMessage(message) && discordChatService.hasBeenPinged(message)) {
             await respondToPing(message);
         }
