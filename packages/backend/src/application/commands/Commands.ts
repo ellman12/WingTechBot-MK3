@@ -42,7 +42,7 @@ export const createCommands = (
         createAudioCommands({ soundService, discordChatService, commandChoicesService }),
         createReactionCommands({ reactionRepository, emoteRepository, discordChatService }),
         createSoundTagCommands({ soundTagService, discordChatService, commandChoicesService }),
-        createVoiceCommands({ voiceService, soundService, commandChoicesService }),
+        createVoiceCommands({ voiceService, soundService, commandChoicesService, bannedFeaturesRepository }),
         createBannedFeaturesCommands({ bannedFeaturesRepository, discordChatService }),
     ];
 
