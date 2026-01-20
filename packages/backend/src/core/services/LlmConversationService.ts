@@ -3,6 +3,7 @@ import type { Config } from "@core/config/Config.js";
 import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
+import { ApiError } from "@google/genai";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import { type Message, MessageFlags, type TextChannel } from "discord.js";
 
@@ -51,7 +52,13 @@ export const createLlmConversationService = ({ config, discordChatService, messa
             const content = await discordChatService.replaceUserAndRoleMentions(message);
             const systemInstruction = await llmInstructionRepo.getInstruction("generalChat");
             const response = await geminiLlmService.generateMessage(content, previousMessages, systemInstruction);
-            await discordChatService.sendMessage(response, channel, "split");
+            await discordChatService.sendMessage(response, channel);
+        } catch (e: unknown) {
+            if (e instanceof ApiError) {
+                await message.reply("I'm not available right now, please try again later.");
+            } else {
+                await message.reply("Something went wrong while processing your message");
+            }
         } finally {
             controller.abort();
         }
