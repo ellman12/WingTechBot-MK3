@@ -3,6 +3,7 @@ import type { Config } from "@core/config/Config.js";
 import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
+import { ApiError } from "@google/genai";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import { type Message, MessageFlags, type TextChannel } from "discord.js";
 
@@ -45,13 +46,26 @@ export const createLlmConversationService = ({ config, discordChatService, messa
         void discordChatService.sendTypingIndicator(controller.signal, channel);
 
         try {
-            //Get previous messages, ensuring we don't include the message that pinged the bot.
-            const previousMessages = (await messageArchiveService.getNewestDBMessages(channel.id, 10)).filter(m => m.id !== message.id);
+            //Get recent, previous messages, ensuring we don't include the message that pinged the bot.
+            const withinMinutes = 15;
+            const previousMessages = (await messageArchiveService.getNewestDBMessages(channel.id, 10, withinMinutes)).filter(m => m.id !== message.id);
+
+            if (config.server.environment === "development") {
+                console.log(`Previous messages within ${withinMinutes} minutes:`, previousMessages);
+            }
 
             const content = await discordChatService.replaceUserAndRoleMentions(message);
             const systemInstruction = await llmInstructionRepo.getInstruction("generalChat");
             const response = await geminiLlmService.generateMessage(content, previousMessages, systemInstruction);
-            await discordChatService.sendMessage(response, channel, "split");
+            await discordChatService.sendMessage(response, channel);
+        } catch (e: unknown) {
+            if (e instanceof ApiError) {
+                await message.reply("I'm not available right now, please try again later.");
+            } else {
+                await message.reply("Something went wrong while processing your message.");
+            }
+
+            throw e;
         } finally {
             controller.abort();
         }

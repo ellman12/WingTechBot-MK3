@@ -60,6 +60,8 @@ services:
         condition: service_healthy
     volumes:
       - wtb_backups:/backups
+    networks:
+      - app-network
     restart: unless-stopped
 
   watchtower:
