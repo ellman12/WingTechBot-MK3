@@ -1,34 +1,99 @@
 import { Kysely, sql } from "kysely";
 
+//Fixes all the timestamp columns being in CST, converting them to UTC.
+
 //eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function up(db: Kysely<any>): Promise<void> {
-    //Convert timestamp columns in all tables to timestamptz, interpreting existing values as America/Chicago
+    //messages
     await sql`
-    ALTER TABLE messages
-      ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'America/Chicago',
-      ALTER COLUMN edited_at TYPE timestamptz USING edited_at AT TIME ZONE 'America/Chicago';
-    
-    ALTER TABLE soundtags
-      ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'America/Chicago';
+    ALTER TABLE messages ADD COLUMN created_at_tmp timestamptz;
+    ALTER TABLE messages ADD COLUMN edited_at_tmp timestamptz;
 
-    ALTER TABLE sounds
-      ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'America/Chicago';
+    UPDATE messages
+    SET
+      created_at_tmp = created_at AT TIME ZONE 'America/Chicago',
+      edited_at_tmp  = edited_at  AT TIME ZONE 'America/Chicago';
 
-    ALTER TABLE sound_soundtags
-      ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'America/Chicago';
+    ALTER TABLE messages DROP COLUMN created_at;
+    ALTER TABLE messages DROP COLUMN edited_at;
 
-    ALTER TABLE reaction_emotes
-      ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'America/Chicago',
-      ALTER COLUMN updated_at TYPE timestamptz USING updated_at AT TIME ZONE 'America/Chicago';
-
-    ALTER TABLE voice_event_sounds
-      ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'America/Chicago';
-
-    ALTER TABLE banned_features
-      ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'America/Chicago';
+    ALTER TABLE messages RENAME COLUMN created_at_tmp TO created_at;
+    ALTER TABLE messages RENAME COLUMN edited_at_tmp  TO edited_at;
   `.execute(db);
 
-    //Update defaults for future inserts to use UTC timestamptz
+    //soundtags
+    await sql`
+    ALTER TABLE soundtags ADD COLUMN created_at_tmp timestamptz;
+
+    UPDATE soundtags
+    SET created_at_tmp = created_at AT TIME ZONE 'America/Chicago';
+
+    ALTER TABLE soundtags DROP COLUMN created_at;
+    ALTER TABLE soundtags RENAME COLUMN created_at_tmp TO created_at;
+  `.execute(db);
+
+    //sounds
+    await sql`
+    ALTER TABLE sounds ADD COLUMN created_at_tmp timestamptz;
+
+    UPDATE sounds
+    SET created_at_tmp = created_at AT TIME ZONE 'America/Chicago';
+
+    ALTER TABLE sounds DROP COLUMN created_at;
+    ALTER TABLE sounds RENAME COLUMN created_at_tmp TO created_at;
+  `.execute(db);
+
+    //sound_soundtags
+    await sql`
+    ALTER TABLE sound_soundtags ADD COLUMN created_at_tmp timestamptz;
+
+    UPDATE sound_soundtags
+    SET created_at_tmp = created_at AT TIME ZONE 'America/Chicago';
+
+    ALTER TABLE sound_soundtags DROP COLUMN created_at;
+    ALTER TABLE sound_soundtags RENAME COLUMN created_at_tmp TO created_at;
+  `.execute(db);
+
+    //reaction_emotes
+    await sql`
+    ALTER TABLE reaction_emotes ADD COLUMN created_at_tmp timestamptz;
+    ALTER TABLE reaction_emotes ADD COLUMN updated_at_tmp timestamptz;
+
+    UPDATE reaction_emotes
+    SET
+      created_at_tmp = created_at AT TIME ZONE 'America/Chicago',
+      updated_at_tmp = updated_at AT TIME ZONE 'America/Chicago';
+
+    ALTER TABLE reaction_emotes DROP COLUMN created_at;
+    ALTER TABLE reaction_emotes DROP COLUMN updated_at;
+
+    ALTER TABLE reaction_emotes RENAME COLUMN created_at_tmp TO created_at;
+    ALTER TABLE reaction_emotes RENAME COLUMN updated_at_tmp TO updated_at;
+  `.execute(db);
+
+    //voice_event_sounds
+    await sql`
+    ALTER TABLE voice_event_sounds ADD COLUMN created_at_tmp timestamptz;
+
+    UPDATE voice_event_sounds
+    SET created_at_tmp = created_at AT TIME ZONE 'America/Chicago';
+
+    ALTER TABLE voice_event_sounds DROP COLUMN created_at;
+    ALTER TABLE voice_event_sounds RENAME COLUMN created_at_tmp TO created_at;
+  `.execute(db);
+
+    //banned_features
+    await sql`
+    ALTER TABLE banned_features ADD COLUMN created_at_tmp timestamptz;
+
+    UPDATE banned_features
+    SET created_at_tmp = created_at AT TIME ZONE 'America/Chicago';
+
+    ALTER TABLE banned_features DROP COLUMN created_at;
+    ALTER TABLE banned_features RENAME COLUMN created_at_tmp TO created_at;
+  `.execute(db);
+
+    //defaults (UTC timestamptz)
     await sql`
     ALTER TABLE messages ALTER COLUMN created_at SET DEFAULT now();
     ALTER TABLE soundtags ALTER COLUMN created_at SET DEFAULT now();
@@ -43,33 +108,96 @@ export async function up(db: Kysely<any>): Promise<void> {
 
 //eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function down(db: Kysely<any>): Promise<void> {
-    //Revert timestamptz columns back to timestamp (local America/Chicago)
+    //messages
     await sql`
-    ALTER TABLE messages
-      ALTER COLUMN created_at TYPE timestamp USING created_at AT TIME ZONE 'America/Chicago',
-      ALTER COLUMN edited_at TYPE timestamp USING edited_at AT TIME ZONE 'America/Chicago';
-    
-    ALTER TABLE soundtags
-      ALTER COLUMN created_at TYPE timestamp USING created_at AT TIME ZONE 'America/Chicago';
+    ALTER TABLE messages ADD COLUMN created_at_tmp timestamp;
+    ALTER TABLE messages ADD COLUMN edited_at_tmp timestamp;
 
-    ALTER TABLE sounds
-      ALTER COLUMN created_at TYPE timestamp USING created_at AT TIME ZONE 'America/Chicago';
+    UPDATE messages
+    SET
+      created_at_tmp = created_at AT TIME ZONE 'America/Chicago',
+      edited_at_tmp  = edited_at  AT TIME ZONE 'America/Chicago';
 
-    ALTER TABLE sound_soundtags
-      ALTER COLUMN created_at TYPE timestamp USING created_at AT TIME ZONE 'America/Chicago';
+    ALTER TABLE messages DROP COLUMN created_at;
+    ALTER TABLE messages DROP COLUMN edited_at;
 
-    ALTER TABLE reaction_emotes
-      ALTER COLUMN created_at TYPE timestamp USING created_at AT TIME ZONE 'America/Chicago',
-      ALTER COLUMN updated_at TYPE timestamp USING updated_at AT TIME ZONE 'America/Chicago';
-
-    ALTER TABLE voice_event_sounds
-      ALTER COLUMN created_at TYPE timestamp USING created_at AT TIME ZONE 'America/Chicago';
-
-    ALTER TABLE banned_features
-      ALTER COLUMN created_at TYPE timestamp USING created_at AT TIME ZONE 'America/Chicago';
+    ALTER TABLE messages RENAME COLUMN created_at_tmp TO created_at;
+    ALTER TABLE messages RENAME COLUMN edited_at_tmp  TO edited_at;
   `.execute(db);
 
-    //Restore original defaults
+    //soundtags
+    await sql`
+    ALTER TABLE soundtags ADD COLUMN created_at_tmp timestamp;
+
+    UPDATE soundtags
+    SET created_at_tmp = created_at AT TIME ZONE 'America/Chicago';
+
+    ALTER TABLE soundtags DROP COLUMN created_at;
+    ALTER TABLE soundtags RENAME COLUMN created_at_tmp TO created_at;
+  `.execute(db);
+
+    //sounds
+    await sql`
+    ALTER TABLE sounds ADD COLUMN created_at_tmp timestamp;
+
+    UPDATE sounds
+    SET created_at_tmp = created_at AT TIME ZONE 'America/Chicago';
+
+    ALTER TABLE sounds DROP COLUMN created_at;
+    ALTER TABLE sounds RENAME COLUMN created_at_tmp TO created_at;
+  `.execute(db);
+
+    //sound_soundtags
+    await sql`
+    ALTER TABLE sound_soundtags ADD COLUMN created_at_tmp timestamp;
+
+    UPDATE sound_soundtags
+    SET created_at_tmp = created_at AT TIME ZONE 'America/Chicago';
+
+    ALTER TABLE sound_soundtags DROP COLUMN created_at;
+    ALTER TABLE sound_soundtags RENAME COLUMN created_at_tmp TO created_at;
+  `.execute(db);
+
+    //reaction_emotes
+    await sql`
+    ALTER TABLE reaction_emotes ADD COLUMN created_at_tmp timestamp;
+    ALTER TABLE reaction_emotes ADD COLUMN updated_at_tmp timestamp;
+
+    UPDATE reaction_emotes
+    SET
+      created_at_tmp = created_at AT TIME ZONE 'America/Chicago',
+      updated_at_tmp = updated_at AT TIME ZONE 'America/Chicago';
+
+    ALTER TABLE reaction_emotes DROP COLUMN created_at;
+    ALTER TABLE reaction_emotes DROP COLUMN updated_at;
+
+    ALTER TABLE reaction_emotes RENAME COLUMN created_at_tmp TO created_at;
+    ALTER TABLE reaction_emotes RENAME COLUMN updated_at_tmp TO updated_at;
+  `.execute(db);
+
+    //voice_event_sounds
+    await sql`
+    ALTER TABLE voice_event_sounds ADD COLUMN created_at_tmp timestamp;
+
+    UPDATE voice_event_sounds
+    SET created_at_tmp = created_at AT TIME ZONE 'America/Chicago';
+
+    ALTER TABLE voice_event_sounds DROP COLUMN created_at;
+    ALTER TABLE voice_event_sounds RENAME COLUMN created_at_tmp TO created_at;
+  `.execute(db);
+
+    //banned_features
+    await sql`
+    ALTER TABLE banned_features ADD COLUMN created_at_tmp timestamp;
+
+    UPDATE banned_features
+    SET created_at_tmp = created_at AT TIME ZONE 'America/Chicago';
+
+    ALTER TABLE banned_features DROP COLUMN created_at;
+    ALTER TABLE banned_features RENAME COLUMN created_at_tmp TO created_at;
+  `.execute(db);
+
+    //restore original defaults
     await sql`
     ALTER TABLE messages ALTER COLUMN created_at SET DEFAULT timezone('utc', now());
     ALTER TABLE soundtags ALTER COLUMN created_at SET DEFAULT timezone('utc', now());
