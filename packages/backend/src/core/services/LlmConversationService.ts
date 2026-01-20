@@ -57,8 +57,10 @@ export const createLlmConversationService = ({ config, discordChatService, messa
             if (e instanceof ApiError) {
                 await message.reply("I'm not available right now, please try again later.");
             } else {
-                await message.reply("Something went wrong while processing your message");
+                await message.reply("Something went wrong while processing your message.");
             }
+
+            throw e;
         } finally {
             controller.abort();
         }
