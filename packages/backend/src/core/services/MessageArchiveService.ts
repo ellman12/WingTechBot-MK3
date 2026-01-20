@@ -33,7 +33,7 @@ export type MessageArchiveService = {
 
     readonly getAllDBMessages: (year?: number) => Promise<DBMessage[]>;
 
-    readonly getNewestDBMessages: (channelId: string, limit: number) => Promise<DBMessage[]>;
+    readonly getNewestDBMessages: (channelId: string, limit: number, withinMinutes?: number) => Promise<DBMessage[]>;
 
     readonly hasAnyMessages: () => Promise<boolean>;
 };
@@ -792,9 +792,9 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
         return [];
     }
 
-    async function getNewestDBMessages(channelId: string, limit: number) {
+    async function getNewestDBMessages(channelId: string, limit: number, withinMinutes?: number) {
         try {
-            return await messageRepository.getNewestMessages(limit, channelId);
+            return await messageRepository.getNewestMessages(limit, channelId, withinMinutes);
         } catch (e: unknown) {
             console.error("Error getting newest DB messages", e);
         }

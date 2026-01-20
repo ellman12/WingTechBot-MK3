@@ -46,8 +46,13 @@ export const createLlmConversationService = ({ config, discordChatService, messa
         void discordChatService.sendTypingIndicator(controller.signal, channel);
 
         try {
-            //Get previous messages, ensuring we don't include the message that pinged the bot.
-            const previousMessages = (await messageArchiveService.getNewestDBMessages(channel.id, 10)).filter(m => m.id !== message.id);
+            //Get recent, previous messages, ensuring we don't include the message that pinged the bot.
+            const withinMinutes = 15;
+            const previousMessages = (await messageArchiveService.getNewestDBMessages(channel.id, 10, withinMinutes)).filter(m => m.id !== message.id);
+
+            if (config.server.environment === "development") {
+                console.log(`Previous messages within ${withinMinutes} minutes:`, previousMessages);
+            }
 
             const content = await discordChatService.replaceUserAndRoleMentions(message);
             const systemInstruction = await llmInstructionRepo.getInstruction("generalChat");

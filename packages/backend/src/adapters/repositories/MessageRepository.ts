@@ -116,7 +116,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         return result.map(m => transformMessage(m, m.reactions));
     };
 
-    const getNewestMessages = async (limit: number, channelId?: string): Promise<Message[]> => {
+    const getNewestMessages = async (limit: number, channelId?: string, withinMinutes?: number): Promise<Message[]> => {
         const result = await db
             .selectFrom("messages as m")
             .leftJoin("reactions", "reactions.message_id", "m.id")
@@ -124,6 +124,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
             .groupBy("m.id")
             .orderBy("m.created_at", "desc")
             .limit(limit)
+            .$if(withinMinutes !== undefined, qb => qb.where("m.created_at", ">=", sql<Date>`NOW() - make_interval(mins => ${withinMinutes})`))
             .$if(channelId !== undefined, qb => qb.where("m.channel_id", "=", channelId!))
             .execute();
 

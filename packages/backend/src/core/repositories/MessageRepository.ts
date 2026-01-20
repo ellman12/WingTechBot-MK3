@@ -8,7 +8,7 @@ export type MessageRepository = {
     getAllMessages(year?: number): Promise<Message[]>;
     getAllMessagesAsMap(year?: number): Promise<Map<string, Message>>;
     getMessagesForChannel(channelId: string, year?: number): Promise<Message[]>;
-    getNewestMessages(limit: number, channelId?: string): Promise<Message[]>;
+    getNewestMessages(limit: number, channelId?: string, withinMinutes?: number): Promise<Message[]>;
 
     batchCreate(messages: CreateMessageData[]): Promise<void>;
     batchUpdate(messages: Array<{ id: string; content: string; editedAt: Date | null }>): Promise<void>;
