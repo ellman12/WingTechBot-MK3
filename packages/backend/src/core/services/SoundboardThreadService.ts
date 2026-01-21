@@ -1,3 +1,4 @@
+import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import type { Config } from "@core/config/Config.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
@@ -12,11 +13,12 @@ export type SoundboardThreadServiceDeps = {
     readonly config: Config;
     readonly soundRepository: SoundRepository;
     readonly voiceService: VoiceService;
+    readonly bannedFeaturesRepository: BannedFeaturesRepository;
 };
 
 const threadName = "WTB Soundboard";
 
-export const createSoundboardThreadService = ({ config, soundRepository, voiceService }: SoundboardThreadServiceDeps) => {
+export const createSoundboardThreadService = ({ config, soundRepository, voiceService, bannedFeaturesRepository }: SoundboardThreadServiceDeps) => {
     function validMessage(message: Message): boolean {
         return message.channel.type !== ChannelType.DM && !message.flags.has(MessageFlags.Ephemeral) && message.channel.name === threadName && message.author.id !== config.discord.clientId;
     }
@@ -42,6 +44,12 @@ export const createSoundboardThreadService = ({ config, soundRepository, voiceSe
     }
 
     async function tryToPlaySoundFromMessage(message: Message) {
+        const banned = await bannedFeaturesRepository.isUserBanned(message.author.id, "Soundboard");
+        if (banned) {
+            await message.author.send("You are forbidden to use the soundboard");
+            return;
+        }
+
         if (!validMessage(message)) {
             return;
         }
