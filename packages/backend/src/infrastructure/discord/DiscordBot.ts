@@ -2,6 +2,7 @@ import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeat
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
 import { registerAutoReactionEvents } from "@application/eventHandlers/AutoReaction.js";
+import { registerDiscordUserSyncEvents } from "@application/eventHandlers/DiscordUserSyncService.js";
 import { registerVoiceServiceEventHandlers } from "@application/eventHandlers/DiscordVoiceService.js";
 import { registerLlmConversationServiceEventHandlers } from "@application/eventHandlers/LlmConversation.js";
 import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive.js";
@@ -16,6 +17,7 @@ import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { AutoReactionService } from "@core/services/AutoReactionService.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
+import type { DiscordUserSyncService } from "@core/services/DiscordUserSyncService.js";
 import type { LlmConversationService } from "@core/services/LlmConversationService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { ReactionArchiveService } from "@core/services/ReactionArchiveService.js";
@@ -50,6 +52,7 @@ export type DiscordBotDeps = {
     readonly voiceService: VoiceService;
     readonly commandChoicesService: CommandChoicesService;
     readonly bannedFeaturesRepository: BannedFeaturesRepository;
+    readonly discordUserSyncService: DiscordUserSyncService;
     readonly eventFilter?: EventFilter;
 };
 
@@ -81,6 +84,7 @@ export const createDiscordBot = async ({
     voiceService,
     commandChoicesService,
     bannedFeaturesRepository,
+    discordUserSyncService,
     eventFilter,
 }: DiscordBotDeps): Promise<DiscordBot> => {
     let client: Client;
@@ -173,6 +177,7 @@ export const createDiscordBot = async ({
 
         registerCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, bannedFeaturesRepository, registerEventHandler);
 
+        registerDiscordUserSyncEvents(discordUserSyncService, registerEventHandler);
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
         registerReactionArchiveEvents(reactionArchiveService, registerEventHandler);
         registerLlmConversationServiceEventHandlers(llmConversationService, registerEventHandler);
@@ -208,6 +213,11 @@ export const createDiscordBot = async ({
             await guild.fetch();
             const botChannel = (await guild.channels.fetch(config.discord.botChannelId)) as TextChannel;
             console.log(`✅ Guild and channels fetched in ${Date.now() - guildStart}ms`);
+
+            console.log("⏱️  Syncing users...");
+            const userSyncStart = Date.now();
+            await discordUserSyncService.syncUsers(client, guild);
+            console.log(`✅ Users synced in ${Date.now() - userSyncStart}ms`);
 
             console.log("⏱️  Creating karma emotes...");
             const emotesStart = Date.now();

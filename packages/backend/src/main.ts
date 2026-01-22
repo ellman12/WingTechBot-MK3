@@ -8,6 +8,7 @@ import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEm
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
 import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
+import { createUserRepository } from "@adapters/repositories/UserRepository.js";
 import { createVoiceEventsSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import { createDiscordVoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
@@ -19,6 +20,7 @@ import { AudioFormatDetectionService } from "@core/services/AudioFormatDetection
 import { createAutoReactionService } from "@core/services/AutoReactionService.js";
 import { createCommandChoicesService } from "@core/services/CommandChoicesService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
+import { createDiscordUserSyncService } from "@core/services/DiscordUserSyncService.js";
 import { createLlmConversationService } from "@core/services/LlmConversationService.js";
 import { type MessageArchiveService, createMessageArchiveService } from "@core/services/MessageArchiveService.js";
 import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
@@ -77,6 +79,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
     const ffprobeService = new FfprobeService(config);
     const audioFormatDetectionService = new AudioFormatDetectionService(ffprobeService);
 
+    const userRepository = createUserRepository(db);
     const soundRepository = createSoundRepository(db);
     const voiceEventSoundsRepository = createVoiceEventsSoundsRepository(db);
     const soundTagRepository = createSoundTagRepository(db);
@@ -90,6 +93,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
         await llmInstructionRepo.validateInstructions();
     }
 
+    const discordUserSyncService = createDiscordUserSyncService(userRepository, messageRepository, reactionRepository);
     const commandChoicesService = createCommandChoicesService({ soundRepository, soundTagRepository });
     const audioProcessingService = createFfmpegAudioProcessingService({ ffmpeg });
     const audioCacheService = createAudioCacheService({ fileManager, config });
@@ -146,6 +150,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
         voiceEventSoundsService,
         voiceService,
         bannedFeaturesRepository,
+        discordUserSyncService,
         commandChoicesService,
     });
 

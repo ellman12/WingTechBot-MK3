@@ -4,6 +4,7 @@ import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstru
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
+import { createUserRepository } from "@adapters/repositories/UserRepository.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import type { Config } from "@core/config/Config.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
@@ -12,6 +13,7 @@ import type { AutoReactionService } from "@core/services/AutoReactionService.js"
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
+import { createDiscordUserSyncService } from "@core/services/DiscordUserSyncService.js";
 import { createLlmConversationService } from "@core/services/LlmConversationService.js";
 import type { LlmConversationService } from "@core/services/LlmConversationService.js";
 import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
@@ -66,6 +68,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
 
     const db = databaseConnection.getKysely();
 
+    const userRepository = createUserRepository(db);
     const messageRepository = createMessageRepository(db);
     const reactionRepository = createReactionRepository(db);
     const emoteRepository = createReactionEmoteRepository(db);
@@ -80,6 +83,8 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
     let messageArchiveService: MessageArchiveService | undefined;
     let llmConversationService: LlmConversationService | undefined;
     let discordChatService: DiscordChatService | undefined;
+    const discordUserSyncService = createDiscordUserSyncService(userRepository, messageRepository, reactionRepository);
+
     let geminiLlmService: GeminiLlmService | undefined;
 
     if (options.reactionArchiveService || options.autoReactionService) {
@@ -254,6 +259,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
             reactionAdded: vi.fn().mockResolvedValue(undefined),
             messageCreated: vi.fn().mockResolvedValue(undefined),
         },
+        discordUserSyncService,
         voiceEventSoundsService: createStubVoiceEventSoundsService(),
         voiceService: createStubVoiceService(),
         commandChoicesService: createStubCommandChoicesService(),
