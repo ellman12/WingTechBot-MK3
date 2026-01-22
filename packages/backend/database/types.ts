@@ -14,7 +14,7 @@ export type VoiceEventSoundType = "UserJoin" | "UserLeave";
 
 export interface BannedFeatures {
     banned_by_id: string;
-    created_at: Generated<Timestamp | null>;
+    created_at: Generated<Timestamp>;
     feature: AvailableFeatures;
     user_id: string;
 }
@@ -23,19 +23,19 @@ export interface Messages {
     author_id: string;
     channel_id: string;
     content: string;
-    created_at: Generated<Timestamp | null>;
+    created_at: Generated<Timestamp>;
     edited_at: Timestamp | null;
     id: string;
     referenced_message_id: string | null;
 }
 
 export interface ReactionEmotes {
-    created_at: Generated<Timestamp | null>;
+    created_at: Generated<Timestamp>;
     discord_id: Generated<string>;
     id: Generated<number>;
     karma_value: Generated<number>;
     name: string;
-    updated_at: Generated<Timestamp | null>;
+    updated_at: Generated<Timestamp>;
 }
 
 export interface Reactions {
@@ -47,21 +47,21 @@ export interface Reactions {
 }
 
 export interface Sounds {
-    created_at: Generated<Timestamp | null>;
+    created_at: Generated<Timestamp>;
     id: Generated<number>;
     name: string;
     path: string;
 }
 
 export interface SoundSoundtags {
-    created_at: Generated<Timestamp | null>;
+    created_at: Generated<Timestamp>;
     id: Generated<number>;
     sound: Generated<number>;
     tag: Generated<number>;
 }
 
 export interface Soundtags {
-    created_at: Generated<Timestamp | null>;
+    created_at: Generated<Timestamp>;
     id: Generated<number>;
     name: string;
 }
@@ -75,7 +75,7 @@ export interface Users {
 }
 
 export interface VoiceEventSounds {
-    created_at: Generated<Timestamp | null>;
+    created_at: Generated<Timestamp>;
     sound_id: number;
     type: VoiceEventSoundType;
     user_id: string;

@@ -6,7 +6,7 @@ import { Kysely, sql } from "kysely";
 export async function up(db: Kysely<any>): Promise<void> {
     // messages
     await sql`
-    ALTER TABLE messages ADD COLUMN created_at_tmp timestamptz;
+    ALTER TABLE messages ADD COLUMN created_at_tmp timestamptz NOT NULL;
     ALTER TABLE messages ADD COLUMN edited_at_tmp timestamptz;
 
     UPDATE messages SET created_at_tmp = timezone('America/Chicago', created_at);
@@ -21,7 +21,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 
     // soundtags
     await sql`
-    ALTER TABLE soundtags ADD COLUMN created_at_tmp timestamptz;
+    ALTER TABLE soundtags ADD COLUMN created_at_tmp timestamptz NOT NULL;
 
     UPDATE soundtags SET created_at_tmp = timezone('America/Chicago', created_at);
 
@@ -31,7 +31,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 
     // sounds
     await sql`
-    ALTER TABLE sounds ADD COLUMN created_at_tmp timestamptz;
+    ALTER TABLE sounds ADD COLUMN created_at_tmp timestamptz NOT NULL;
 
     UPDATE sounds SET created_at_tmp = timezone('America/Chicago', created_at);
 
@@ -41,7 +41,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 
     // sound_soundtags
     await sql`
-    ALTER TABLE sound_soundtags ADD COLUMN created_at_tmp timestamptz;
+    ALTER TABLE sound_soundtags ADD COLUMN created_at_tmp timestamptz NOT NULL;
 
     UPDATE sound_soundtags SET created_at_tmp = timezone('America/Chicago', created_at);
 
@@ -51,8 +51,8 @@ export async function up(db: Kysely<any>): Promise<void> {
 
     // reaction_emotes
     await sql`
-    ALTER TABLE reaction_emotes ADD COLUMN created_at_tmp timestamptz;
-    ALTER TABLE reaction_emotes ADD COLUMN updated_at_tmp timestamptz;
+    ALTER TABLE reaction_emotes ADD COLUMN created_at_tmp timestamptz NOT NULL;
+    ALTER TABLE reaction_emotes ADD COLUMN updated_at_tmp timestamptz NOT NULL;
 
     UPDATE reaction_emotes SET created_at_tmp = timezone('America/Chicago', created_at);
     UPDATE reaction_emotes SET updated_at_tmp = timezone('America/Chicago', updated_at);
@@ -66,7 +66,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 
     // voice_event_sounds
     await sql`
-    ALTER TABLE voice_event_sounds ADD COLUMN created_at_tmp timestamptz;
+    ALTER TABLE voice_event_sounds ADD COLUMN created_at_tmp timestamptz NOT NULL;
 
     UPDATE voice_event_sounds SET created_at_tmp = timezone('America/Chicago', created_at);
 
@@ -76,7 +76,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 
     // banned_features
     await sql`
-    ALTER TABLE banned_features ADD COLUMN created_at_tmp timestamptz;
+    ALTER TABLE banned_features ADD COLUMN created_at_tmp timestamptz NOT NULL;
 
     UPDATE banned_features SET created_at_tmp = timezone('America/Chicago', created_at);
 
@@ -101,7 +101,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 export async function down(db: Kysely<any>): Promise<void> {
     // messages
     await sql`
-    ALTER TABLE messages ADD COLUMN created_at_tmp timestamp;
+    ALTER TABLE messages ADD COLUMN created_at_tmp timestamp NOT NULL;
     ALTER TABLE messages ADD COLUMN edited_at_tmp timestamp;
 
     UPDATE messages SET created_at_tmp = timezone('America/Chicago', created_at);
@@ -116,7 +116,7 @@ export async function down(db: Kysely<any>): Promise<void> {
 
     // soundtags
     await sql`
-    ALTER TABLE soundtags ADD COLUMN created_at_tmp timestamp;
+    ALTER TABLE soundtags ADD COLUMN created_at_tmp timestamp NOT NULL;
 
     UPDATE soundtags SET created_at_tmp = timezone('America/Chicago', created_at);
 
@@ -126,7 +126,7 @@ export async function down(db: Kysely<any>): Promise<void> {
 
     // sounds
     await sql`
-    ALTER TABLE sounds ADD COLUMN created_at_tmp timestamp;
+    ALTER TABLE sounds ADD COLUMN created_at_tmp timestamp NOT NULL;
 
     UPDATE sounds SET created_at_tmp = timezone('America/Chicago', created_at);
 
@@ -136,7 +136,7 @@ export async function down(db: Kysely<any>): Promise<void> {
 
     // sound_soundtags
     await sql`
-    ALTER TABLE sound_soundtags ADD COLUMN created_at_tmp timestamp;
+    ALTER TABLE sound_soundtags ADD COLUMN created_at_tmp timestamp NOT NULL;
 
     UPDATE sound_soundtags SET created_at_tmp = timezone('America/Chicago', created_at);
 
@@ -146,8 +146,8 @@ export async function down(db: Kysely<any>): Promise<void> {
 
     // reaction_emotes
     await sql`
-    ALTER TABLE reaction_emotes ADD COLUMN created_at_tmp timestamp;
-    ALTER TABLE reaction_emotes ADD COLUMN updated_at_tmp timestamp;
+    ALTER TABLE reaction_emotes ADD COLUMN created_at_tmp timestamp NOT NULL;
+    ALTER TABLE reaction_emotes ADD COLUMN updated_at_tmp timestamp NOT NULL;
 
     UPDATE reaction_emotes SET created_at_tmp = timezone('America/Chicago', created_at);
     UPDATE reaction_emotes SET updated_at_tmp = timezone('America/Chicago', updated_at);
@@ -161,7 +161,7 @@ export async function down(db: Kysely<any>): Promise<void> {
 
     // voice_event_sounds
     await sql`
-    ALTER TABLE voice_event_sounds ADD COLUMN created_at_tmp timestamp;
+    ALTER TABLE voice_event_sounds ADD COLUMN created_at_tmp timestamp NOT NULL;
 
     UPDATE voice_event_sounds SET created_at_tmp = timezone('America/Chicago', created_at);
 
@@ -171,7 +171,7 @@ export async function down(db: Kysely<any>): Promise<void> {
 
     // banned_features
     await sql`
-    ALTER TABLE banned_features ADD COLUMN created_at_tmp timestamp;
+    ALTER TABLE banned_features ADD COLUMN created_at_tmp timestamp NOT NULL;
 
     UPDATE banned_features SET created_at_tmp = timezone('America/Chicago', created_at);
 

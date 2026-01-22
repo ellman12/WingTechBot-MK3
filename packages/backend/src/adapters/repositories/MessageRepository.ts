@@ -11,7 +11,7 @@ const transformMessage = (dbMessage: Selectable<Messages>, reactions?: Reactions
         channelId: dbMessage.channel_id,
         content: dbMessage.content,
         referencedMessageId: dbMessage.referenced_message_id ?? undefined,
-        createdAt: dbMessage.created_at!,
+        createdAt: dbMessage.created_at,
         editedAt: dbMessage.edited_at,
         reactions: reactions?.map(transformReaction) ?? [],
     };
