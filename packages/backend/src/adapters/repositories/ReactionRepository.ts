@@ -214,6 +214,14 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         }
     };
 
+    //Gets all unique giver/receiver user IDs
+    const getUniqueUserIds = async (): Promise<string[]> => {
+        const giverIds = db.selectFrom("reactions").select("giver_id as id");
+        const receiverIds = db.selectFrom("reactions").select("receiver_id as id");
+        const result = await giverIds.union(receiverIds).execute();
+        return result.map(r => r.id);
+    };
+
     return {
         find: findReaction,
         findForMessage: findReactionsForMessage,
@@ -229,5 +237,6 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         getEmoteLeaderboard,
         getKarmaLeaderboard,
         getTopMessages,
+        getUniqueUserIds,
     };
 };

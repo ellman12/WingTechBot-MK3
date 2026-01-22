@@ -46,4 +46,6 @@ export type ReactionRepository = {
     getKarmaLeaderboard(year?: number, includeSelfReactions?: boolean): Promise<KarmaLeaderboardEntry[]>;
 
     getTopMessages(authorId: string, emoteName: string, year?: number, limit?: number): Promise<TopMessage[]>;
+
+    getUniqueUserIds(): Promise<string[]>;
 };
