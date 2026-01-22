@@ -14,7 +14,7 @@ export type VoiceEventSoundType = "UserJoin" | "UserLeave";
 
 export interface BannedFeatures {
     banned_by_id: string;
-    created_at: Generated<Timestamp>;
+    created_at: Generated<Timestamp | null>;
     feature: AvailableFeatures;
     user_id: string;
 }
@@ -23,19 +23,19 @@ export interface Messages {
     author_id: string;
     channel_id: string;
     content: string;
-    created_at: Generated<Timestamp>;
+    created_at: Generated<Timestamp | null>;
     edited_at: Timestamp | null;
     id: string;
     referenced_message_id: string | null;
 }
 
 export interface ReactionEmotes {
-    created_at: Generated<Timestamp>;
+    created_at: Generated<Timestamp | null>;
     discord_id: Generated<string>;
     id: Generated<number>;
     karma_value: Generated<number>;
     name: string;
-    updated_at: Generated<Timestamp>;
+    updated_at: Generated<Timestamp | null>;
 }
 
 export interface Reactions {
@@ -47,37 +47,35 @@ export interface Reactions {
 }
 
 export interface Sounds {
-    created_at: Generated<Timestamp>;
+    created_at: Generated<Timestamp | null>;
     id: Generated<number>;
     name: string;
     path: string;
 }
 
 export interface SoundSoundtags {
-    created_at: Generated<Timestamp>;
+    created_at: Generated<Timestamp | null>;
     id: Generated<number>;
     sound: Generated<number>;
     tag: Generated<number>;
 }
 
 export interface Soundtags {
-    created_at: Generated<Timestamp>;
+    created_at: Generated<Timestamp | null>;
     id: Generated<number>;
     name: string;
 }
 
 export interface Users {
-    avatar: string | null;
-    created_at: Generated<Timestamp>;
-    display_name: string | null;
+    created_at: Timestamp;
     id: string;
     is_bot: Generated<boolean>;
-    updated_at: Generated<Timestamp>;
+    joined_at: Timestamp | null;
     username: string;
 }
 
 export interface VoiceEventSounds {
-    created_at: Generated<Timestamp>;
+    created_at: Generated<Timestamp | null>;
     sound_id: number;
     type: VoiceEventSoundType;
     user_id: string;
