@@ -292,6 +292,7 @@ jobs:
                   NODE_ENV: CICD
                   CI: true
                   SKIP_CHANNEL_PROCESSING_ON_STARTUP: true
+                  SKIP_USER_PROCESSING_ON_STARTUP: true
 
                   DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
                   DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}

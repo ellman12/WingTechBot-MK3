@@ -19,6 +19,7 @@ export const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
             roleId: process.env[`${envPrefix}DISCORD_BOT_ROLE_ID`],
             errorWebhookUrl: process.env.DISCORD_ERROR_WEBHOOK_URL,
             skipChannelProcessingOnStartup: process.env.SKIP_CHANNEL_PROCESSING_ON_STARTUP,
+            skipUserProcessingOnStartup: process.env.SKIP_USER_PROCESSING_ON_STARTUP,
             skipCommandDeploymentOnStartup: process.env.SKIP_COMMAND_DEPLOYMENT_ON_STARTUP,
         },
         sounds: {

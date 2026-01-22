@@ -214,11 +214,6 @@ export const createDiscordBot = async ({
             const botChannel = (await guild.channels.fetch(config.discord.botChannelId)) as TextChannel;
             console.log(`✅ Guild and channels fetched in ${Date.now() - guildStart}ms`);
 
-            console.log("⏱️  Syncing users...");
-            const userSyncStart = Date.now();
-            await discordUserSyncService.syncUsers(client, guild);
-            console.log(`✅ Users synced in ${Date.now() - userSyncStart}ms`);
-
             console.log("⏱️  Creating karma emotes...");
             const emotesStart = Date.now();
             await emoteRepository.createKarmaEmotes(guild);
@@ -228,6 +223,13 @@ export const createDiscordBot = async ({
                 const currentYear = new Date().getUTCFullYear();
                 console.log(`🔄 Processing messages for ${currentYear}`);
                 await messageArchiveService.processAllChannels(guild, currentYear);
+            }
+
+            if (!config.discord.skipUserProcessingOnStartup) {
+                console.log("⏱️  Syncing users...");
+                const userSyncStart = Date.now();
+                await discordUserSyncService.syncUsers(client, guild);
+                console.log(`✅ Users synced in ${Date.now() - userSyncStart}ms`);
             }
 
             await soundboardThreadService.findOrCreateSoundboardThread(guild);

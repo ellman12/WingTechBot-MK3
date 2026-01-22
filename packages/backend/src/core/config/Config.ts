@@ -21,6 +21,7 @@ const discordConfigSchema = z.object({
         .refine(val => !val || val === "" || URL.canParse(val), "Must be a valid URL or empty string")
         .optional(),
     skipChannelProcessingOnStartup: z.coerce.boolean().default(false),
+    skipUserProcessingOnStartup: z.coerce.boolean().default(false),
     skipCommandDeploymentOnStartup: z.coerce.boolean().default(false),
 });
 

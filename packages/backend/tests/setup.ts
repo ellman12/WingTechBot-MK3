@@ -24,6 +24,7 @@ export const getTestConfig = (): Config => {
         discord: {
             ...baseConfig.discord,
             skipChannelProcessingOnStartup: true,
+            skipUserProcessingOnStartup: true,
             skipCommandDeploymentOnStartup: true,
         },
         autoReaction: {
