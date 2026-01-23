@@ -12,6 +12,8 @@ export type EmoteTotals = EmoteTotal[];
 //Used for getKarmaLeaderboard().
 export type KarmaLeaderboardEntry = {
     readonly userId: string;
+    readonly username: string | null;
+    readonly count: number;
     readonly totalKarma: number;
 };
 

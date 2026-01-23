@@ -150,14 +150,12 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository, di
                 return;
             }
 
-            const members = await interaction.guild!.members.fetch();
-
             const { result } = leaderboard.reduce(
                 (acc, current) => {
                     const { lastCount, rank, index, result } = acc;
                     const newRank = current.totalKarma === lastCount ? rank : index + 1;
 
-                    result.push(`${String(newRank + ".").padEnd(8)}${String(current.totalKarma).padEnd(8)}${members.get(current.userId)?.displayName ?? "Unknown"}`);
+                    result.push(`${String(newRank + ".").padEnd(8)}${String(current.totalKarma).padEnd(8)}${current.username ?? "Unknown"}`);
                     return { lastCount: current.totalKarma, rank: newRank, index: index + 1, result };
                 },
                 { lastCount: 0, rank: 1, index: 0, result: [] as string[] }
