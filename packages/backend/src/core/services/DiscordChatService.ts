@@ -41,7 +41,7 @@ export const createDiscordChatService = ({ config }: DiscordChatServiceDeps): Di
         const roles = (await guild?.roles.fetch()) ?? new Map();
         const channels = (await guild?.channels.fetch()) ?? new Map();
 
-        return message.content.replace(/<([@#])&?(\d+)>/g, (_, id) => {
+        return message.content.replace(/<[@#]&?(\d+)>/g, (_, id) => {
             if (id === botId || id === botRoleId) return "";
             if (roles.has(id)) return roles.get(id)!.name;
             if (members.has(id)) return members.get(id)!.displayName;
