@@ -51,6 +51,7 @@ const autoReactionConfigSchema = z.object({
     erJokeProbability: z.coerce.number().int().positive().default(50),
     nekoizeProbability: z.coerce.number().int().positive().default(1000),
     elliottReminderProbability: z.coerce.number().int().positive().default(1),
+    atYallProbability: z.coerce.number().int().positive().default(1),
 });
 
 export const configSchema = z.object({

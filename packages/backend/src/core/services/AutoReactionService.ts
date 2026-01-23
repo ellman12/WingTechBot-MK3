@@ -63,6 +63,7 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         { probabilityDenominator: config.autoReaction.erJokeProbability, handler: tryToSayErJoke },
         { probabilityDenominator: config.autoReaction.nekoizeProbability, handler: tryToNekoizeMessage },
         { probabilityDenominator: config.autoReaction.elliottReminderProbability, handler: tryElliottReminder },
+        { probabilityDenominator: config.autoReaction.atYallProbability, handler: tryAtYall },
     ];
 
     const botId = config.discord.clientId;
@@ -215,6 +216,13 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         if (!highlighted) return false;
 
         await message.reply(`> ${highlighted}\n${reply}`);
+        return true;
+    }
+
+    async function tryAtYall(message: Message): Promise<boolean> {
+        if (message.author.id === botId) return false;
+
+        await message.reply("@everyone");
         return true;
     }
 
