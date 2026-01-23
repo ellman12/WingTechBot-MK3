@@ -31,9 +31,12 @@ COPY package*.json pnpm-lock.yaml* ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/types/package.json ./packages/types/
 
+# Copy migrations early to invalidate cache when they change
+COPY packages/backend/database/migrations ./packages/backend/database/migrations
+
 # Install dependencies (allow scripts for native modules)
 RUN pnpm install --frozen-lockfile
- 
+
 # Development stage
 FROM base AS development
 
@@ -93,7 +96,10 @@ RUN npm install -g pnpm
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
 
-# Copy everything from build stage (includes all dependencies)
+# Explicitly copy migrations (guaranteed present at runtime)
+COPY --from=build --chown=nodejs:nodejs /app/packages/backend/database/migrations ./packages/backend/database/migrations
+
+# Copy everything else from build stage
 COPY --from=build --chown=nodejs:nodejs /app ./
 
 # Create directories for sounds and cache with proper permissions
