@@ -142,11 +142,13 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
     };
 
     //Gets the leaderboard for karma, optionally for a year.
-    const getKarmaLeaderboard = async (year?: number, includeSelfReactions?: boolean): Promise<KarmaLeaderboardEntry[]> => {
+    const getKarmaLeaderboard = async (year?: number, includeSelfReactions?: boolean, filterFormerMembers = false, filterUnknown = false): Promise<KarmaLeaderboardEntry[]> => {
         const query = getBaseQuery(year)
             .leftJoin("users as u", "u.id", "r.receiver_id")
-            .select(["r.receiver_id as userId", "u.username"])
+            .select(["r.receiver_id as userId", "u.username", "u.joined_at"])
             .$if(!includeSelfReactions, qb => qb.whereRef("r.giver_id", "!=", "r.receiver_id"))
+            .$if(filterFormerMembers, qb => qb.where("u.joined_at", "is not", null))
+            .$if(filterUnknown, qb => qb.where("u.username", "is not", null))
             .groupBy(["r.receiver_id", "u.id", "u.username"])
             .orderBy("totalKarma", "desc");
 
