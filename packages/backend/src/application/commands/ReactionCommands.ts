@@ -139,25 +139,28 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository, di
             .setName("karma-leaderboard")
             .setDescription("Shows the leaderboard for karma")
             .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by").setRequired(false))
-            .addBooleanOption(option => option.setName("include-self-reactions").setDescription("If self-reactions should be included (defaults to false)").setRequired(false)),
+            .addBooleanOption(option => option.setName("include-self-reactions").setDescription("If self-reactions should be included (defaults to false)").setRequired(false))
+            .addBooleanOption(option => option.setName("filter-former-members").setDescription("If former server members should be filtered out (defaults to false)").setRequired(false))
+            .addBooleanOption(option => option.setName("filter-unknown").setDescription("If unknown users should be filtered out (defaults to false)").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             const year = interaction.options.getNumber("year") ?? undefined;
             const includeSelfReactions = interaction.options.getBoolean("include-self-reactions") ?? false;
-            const leaderboard = await reactionRepository.getKarmaLeaderboard(year, includeSelfReactions);
+            const filterFormerMembers = interaction.options.getBoolean("filter-former-members") ?? false;
+            const filterUnknown = interaction.options.getBoolean("filter-unknown") ?? false;
+
+            const leaderboard = await reactionRepository.getKarmaLeaderboard(year, includeSelfReactions, filterFormerMembers, filterUnknown);
 
             if (leaderboard.length === 0) {
                 await interaction.reply(`No reactions ${year ? `for ${year}` : ""}`);
                 return;
             }
 
-            const members = await interaction.guild!.members.fetch();
-
             const { result } = leaderboard.reduce(
                 (acc, current) => {
                     const { lastCount, rank, index, result } = acc;
                     const newRank = current.totalKarma === lastCount ? rank : index + 1;
 
-                    result.push(`${String(newRank + ".").padEnd(8)}${String(current.totalKarma).padEnd(8)}${members.get(current.userId)?.displayName ?? "Unknown"}`);
+                    result.push(`${String(newRank + ".").padEnd(8)}${String(current.totalKarma).padEnd(8)}${current.username ?? "Unknown"}`);
                     return { lastCount: current.totalKarma, rank: newRank, index: index + 1, result };
                 },
                 { lastCount: 0, rank: 1, index: 0, result: [] as string[] }

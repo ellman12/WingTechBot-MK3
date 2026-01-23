@@ -67,12 +67,10 @@ export interface Soundtags {
 }
 
 export interface Users {
-    avatar: string | null;
-    created_at: Generated<Timestamp>;
-    display_name: string | null;
+    created_at: Timestamp;
     id: string;
     is_bot: Generated<boolean>;
-    updated_at: Generated<Timestamp>;
+    joined_at: Timestamp | null;
     username: string;
 }
 

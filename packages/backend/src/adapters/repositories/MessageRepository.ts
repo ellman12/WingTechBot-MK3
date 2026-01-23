@@ -131,6 +131,11 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         return result.map(m => transformMessage(m, m.reactions));
     };
 
+    const getUniqueAuthorIds = async (): Promise<string[]> => {
+        const result = await db.selectFrom("messages").select("author_id").distinct().execute();
+        return result.map(m => m.author_id);
+    };
+
     const batchCreateMessages = async (messages: CreateMessageData[]): Promise<void> => {
         if (messages.length === 0) {
             return;
@@ -196,6 +201,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         getAllMessagesAsMap,
         getMessagesForChannel,
         getNewestMessages,
+        getUniqueAuthorIds,
         batchCreate: batchCreateMessages,
         batchUpdate: batchUpdateMessages,
     };

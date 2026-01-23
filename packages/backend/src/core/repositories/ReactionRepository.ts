@@ -12,6 +12,8 @@ export type EmoteTotals = EmoteTotal[];
 //Used for getKarmaLeaderboard().
 export type KarmaLeaderboardEntry = {
     readonly userId: string;
+    readonly username: string | null;
+    readonly count: number;
     readonly totalKarma: number;
 };
 
@@ -43,7 +45,9 @@ export type ReactionRepository = {
 
     getEmoteLeaderboard(year?: number, includeSelfReactions?: boolean, limit?: number): Promise<EmoteTotals>;
 
-    getKarmaLeaderboard(year?: number, includeSelfReactions?: boolean): Promise<KarmaLeaderboardEntry[]>;
+    getKarmaLeaderboard(year?: number, includeSelfReactions?: boolean, filterFormerMembers?: boolean, filterUnknown?: boolean): Promise<KarmaLeaderboardEntry[]>;
 
     getTopMessages(authorId: string, emoteName: string, year?: number, limit?: number): Promise<TopMessage[]>;
+
+    getUniqueUserIds(): Promise<string[]>;
 };
