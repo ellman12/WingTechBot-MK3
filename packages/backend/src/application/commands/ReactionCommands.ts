@@ -74,8 +74,7 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository, di
         const messageHeader = direction === "received" ? `${primaryUser.username} received\n` : `${primaryUser.username} gave\n`;
         const messageBody = result.reduce((previous, current) => previous + `* ${current.count} ${formatEmoji(current.name, current.discordId)}\n`, messageHeader);
         const response = `${messageBody}${name ? (direction === "received" ? `from ${name} ` : `to ${name} `) : ""}${year ? `for ${year}` : ""}`;
-        const enclosingChars = response.length > MESSAGE_LENGTH_LIMIT ? "" : "```";
-        await discordChatService.replyToInteraction(interaction, `${enclosingChars}${response}${enclosingChars}`);
+        await discordChatService.replyToInteraction(interaction, response);
     }
 
     const reactionsReceived: Command = {
