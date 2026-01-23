@@ -243,6 +243,7 @@ export const createDiscordBot = async ({
                 client.user!.setActivity(status);
 
                 const description = `Version: ${process.env.GIT_TAG}\nCommit: ${process.env.GIT_COMMIT}\nhttps://github.com/ellman12/WingTechBot-MK3`;
+                console.log(`Setting Discord bot description to ${description}`);
                 await client.application!.edit({ description });
 
                 await botChannel.send("WTB3 online and ready");
