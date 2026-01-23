@@ -84,7 +84,9 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
     async function checkForFunnySubstrings(message: Message): Promise<boolean> {
         if (message.author.id === botId) return false;
 
-        const content = await discordChatService.replaceUserAndRoleMentions(message);
+        const initialFilteredContent = await discordChatService.replaceUserRoleAndChannelMentions(message);
+
+        const content = initialFilteredContent.replace(/<a?(:[a-zA-Z]+:)(\d+)>/g, (_, name, _id) => name);
 
         const substrings = ["69420", "69", "420"];
         const highlightPattern = `(${substrings.join("|")})`;
@@ -139,7 +141,7 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         void discordChatService.sendTypingIndicator(controller.signal, channel);
 
         try {
-            const content = await discordChatService.replaceUserAndRoleMentions(message);
+            const content = await discordChatService.replaceUserRoleAndChannelMentions(message);
             const systemInstruction = await llmInstructionRepo.getInstruction("nekoize");
             const response = await geminiLlmService.generateMessage(content, [], systemInstruction);
             await message.reply(response);

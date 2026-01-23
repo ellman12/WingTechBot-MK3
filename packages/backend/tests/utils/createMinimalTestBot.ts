@@ -239,7 +239,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
         },
         discordChatService: discordChatService || {
             hasBeenPinged: vi.fn().mockReturnValue(false),
-            replaceUserAndRoleMentions: vi.fn().mockResolvedValue(""),
+            replaceUserRoleAndChannelMentions: vi.fn().mockResolvedValue(""),
             sendTypingIndicator: vi.fn().mockResolvedValue(undefined),
             formatMessageContent: vi.fn().mockReturnValue([]),
             sendMessage: vi.fn().mockResolvedValue(undefined),

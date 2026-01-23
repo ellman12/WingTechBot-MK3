@@ -44,13 +44,13 @@ export const createSoundboardThreadService = ({ config, soundRepository, voiceSe
     }
 
     async function tryToPlaySoundFromMessage(message: Message) {
-        const banned = await bannedFeaturesRepository.isUserBanned(message.author.id, "Soundboard");
-        if (banned) {
-            await message.author.send("You are forbidden to use the soundboard");
+        if (!validMessage(message)) {
             return;
         }
 
-        if (!validMessage(message)) {
+        const banned = await bannedFeaturesRepository.isUserBanned(message.author.id, "Soundboard");
+        if (banned) {
+            await message.author.send("You are forbidden to use the soundboard");
             return;
         }
 

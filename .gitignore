@@ -12,6 +12,7 @@ node_modules
 /packages/backend/cache/
 /packages/backend/sounds/
 
+# Ignore prod docker compose file.
 /packages/backend/compose.yaml
 
 /packages/backend/llmInstructions/*

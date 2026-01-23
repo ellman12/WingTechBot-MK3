@@ -7,7 +7,7 @@ export type SendMode = "split" | "file";
 
 export type DiscordChatService = {
     readonly hasBeenPinged: (latestMessage: Message) => boolean;
-    readonly replaceUserAndRoleMentions: (message: Message) => Promise<string>;
+    readonly replaceUserRoleAndChannelMentions: (message: Message) => Promise<string>;
     readonly sendTypingIndicator: (abortSignal: AbortSignal, channel: TextChannel) => Promise<void>;
     readonly formatMessageContent: (content: string, sendMode?: SendMode) => MessageCreateOptions[];
     readonly sendMessage: (content: string, channel: TextChannel, sendMode?: SendMode) => Promise<void>;
@@ -32,18 +32,20 @@ export const createDiscordChatService = ({ config }: DiscordChatServiceDeps): Di
         return !latestMessage.mentions.everyone && (mentionedByUser || mentionedByRole);
     }
 
-    //Removes the bot's mention from the message content, and replace all user and role pings with their names.
-    async function replaceUserAndRoleMentions(message: Message) {
+    //Removes the bot's mention from the message content, clean up emotes, replace all user and role pings with their names, and replace channel mentions with channel names.
+    async function replaceUserRoleAndChannelMentions(message: Message) {
         const channel = (await message.channel.fetch()) as TextChannel;
         const guild = await message.guild?.fetch();
 
         const members = channel?.members ?? new Map();
         const roles = (await guild?.roles.fetch()) ?? new Map();
+        const channels = (await guild?.channels.fetch()) ?? new Map();
 
-        return message.content.replace(/<@&?(\d+)>/g, (_, id) => {
+        return message.content.replace(/<[@#]&?(\d+)>/g, (_, id) => {
             if (id === botId || id === botRoleId) return "";
             if (roles.has(id)) return roles.get(id)!.name;
             if (members.has(id)) return members.get(id)!.displayName;
+            if (channels.has(id)) return channels.get(id)!.name;
             return "";
         });
     }
@@ -119,7 +121,7 @@ export const createDiscordChatService = ({ config }: DiscordChatServiceDeps): Di
 
     return {
         hasBeenPinged,
-        replaceUserAndRoleMentions,
+        replaceUserRoleAndChannelMentions,
         sendTypingIndicator,
         formatMessageContent,
         sendMessage,
