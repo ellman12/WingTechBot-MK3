@@ -52,7 +52,6 @@ export const createExpressApp = (deps: ExpressAppDeps): ExpressApp => {
     const start = (): void => {
         app.listen(deps.config.port, () => {
             console.log(`🚀 Server running on port ${deps.config.port}`);
-            console.log(`📚 API Documentation: http://localhost:${deps.config.port}/api/docs`);
         });
     };
 
