@@ -2,6 +2,17 @@
 # Generates the Docker compose YAML file needed for running on the prod server.
 set -e
 
+GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "no-tag")
+GIT_COMMIT=$(git rev-parse --short HEAD)
+
+REGISTRY=${REGISTRY,,}
+IMAGE_NAME=${IMAGE_NAME,,}
+
+if [[ "$IMAGE_NAME" =~ [A-Z] ]]; then
+  echo "ERROR: IMAGE_NAME must be lowercase for GHCR"
+  exit 1
+fi
+
 cat > compose.yaml << EOF
 services:
   backend:
@@ -13,6 +24,8 @@ services:
       - DATABASE_URL=postgresql://wingtechbot:wingtechbot_password@postgres:5432/wingtechbot
       - SOUNDS_STORAGE_PATH=/app/sounds
       - AUDIO_CACHE_PATH=/app/sounds/wtb-audio-cache
+      - GIT_COMMIT=${GIT_COMMIT}
+      - GIT_TAG=${GIT_TAG}
     ports:
       - "3000:3000"
     depends_on:
