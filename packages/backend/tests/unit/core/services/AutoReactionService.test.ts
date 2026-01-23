@@ -49,7 +49,7 @@ describe("AutoReactionService - Elliott Reminder", () => {
 
     const mockDiscordChatService: DiscordChatService = {
         hasBeenPinged: vi.fn(),
-        replaceUserAndRoleMentions: vi.fn(),
+        replaceUserRoleAndChannelMentions: vi.fn(),
         sendTypingIndicator: vi.fn(),
         formatMessageContent: vi.fn(),
         sendMessage: vi.fn(),
