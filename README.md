@@ -5,7 +5,7 @@
 [![Docker Build](https://github.com/ellman12/WingTechBot-MK3/workflows/Docker%20Build%20and%20Push/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/docker.yaml)
 [![Dependency Updates](https://github.com/ellman12/WingTechBot-MK3/workflows/Update%20Dependencies/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/dependencies.yaml)
 
-A modern full-stack Discord bot application built with TypeScript, featuring a robust backend API and a sleek React frontend.
+A full-stack Discord bot application built with TypeScript.
 
 ## 🏗️ Architecture
 
@@ -17,7 +17,7 @@ WingTechBot-MK3/
 │   ├── backend/          # Express.js API & Discord Bot
 │   └── frontend/         # React Web Application
 ├── package.json          # Root workspace configuration
-└── README.md            # This file
+└── README.md             # This file
 ```
 
 ## 🛠️ Technologies
@@ -56,6 +56,9 @@ cd WingTechBot-MK3
 
 # Install dependencies for all packages
 pnpm install
+
+# Create a copy of .env.exampme, rename it to .env, and fill in the necessary values.
+cp .env.example .env
 ```
 
 ### Development
@@ -79,10 +82,10 @@ pnpm dev:frontend
 #### Database Operations:
 
 ```bash
-pnpm db:generate
-
 # Run database migrations
 pnpm db:migrate
+
+pnpm db:generate
 ```
 
 #### Building for Production:
@@ -136,8 +139,8 @@ The backend serves as both a Discord bot and a REST API. It follows hexagonal ar
 packages/backend/src/
 ├── adapters/           # External adapters (Discord, DB, etc.)
 ├── application/        # Use cases and application logic
-├── core/              # Domain models and business logic
-├── infrastructure/    # Framework and external concerns
+├── core/               # Domain models and business logic
+├── infrastructure/     # Framework and external concerns
 ```
 
 ### Frontend Package
