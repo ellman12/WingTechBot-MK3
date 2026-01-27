@@ -607,9 +607,11 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
         await executeBatchWithAdaptiveSize(
             messagesToCreate,
             async batch => {
-                await unitOfWork.execute(async repos => {
-                    await repos.messageRepository.batchCreate(batch);
-                });
+                if (batch.length === 1) {
+                    await messageRepository.create(batch[0]!);
+                } else if (batch.length > 1) {
+                    await messageRepository.batchCreate(batch);
+                }
             },
             `Create Messages (#${name})`,
             7
@@ -619,9 +621,15 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
         await executeBatchWithAdaptiveSize(
             messagesToUpdate,
             async batch => {
-                await unitOfWork.execute(async repos => {
-                    await repos.messageRepository.batchUpdate(batch);
-                });
+                if (batch.length === 1) {
+                    await messageRepository.edit({
+                        id: batch[0]!.id,
+                        content: batch[0]!.content,
+                        editedAt: batch[0]!.editedAt,
+                    });
+                } else if (batch.length > 1) {
+                    await messageRepository.batchUpdate(batch);
+                }
             },
             `Update Messages (#${name})`,
             3
