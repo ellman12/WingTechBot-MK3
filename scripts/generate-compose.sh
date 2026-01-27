@@ -3,6 +3,8 @@
 set -e
 
 GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "no-tag")
+GIT_TAG=${GIT_TAG#v} #Remove 'v' from the start if it's there
+
 GIT_COMMIT=$(git rev-parse --short HEAD)
 
 REGISTRY=${REGISTRY,,}
@@ -16,7 +18,7 @@ fi
 cat > compose.yaml << EOF
 services:
   backend:
-    image: ${REGISTRY}/${IMAGE_NAME}/backend:latest
+    image: ${REGISTRY}/${IMAGE_NAME}/backend:${GIT_TAG}
     env_file:
       - .env
     environment:
@@ -59,7 +61,7 @@ services:
     restart: unless-stopped
 
   backup:
-    image: ${REGISTRY}/${IMAGE_NAME}/backup:latest
+    image: ${REGISTRY}/${IMAGE_NAME}/backup:${GIT_TAG}
     env_file:
       - .env
     environment:
