@@ -63,7 +63,7 @@ describe("processAllChannels", async () => {
     });
 
     it("should read all messages and reactions on load", testReadAllMessagesAndReactionsOnLoad, timeout);
-    //prettier-ignore
+
     async function testReadAllMessagesAndReactionsOnLoad() {
         if (!minimalBot || !testerBot) throw new Error("Test setup incomplete");
 
@@ -74,7 +74,7 @@ describe("processAllChannels", async () => {
 
         testChannel = await createTemporaryTestChannel(bot);
         minimalBot.addChannel(testChannel.id);
-        const testerChannel = await testerBot.client.channels.fetch(testChannel.id) as TextChannel;
+        const testerChannel = (await testerBot.client.channels.fetch(testChannel.id)) as TextChannel;
 
         async function stopBot() {
             await bot.stop();
@@ -102,7 +102,7 @@ describe("processAllChannels", async () => {
         await stopBot();
 
         const newMessages: Message[] = [];
-        for (let i = 1; i <= 2; i++) { 
+        for (let i = 1; i <= 2; i++) {
             const message = await testerChannel.send(`Message to process later #${i}`);
             newMessages.push(message);
             await message.react("👍");

@@ -12,7 +12,6 @@ import { createAutoReactionService } from "@core/services/AutoReactionService.js
 import type { AutoReactionService } from "@core/services/AutoReactionService.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
-import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import { createDiscordUserSyncService } from "@core/services/DiscordUserSyncService.js";
 import { createLlmConversationService } from "@core/services/LlmConversationService.js";
 import type { LlmConversationService } from "@core/services/LlmConversationService.js";
@@ -54,6 +53,7 @@ export type MinimalTestBot = {
     readonly autoReactionService?: ReturnType<typeof createAutoReactionService>;
     readonly reactionArchiveService?: ReturnType<typeof createReactionArchiveService>;
     readonly messageArchiveService?: ReturnType<typeof createMessageArchiveService>;
+    readonly discordChatService?: ReturnType<typeof createDiscordChatService>;
 };
 
 // Creates a minimal test bot with only the services needed for testing.
@@ -82,10 +82,10 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
     let reactionArchiveService: ReactionArchiveService | undefined;
     let messageArchiveService: MessageArchiveService | undefined;
     let llmConversationService: LlmConversationService | undefined;
-    let discordChatService: DiscordChatService | undefined;
-    const discordUserSyncService = createDiscordUserSyncService(userRepository, messageRepository, reactionRepository);
-
     let geminiLlmService: GeminiLlmService | undefined;
+
+    const discordChatService = createDiscordChatService({ config });
+    const discordUserSyncService = createDiscordUserSyncService(userRepository, messageRepository, reactionRepository);
 
     if (options.reactionArchiveService || options.autoReactionService) {
         reactionArchiveService = createReactionArchiveService({
@@ -105,7 +105,6 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
     }
 
     if (options.autoReactionService || options.llmConversationService) {
-        discordChatService = createDiscordChatService({ config });
         geminiLlmService = createGeminiLlmService({ config });
 
         if (options.autoReactionService) {
@@ -276,5 +275,6 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
         autoReactionService,
         reactionArchiveService,
         messageArchiveService,
+        discordChatService,
     };
 }
