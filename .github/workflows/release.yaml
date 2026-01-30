@@ -1,4 +1,4 @@
-name: Docker Build and Push, Create Release
+name: Docker Build and Push, Create Release, Deploy on Server
 
 on:
     push:
@@ -88,14 +88,13 @@ jobs:
                       org.opencontainers.image.revision=${{ github.sha }}
                       org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
 
-    generate-compose:
+    deploy:
         needs: build-and-push
         runs-on: ubuntu-latest
         permissions:
             contents: write
 
         steps:
-            # Needed to get the generate-compose.sh script.
             - name: Checkout code
               uses: actions/checkout@v4
 
@@ -108,3 +107,27 @@ jobs:
                   files: compose.yaml
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Copy compose.yaml to server
+              uses: appleboy/scp-action@v1.0.0
+              with:
+                  host: ${{ secrets.SERVER_HOST }}
+                  username: ${{ secrets.SERVER_USER }}
+                  port: ${{ secrets.SERVER_PORT }}
+                  key: ${{ secrets.SERVER_SSH_KEY }}
+                  source: "compose.yaml"
+                  target: "/home/${{ secrets.SERVER_USER }}/WingTechBot-MK3/"
+
+            - name: Start WTB on server
+              uses: appleboy/ssh-action@v1.2.5
+              with:
+                  host: ${{ secrets.SERVER_HOST }}
+                  username: ${{ secrets.SERVER_USER }}
+                  port: ${{ secrets.SERVER_PORT }}
+                  key: ${{ secrets.SERVER_SSH_KEY }}
+                  script: |
+                      set -e
+                      cd /home/${{ secrets.SERVER_USER }}/WingTechBot-MK3/
+                      docker compose down
+                      docker compose pull
+                      docker compose up -d --force-recreate

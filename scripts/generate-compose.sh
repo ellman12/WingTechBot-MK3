@@ -79,18 +79,6 @@ services:
       - app-network
     restart: unless-stopped
 
-  watchtower:
-    image: nickfedor/watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - WATCHTOWER_POLL_INTERVAL=300
-      - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_REGISTRY_AUTH=true
-      - DOCKER_USERNAME=\${GHCR_USERNAME}
-      - DOCKER_PASSWORD=\${GHCR_TOKEN}
-    restart: unless-stopped
-
 volumes:
   postgres_data:
   sounds-data:
