@@ -1,0 +1,27 @@
+name: Cleanup unnecessary GHCR images
+
+on:
+    schedule:
+        - cron: "0 0 * * 0" # Every Sunday at 00:00 UTC
+    workflow_dispatch: # Allow manual trigger
+
+permissions:
+    packages: write
+    contents: read
+
+jobs:
+    package-cleanup:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                package:
+                    - name: backend
+                    - name: backup
+
+        steps:
+            - uses: actions/delete-package-versions@v5
+              with:
+                  package-name: wingtechbot-mk3/${{ matrix.package.name }}
+                  package-type: container
+                  ignore-versions: ^v\d+\.\d+\.\d+$ # Keeps only packages matching this regex
+                  min-versions-to-keep: 0
