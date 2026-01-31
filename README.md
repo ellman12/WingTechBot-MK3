@@ -1,5 +1,6 @@
 # WingTechBot MK3 - Monorepo
 
+![Online](https://img.shields.io/discord/111588824525627392?label=Servicing%20Users%3A&style=for-the-badge)
 [![CI/CD Pipeline](https://github.com/ellman12/WingTechBot-MK3/workflows/CI%3ACD%20Pipeline/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/ci.yaml)
 [![Release](https://github.com/ellman12/WingTechBot-MK3/workflows/Release/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/release.yaml)
 [![Docker Build](https://github.com/ellman12/WingTechBot-MK3/workflows/Docker%20Build%20and%20Push/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/docker.yaml)
