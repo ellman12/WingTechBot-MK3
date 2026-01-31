@@ -1,8 +1,7 @@
 import type { ReactionEmote, UpdateReactionEmoteData } from "@core/entities/ReactionEmote.js";
 import type { Guild } from "discord.js";
 
-export type KarmaEmoteName = "upvote" | "downvote" | "silver" | "gold" | "platinum";
-export const karmaEmoteNames: KarmaEmoteName[] = ["upvote", "downvote", "silver", "gold", "platinum"];
+export const karmaEmoteNames = ["upvote", "downvote", "silver", "gold", "platinum"];
 
 export type ReactionEmoteRepository = {
     findById(id: number): Promise<ReactionEmote | null>;

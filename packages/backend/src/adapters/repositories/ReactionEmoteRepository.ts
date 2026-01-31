@@ -93,7 +93,7 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
     };
 
     const getKarmaEmotes = async (): Promise<ReactionEmote[]> => {
-        const emotes = await db.selectFrom("reaction_emotes").where("reaction_emotes.name", "in", karmaEmoteNames).selectAll().execute();
+        const emotes = await db.selectFrom("reaction_emotes").distinctOn("name").where("reaction_emotes.name", "in", karmaEmoteNames).selectAll().execute();
         return emotes.map(transformReactionEmote);
     };
 

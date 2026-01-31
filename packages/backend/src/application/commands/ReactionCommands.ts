@@ -1,4 +1,4 @@
-import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
+import { karmaEmoteNames } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import { type DiscordChatService, MESSAGE_LENGTH_LIMIT } from "@core/services/DiscordChatService.js";
 import { formatEmoji } from "@core/utils/emojiUtils.js";
@@ -9,13 +9,12 @@ import type { Command } from "./Commands.js";
 
 export type ReactionCommandDeps = {
     reactionRepository: ReactionRepository;
-    emoteRepository: ReactionEmoteRepository;
     discordChatService: DiscordChatService;
 };
 
 type ReactionDirection = "given" | "received";
 
-export const createReactionCommands = ({ reactionRepository, emoteRepository, discordChatService }: ReactionCommandDeps): Record<string, Command> => {
+export const createReactionCommands = ({ reactionRepository, discordChatService }: ReactionCommandDeps): Record<string, Command> => {
     const record: Command = {
         data: new SlashCommandBuilder()
             .setName("record")
@@ -23,15 +22,17 @@ export const createReactionCommands = ({ reactionRepository, emoteRepository, di
             .addUserOption(option => option.setName("user").setDescription("Defaults to you").setRequired(false))
             .addNumberOption(option => option.setName("year").setDescription("Defaults to this year").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
-            const karmaEmotes = await emoteRepository.getKarmaEmotes();
+            const emojis = (await interaction.guild!.emojis.fetch()).filter(e => karmaEmoteNames.includes(e.name));
+            const karmaEmotes = Array.from(emojis.values());
+
             const user = interaction.options.getUser("user") ?? interaction.user;
             const year = interaction.options.getNumber("year") ?? undefined;
 
             const result = await reactionRepository.getKarmaAndAwards(user.id, year);
             const karma = result.reduce((sum, item) => sum + item.totalKarma, 0);
 
-            const formattedEmotes = karmaEmotes.map(e => `${result.find(r => r.name === e.name)!.count} ${formatEmoji(e.name, e.discordId)}`);
-            const response = `${userMention(user.id)} has ${karma} karma (${formattedEmotes.join(" ")})${year ? ` for ${year}` : ""}`;
+            const formattedEmotes = karmaEmotes.map(e => `${result.find(r => r.name === e.name)!.count} ${formatEmoji(e.name, e.id)}`);
+            const response = `${userMention(user.id)} has ${karma} karma (${formattedEmotes.join(" ")}) ${year ? `for ${year}` : ""}`;
             await interaction.reply(response);
         },
     };
