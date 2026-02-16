@@ -23,5 +23,5 @@ jobs:
               with:
                   package-name: wingtechbot-mk3/${{ matrix.package.name }}
                   package-type: container
-                  ignore-versions: ^v\d+\.\d+\.\d+$ # Keeps only packages matching this regex
+                  ignore-versions: ^\d+\.\d+\.\d+$ # Keeps only packages matching this regex
                   min-versions-to-keep: 0
