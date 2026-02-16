@@ -108,7 +108,7 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
             .setName("play")
             .setDescription("Play audio in the voice channel")
             .addStringOption(option => option.setName("audio-source").setDescription("Audio source (URL, sound name, 'random', '#tag', or comma-separated sounds)").setRequired(true).setAutocomplete(true))
-            .addIntegerOption(option => option.setName("volume").setDescription("Volume level (0-100)").setRequired(false).setMinValue(0).setMaxValue(100))
+            .addIntegerOption(option => option.setName("volume").setDescription("Volume level (0-200)").setRequired(false).setMinValue(0).setMaxValue(200))
             .addBooleanOption(option => option.setName("preload").setDescription("If we should download fully first (for URLs").setRequired(false))
             .addIntegerOption(option => option.setName("repeat-amount").setDescription("How many times to repeat the sound").setRequired(false).setMinValue(1))
             .addStringOption(option => option.setName("repeat-delay").setDescription("Delay between each sound. Can be a number or a range.").setRequired(false))
@@ -339,7 +339,7 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
         data: new SlashCommandBuilder()
             .setName("volume")
             .setDescription("Set or get the volume")
-            .addIntegerOption(option => option.setName("level").setDescription("Volume level (0-100)").setRequired(false).setMinValue(0).setMaxValue(100)),
+            .addIntegerOption(option => option.setName("level").setDescription("Volume level (0-200)").setRequired(false).setMinValue(0).setMaxValue(200)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             if (!interaction.guildId) {
                 await interaction.reply({ content: "This command can only be used in a server!", flags: MessageFlags.Ephemeral });

@@ -21,7 +21,6 @@ export class OverlappingAudioPlayer extends AudioPlayer {
     private readonly playingAudio = new Map<string, PlayingAudioInfo>();
     private mixedResource: AudioResource | null = null;
     private nextAudioId = 0;
-    private setupMixerTimeout: NodeJS.Timeout | null = null;
 
     constructor(options: OverlappingAudioPlayerOptions = {}) {
         super({
@@ -44,6 +43,10 @@ export class OverlappingAudioPlayer extends AudioPlayer {
     }
 
     private setupMixerOutput(): void {
+        // Clean up previous mixer listeners to prevent accumulation
+        this.mixer.removeAllListeners("data");
+        this.mixer.removeAllListeners("error");
+
         // Create a readable stream from the mixer output
         const mixerOutput = new Readable({
             read() {
@@ -51,18 +54,15 @@ export class OverlappingAudioPlayer extends AudioPlayer {
             },
         });
 
-        // Pipe mixer to our readable stream
+        // Attach fresh listeners to the mixer
         this.mixer.on("data", (chunk: Buffer) => {
-            mixerOutput.push(chunk);
-        });
-
-        this.mixer.on("end", () => {
-            mixerOutput.push(null);
+            if (!mixerOutput.destroyed) {
+                mixerOutput.push(chunk);
+            }
         });
 
         this.mixer.on("error", error => {
             console.error(`[OverlappingAudioPlayer] Mixer error:`, error);
-            mixerOutput.destroy(error);
         });
 
         // Create audio resource from mixer output
@@ -79,23 +79,10 @@ export class OverlappingAudioPlayer extends AudioPlayer {
         console.log(`[OverlappingAudioPlayer] State change: ${oldState.status} -> ${newState.status} (${this.playingAudio.size} active streams)`);
 
         if (newState.status === AudioPlayerStatus.Idle && this.playingAudio.size > 0) {
-            // If player goes idle but we still have audio to play, restart the mixed resource
-            console.log(`[OverlappingAudioPlayer] Player idle but ${this.playingAudio.size} streams active, restarting mixed resource`);
-            this.debouncedSetupMixer();
+            // If player goes idle but we still have audio to play
+            console.log(`[OverlappingAudioPlayer] Player idle but ${this.playingAudio.size} streams active, reconnecting mixer output`);
+            this.setupMixerOutput();
         }
-    }
-
-    private debouncedSetupMixer(): void {
-        if (this.setupMixerTimeout) {
-            clearTimeout(this.setupMixerTimeout);
-        }
-
-        this.setupMixerTimeout = setTimeout(() => {
-            if (this.playingAudio.size > 0) {
-                this.setupMixerOutput();
-            }
-            this.setupMixerTimeout = null;
-        }, 100);
     }
 
     public override play(resource: AudioResource, volume: number = 1.0): string {
@@ -167,7 +154,7 @@ export class OverlappingAudioPlayer extends AudioPlayer {
             // If the player is idle when adding new audio, restart the mixer output
             if (this.state.status === AudioPlayerStatus.Idle) {
                 console.log(`[OverlappingAudioPlayer] Player is idle, restarting mixer output to resume playback`);
-                this.debouncedSetupMixer();
+                this.setupMixerOutput();
             }
         } else {
             console.warn(`[OverlappingAudioPlayer] Failed to add audio source ${audioSource.id} to mixer`);

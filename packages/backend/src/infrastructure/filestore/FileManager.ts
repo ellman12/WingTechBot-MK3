@@ -35,7 +35,7 @@ export const createFileManager = (): FileManager => {
 
             // Optimized buffer settings for audio streaming
             const stream = fs.createReadStream(path, {
-                highWaterMark: 256 * 1024, // Increased to 256KB buffer for smoother streaming
+                highWaterMark: 256 * 1024, // 256KB buffer for smoother streaming
                 autoClose: true,
                 emitClose: true,
             });

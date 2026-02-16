@@ -21,8 +21,6 @@ export const createAudioStreamWithFormat = (stream: Readable, formatInfo: AudioF
     };
 };
 
-export const extractStream = (audio: AudioStreamWithMetadata): Readable => audio.stream;
-
 export const extractFormatInfo = (audio: AudioStreamWithMetadata): AudioFormatInfo | undefined => {
     return audio.formatInfo;
 };
