@@ -138,7 +138,11 @@ export const createFileManager = (): FileManager => {
             return new Promise((resolve, reject) => {
                 fs.stat(path, (err, stats) => {
                     if (err) {
-                        reject(err);
+                        if (err.code === "ENOENT") {
+                            resolve(null);
+                        } else {
+                            reject(err);
+                        }
                     } else {
                         resolve(stats);
                     }

@@ -213,6 +213,14 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                     console.log(`[VoiceCommands] Generated delays: [${delaysMs.join(", ")}]ms`);
 
                     const repeatedSoundName = await soundService.getRepeatedSound(soundsForPlayback, delaysMs);
+                    if (repeatedSoundName === null) {
+                        if (interaction.deferred) {
+                            await interaction.editReply({ content: `Couldn't find that sound` });
+                        } else {
+                            await interaction.reply({ content: `Couldn't find that sound`, flags: MessageFlags.Ephemeral });
+                        }
+                        return;
+                    }
 
                     console.log(`[VoiceCommands] Playing premixed repeated sound: ${repeatedSoundName}`);
                     await voiceService.playAudio(interaction.guildId, repeatedSoundName, normalizedVolume);

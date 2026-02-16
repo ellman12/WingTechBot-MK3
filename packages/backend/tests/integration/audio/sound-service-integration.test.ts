@@ -8,6 +8,7 @@ import { createSoundService } from "@core/services/SoundService.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { createFileManager } from "@infrastructure/filestore/FileManager.js";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "fs";
+import assert from "node:assert";
 import { tmpdir } from "os";
 import { join } from "path";
 import { Readable } from "stream";
@@ -137,6 +138,7 @@ describe.concurrent("SoundService Integration Tests", () => {
             // Retrieve the sound
             const audioStream = await ctx.soundService.getSound(soundName);
             expect(audioStream).toBeInstanceOf(Readable);
+            assert(audioStream instanceof Readable);
 
             // Verify we can read data from the stream
             const chunks: Buffer[] = [];
@@ -216,6 +218,7 @@ describe.concurrent("SoundService Integration Tests", () => {
             // Get audio stream (should be processed through FFmpeg)
             const audioStream = await ctx.soundService.getSound(testUrl);
             expect(audioStream).toBeInstanceOf(Readable);
+            assert(audioStream instanceof Readable);
 
             // Verify we can read processed data
             const chunks: Buffer[] = [];
@@ -238,7 +241,8 @@ describe.concurrent("SoundService Integration Tests", () => {
             await expect(ctx.soundService.addSound("bad-sound", "not-a-url")).rejects.toThrow();
 
             // Test getting non-existent soundboard sound
-            await expect(ctx.soundService.getSound("non-existent-sound")).rejects.toThrow("Sound with name non-existent-sound not found");
+            const result = await ctx.soundService.getSound("non-existent-sound");
+            expect(result).toBeNull();
 
             // Test deleting non-existent sound
             await expect(ctx.soundService.deleteSound("non-existent-sound")).rejects.toThrow("Sound with name non-existent-sound not found");

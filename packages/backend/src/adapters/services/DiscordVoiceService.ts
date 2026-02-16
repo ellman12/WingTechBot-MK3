@@ -138,7 +138,7 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
         return connected;
     };
 
-    const playAudio = async (serverId: string, nameOrSource: string, volume: number = 1.0): Promise<string> => {
+    const playAudio = async (serverId: string, nameOrSource: string, volume: number = 1.0): Promise<string | null> => {
         console.log(`[DiscordVoiceService] Playing audio: ${nameOrSource} in server ${serverId}`);
 
         const state = voiceStates.get(serverId);
@@ -177,6 +177,7 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
             const audioId = `${++state.audioIdCounter}`;
 
             const audioStream = await soundService.getSound(nameOrSource, abortController.signal);
+            if (audioStream === null) return null;
 
             console.log(`[DiscordVoiceService] Creating PlayingSound with metadata:`, {
                 id: audioId,

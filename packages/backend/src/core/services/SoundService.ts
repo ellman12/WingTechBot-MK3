@@ -10,8 +10,8 @@ import type { FileManager } from "./FileManager.js";
 
 export type SoundService = {
     readonly addSound: (name: string, source: string) => Promise<void>;
-    readonly getSound: (nameOrSource: string, abortSignal?: AbortSignal) => Promise<Readable>;
-    readonly getRepeatedSound: (namesOrSources: string[], delaysMs: number[], abortSignal?: AbortSignal) => Promise<string>;
+    readonly getSound: (nameOrSource: string, abortSignal?: AbortSignal) => Promise<Readable | null>;
+    readonly getRepeatedSound: (namesOrSources: string[], delaysMs: number[], abortSignal?: AbortSignal) => Promise<string | null>;
     readonly listSounds: (tagName?: string) => Promise<string[]>;
     readonly deleteSound: (name: string) => Promise<void>;
 };
@@ -30,7 +30,7 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
     // Cache for temporary repeated sounds
     const repeatedSoundCache = new Map<string, Readable>();
 
-    const getSoundInternal = async (nameOrSource: string, abortSignal?: AbortSignal): Promise<Readable> => {
+    const getSoundInternal = async (nameOrSource: string, abortSignal?: AbortSignal): Promise<Readable | null> => {
         // Check if this is a cached repeated sound
         const cachedRepeated = repeatedSoundCache.get(nameOrSource);
         if (cachedRepeated) {
@@ -46,9 +46,7 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                 case "soundboard": {
                     const sound = await soundRepository.getSoundByName(nameOrSource);
                     if (!sound) {
-                        const error = new Error(`Sound with name ${nameOrSource} not found`);
-                        console.error(`[SoundService] ${error.message}`);
-                        throw error;
+                        return null;
                     }
 
                     const soundPath = `${AUDIO_FILE_STORE_PATH}${sound.path}`;
@@ -101,13 +99,17 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
             }
         },
         getSound: getSoundInternal,
-        getRepeatedSound: async (namesOrSources: string[], delaysMs: number[], abortSignal?: AbortSignal): Promise<string> => {
+        getRepeatedSound: async (namesOrSources: string[], delaysMs: number[], abortSignal?: AbortSignal): Promise<string | null> => {
             try {
                 const uniqueSounds = [...new Set(namesOrSources)];
                 const pcmDataMap = new Map<string, Buffer>();
 
                 for (const nameOrSource of uniqueSounds) {
                     const soundStream = await getSoundInternal(nameOrSource, abortSignal);
+                    if (!soundStream) {
+                        return null;
+                    }
+
                     const pcmData = await readStreamToBytes(soundStream);
                     pcmDataMap.set(nameOrSource, Buffer.from(pcmData));
                 }
