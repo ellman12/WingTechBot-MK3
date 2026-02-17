@@ -96,11 +96,6 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         return result.map(m => transformMessage(m, m.reactions));
     };
 
-    //Identical to getAllMessages but returns Map of messages with their ids for keys.
-    const getAllMessagesAsMap = async (year?: number): Promise<Map<string, Message>> => {
-        return new Map((await getAllMessages(year)).map(m => [m.id, m]));
-    };
-
     //Gets all messages for a specific channel (optionally filtered by year) with their reactions
     const getMessagesForChannel = async (channelId: string, year?: number): Promise<Message[]> => {
         const result = await db
@@ -198,7 +193,6 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         delete: deleteMessage,
         edit: editMessage,
         getAllMessages,
-        getAllMessagesAsMap,
         getMessagesForChannel,
         getNewestMessages,
         getUniqueAuthorIds,
