@@ -38,7 +38,7 @@ describe("FfmpegAudioProcessingService", () => {
                 codec: "pcm_s16le",
                 sampleRate: 48000,
                 channels: 2,
-                extraArgs: ["-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11:linear=true"],
+                extraArgs: ["-filter:a", "loudnorm=I=-24:TP=-1.5:LRA=11:linear=true"],
             });
             expect(result).toBe(finalAudio);
         });
@@ -77,7 +77,7 @@ describe("FfmpegAudioProcessingService", () => {
                 codec: "pcm_s16le",
                 sampleRate: 48000,
                 channels: 2,
-                extraArgs: ["-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11:linear=true"],
+                extraArgs: ["-filter:a", "loudnorm=I=-24:TP=-1.5:LRA=11:linear=true"],
             });
             expect(result).toBeInstanceOf(Readable);
         });
