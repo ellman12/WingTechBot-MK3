@@ -6,7 +6,6 @@ export type MessageRepository = {
     delete(data: DeleteMessageData): Promise<Message>;
     edit(data: EditMessageData): Promise<Message>;
     getAllMessages(year?: number): Promise<Message[]>;
-    getAllMessagesAsMap(year?: number): Promise<Map<string, Message>>;
     getMessagesForChannel(channelId: string, year?: number): Promise<Message[]>;
     getNewestMessages(limit: number, channelId?: string, withinMinutes?: number): Promise<Message[]>;
     getUniqueAuthorIds(): Promise<string[]>;
