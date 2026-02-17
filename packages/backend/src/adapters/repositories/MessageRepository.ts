@@ -37,9 +37,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         }
 
         const existing = await findMessageById(id);
-        if (existing) {
-            return existing;
-        }
+        if (existing) return existing;
 
         const values = { id, author_id: authorId, channel_id: channelId, content, referenced_message_id: referencedMessageId, created_at: createdAt, edited_at: editedAt };
         const message = await db.insertInto("messages").values(values).returningAll().executeTakeFirst();
@@ -53,14 +51,10 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
     const deleteMessage = async (data: DeleteMessageData): Promise<Message> => {
         const { id } = data;
         const message = await findMessageById(id);
-        if (!message) {
-            throw new Error("Message does not exist");
-        }
+        if (!message) throw new Error("Message does not exist");
 
         const result = await db.deleteFrom("messages").where("id", "=", id).executeTakeFirst();
-        if (result.numDeletedRows <= 0) {
-            throw new Error("Failed to delete message");
-        }
+        if (result.numDeletedRows <= 0) throw new Error("Failed to delete message");
 
         return message;
     };
@@ -69,15 +63,11 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         const { id, content, editedAt } = data;
 
         const existing = await findMessageById(id);
-        if (!existing) {
-            throw new Error("Message does not exist");
-        }
+        if (!existing) throw new Error("Message does not exist");
 
         const updated = await db.updateTable("messages").set({ content, edited_at: editedAt }).where("id", "=", id).returningAll().executeTakeFirst();
 
-        if (!updated) {
-            throw new Error("Failed to update message");
-        }
+        if (!updated) throw new Error("Failed to update message");
 
         return transformMessage(updated);
     };
@@ -119,9 +109,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
     };
 
     const batchCreateMessages = async (messages: CreateMessageData[]): Promise<void> => {
-        if (messages.length === 0) {
-            return;
-        }
+        if (messages.length === 0) return;
 
         // Validate all messages
         for (const data of messages) {
