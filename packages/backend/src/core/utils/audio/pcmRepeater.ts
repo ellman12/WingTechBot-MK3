@@ -36,34 +36,12 @@ export function createRepeatedPcmStream(pcmData: (Uint8Array | Buffer)[], delays
     console.log(`[PcmRepeater] Total duration: ${totalSamples / sampleRate}s (${totalBytes} bytes)`);
 
     const chunkSizeSamples = 960; // 20ms at 48kHz (standard Discord chunk)
-    const chunkQueue: Buffer[] = [];
     let currentSample = 0;
     let isGenerating = false;
     let generationComplete = false;
 
-    const generateNextChunk = (): void => {
-        if (currentSample >= totalSamples) {
-            generationComplete = true;
-            isGenerating = false;
-            return;
-        }
-
-        const samplesToGenerate = Math.min(chunkSizeSamples, totalSamples - currentSample);
-        const outputBuffer = mixRepeatedChunk(currentSample, samplesToGenerate, schedule, bytesPerSample, channels);
-
-        chunkQueue.push(outputBuffer);
-        currentSample += samplesToGenerate;
-
-        setImmediate(generateNextChunk);
-    };
-
     return new Readable({
         read() {
-            if (chunkQueue.length > 0) {
-                this.push(chunkQueue.shift());
-                return;
-            }
-
             if (generationComplete) {
                 this.push(null);
                 return;
@@ -71,6 +49,27 @@ export function createRepeatedPcmStream(pcmData: (Uint8Array | Buffer)[], delays
 
             if (!isGenerating) {
                 isGenerating = true;
+
+                const generateNextChunk = (): void => {
+                    if (currentSample >= totalSamples) {
+                        generationComplete = true;
+                        isGenerating = false;
+                        this.push(null);
+                        return;
+                    }
+
+                    const samplesToGenerate = Math.min(chunkSizeSamples, totalSamples - currentSample);
+                    const outputBuffer = mixRepeatedChunk(currentSample, samplesToGenerate, schedule, bytesPerSample, channels);
+                    currentSample += samplesToGenerate;
+
+                    const shouldContinue = this.push(outputBuffer);
+                    if (shouldContinue) {
+                        setImmediate(generateNextChunk);
+                    } else {
+                        isGenerating = false; // Stop until _read() is called again
+                    }
+                };
+
                 setImmediate(generateNextChunk);
             }
         },
