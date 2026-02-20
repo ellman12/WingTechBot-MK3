@@ -74,7 +74,7 @@ export const createYtDlpService = (formatDetectionService?: AudioFormatDetection
                     console.log(`[YtDlpService] Detected format via ffprobe:`, formatInfo);
 
                     const fileStream = createReadStream(tempFile, {
-                        highWaterMark: 256 * 1024,
+                        highWaterMark: 64 * 1024,
                     });
 
                     fileStream.on("end", () => {
@@ -126,7 +126,7 @@ export const createYtDlpService = (formatDetectionService?: AudioFormatDetection
                 };
 
                 const fileStream = createReadStream(tempFile, {
-                    highWaterMark: 256 * 1024,
+                    highWaterMark: 64 * 1024,
                 });
 
                 fileStream.on("end", () => {
@@ -192,7 +192,7 @@ export const createYtDlpService = (formatDetectionService?: AudioFormatDetection
                     console.log(`[YtDlpService] Creating read stream from temp file: ${tempFile}`);
                     try {
                         const fileStream = createReadStream(tempFile, {
-                            highWaterMark: 256 * 1024,
+                            highWaterMark: 64 * 1024,
                         });
 
                         fileStream.on("end", () => {

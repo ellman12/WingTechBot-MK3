@@ -4,11 +4,11 @@ export const createPreBufferedStream = async (sourceStream: Readable, sourceName
     console.log(`[SoundService] Creating pre-buffered stream for: ${sourceName}`);
 
     const bufferedStream = new PassThrough({
-        highWaterMark: 256 * 1024, // 256KB buffer
+        highWaterMark: 64 * 1024, // 64KB buffer
         objectMode: false,
     });
 
-    const preBufferTarget = 128 * 1024; // Wait for 128KB before resolving
+    const preBufferTarget = 32 * 1024; // Wait for 32KB before resolving
     let bytesBuffered = 0;
     const prebufferStartTime = Date.now();
 
@@ -96,41 +96,6 @@ export const createPreBufferedStream = async (sourceStream: Readable, sourceName
             clearTimeout(timeout);
         });
     });
-};
-
-export const createBufferedStream = (sourceStream: Readable, sourceName: string): Readable => {
-    console.log(`[SoundService] Creating simple buffered stream for: ${sourceName}`);
-
-    const bufferedStream = new PassThrough({
-        highWaterMark: 256 * 1024, // 256KB buffer
-        objectMode: false,
-        allowHalfOpen: false, // Close when source closes
-    });
-
-    // Simple piping with monitoring - let Node.js handle the flow control
-    let bytesTransferred = 0;
-
-    sourceStream.on("data", chunk => {
-        bytesTransferred += chunk.length;
-        // Reduce logging frequency to avoid performance impact
-        if (bytesTransferred % (64 * 1024) === 0 || chunk.length > 32 * 1024) {
-            console.log(`[SoundService] Buffered stream transferred: ${bytesTransferred} bytes for ${sourceName}`);
-        }
-    });
-
-    sourceStream.on("end", () => {
-        console.log(`[SoundService] Buffered stream ended for: ${sourceName}, total bytes: ${bytesTransferred}`);
-    });
-
-    sourceStream.on("error", error => {
-        console.error(`[SoundService] Buffered stream error for ${sourceName}:`, error);
-        bufferedStream.destroy(error);
-    });
-
-    // Use native piping for optimal performance
-    sourceStream.pipe(bufferedStream, { end: true });
-
-    return bufferedStream;
 };
 
 export const readStreamToBytes = (stream: Readable): Promise<Uint8Array> => {

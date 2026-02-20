@@ -5,17 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock FFmpeg service
 const mockFfmpegService: FfmpegService = {
-    run: vi.fn(),
-    runStreamAsync: vi.fn(),
-    runAsyncStream: vi.fn(),
-    runAsync: vi.fn(),
-    runAsyncWithStderr: vi.fn(),
     convertAudio: vi.fn(),
-    convertStreamToAudio: vi.fn(),
     convertStreamToStream: vi.fn(),
-    convertAudioToStream: vi.fn(),
-    normalizeAudioStreamRealtime: vi.fn(),
-    normalizeAudio: vi.fn(),
 };
 
 describe("FfmpegAudioProcessingService", () => {
@@ -47,7 +38,7 @@ describe("FfmpegAudioProcessingService", () => {
                 codec: "pcm_s16le",
                 sampleRate: 48000,
                 channels: 2,
-                extraArgs: ["-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11:linear=true"],
+                extraArgs: ["-filter:a", "loudnorm=I=-24:TP=-1.5:LRA=11:linear=true"],
             });
             expect(result).toBe(finalAudio);
         });
@@ -86,7 +77,7 @@ describe("FfmpegAudioProcessingService", () => {
                 codec: "pcm_s16le",
                 sampleRate: 48000,
                 channels: 2,
-                extraArgs: ["-filter:a", "loudnorm=I=-16:TP=-1.5:LRA=11:linear=true"],
+                extraArgs: ["-filter:a", "loudnorm=I=-24:TP=-1.5:LRA=11:linear=true"],
             });
             expect(result).toBeInstanceOf(Readable);
         });
@@ -111,7 +102,7 @@ describe("FfmpegAudioProcessingService", () => {
 
             // The result should be a buffered stream (PassThrough stream)
             expect(result).toBeInstanceOf(Readable);
-            expect(result.readableHighWaterMark).toBe(256 * 1024); // 256KB buffer
+            expect(result.readableHighWaterMark).toBe(64 * 1024); // 64KB buffer
         });
 
         it("should handle stream processing errors", () => {

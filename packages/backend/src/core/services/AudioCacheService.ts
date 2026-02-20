@@ -71,6 +71,10 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
 
             // Check if cache is expired by reading file stats
             const stats = await fileManager.getFileStats(filePath);
+            if (!stats) {
+                console.log(`[AudioCacheService] Cache file disappeared for: ${url}`);
+                return null;
+            }
             const age = Date.now() - stats.mtime.getTime();
             if (age > ttlMs) {
                 console.log(`[AudioCacheService] Cache expired for: ${url} (age: ${Math.round(age / 1000 / 60)}min, ttl: ${config.cache.ttlHours}h)`);
@@ -160,6 +164,7 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
             const expiredChecks = cacheFiles.map(async file => {
                 try {
                     const stats = await fileManager.getFileStats(file);
+                    if (!stats) return 0;
                     if (now - stats.mtime.getTime() > ttlMs) {
                         await fileManager.deleteFile(file);
                         return 1;
@@ -192,6 +197,7 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
             for (const file of cacheFiles) {
                 try {
                     const stats = await fileManager.getFileStats(file);
+                    if (!stats) continue;
                     totalSize += stats.size;
                     fileStats.push({
                         path: file,

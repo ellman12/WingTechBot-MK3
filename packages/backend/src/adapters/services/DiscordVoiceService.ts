@@ -102,7 +102,7 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
             });
 
             console.log(`[DiscordVoiceService] Storing voice state for server ${serverId}`);
-            voiceStates.set(serverId, { connection, player, volume: 100, isReady: false, audioIdCounter: 0 });
+            voiceStates.set(serverId, { connection, player, volume: 100, isReady: connection.state.status === VoiceConnectionStatus.Ready, audioIdCounter: 0 });
             console.log(`[DiscordVoiceService] Successfully connected to voice channel ${channel.name} in server ${serverId}`);
         } catch (error) {
             console.error(`[DiscordVoiceService] Failed to connect to voice channel:`, error);
@@ -138,7 +138,7 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
         return connected;
     };
 
-    const playAudio = async (serverId: string, nameOrSource: string, volume: number = 1.0): Promise<string> => {
+    const playAudio = async (serverId: string, nameOrSource: string, volume: number = 1.0): Promise<string | null> => {
         console.log(`[DiscordVoiceService] Playing audio: ${nameOrSource} in server ${serverId}`);
 
         const state = voiceStates.get(serverId);
@@ -149,15 +149,17 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
         }
 
         // Wait for connection to be ready
-        if (!state.isReady) {
-            console.log(`[DiscordVoiceService] Waiting for connection to be ready...`);
+        const isReady = () => state.isReady || state.connection.state.status === VoiceConnectionStatus.Ready;
+        if (!isReady()) {
+            console.log(`[DiscordVoiceService] Waiting for connection to be ready (current status: ${state.connection.state.status})...`);
             await new Promise<void>((resolve, reject) => {
                 const timeout = setTimeout(() => {
-                    reject(new Error("Connection timeout - voice connection not ready after 10 seconds"));
+                    reject(new Error(`Connection timeout - voice connection not ready after 10 seconds (status: ${state.connection.state.status})`));
                 }, 10000);
 
                 const checkReady = () => {
-                    if (state.isReady) {
+                    if (isReady()) {
+                        state.isReady = true;
                         clearTimeout(timeout);
                         resolve();
                     } else {
@@ -175,6 +177,7 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
             const audioId = `${++state.audioIdCounter}`;
 
             const audioStream = await soundService.getSound(nameOrSource, abortController.signal);
+            if (audioStream === null) return null;
 
             console.log(`[DiscordVoiceService] Creating PlayingSound with metadata:`, {
                 id: audioId,
@@ -256,8 +259,7 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
     const setVolume = async (serverId: string, volume: number): Promise<void> => {
         const state = voiceStates.get(serverId);
         if (state) {
-            // Volume should be 0-100 scale for compatibility with commands
-            state.volume = Math.max(0, Math.min(100, volume));
+            state.volume = Math.max(0, Math.min(200, volume));
         }
     };
 

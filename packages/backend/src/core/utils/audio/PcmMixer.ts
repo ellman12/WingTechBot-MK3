@@ -29,15 +29,19 @@ export class PcmMixer extends Transform {
     private readonly maxConcurrentStreams: number;
 
     private activeStreams = new Map<string, StreamState>();
-    private streamBuffers = new Map<string, Buffer>();
+    private streamBuffers = new Map<string, Buffer[]>();
+    private streamBufferLengths = new Map<string, number>();
     private isProcessing = false;
-    private processingInterval: NodeJS.Timeout | null = null;
+    private processingTimeout: NodeJS.Timeout | null = null;
+    private processingStartTime: number = 0;
+    private chunkCount: number = 0;
     private readonly minBufferSize: number; // Minimum buffer before mixing
+    private readonly initialBufferThreshold: number; // Bytes needed before first output
 
     constructor(options: PcmMixerOptions) {
         super({
             objectMode: false,
-            highWaterMark: 128 * 1024, // Increased to 128KB for smoother playback
+            highWaterMark: 128 * 1024,
         });
 
         this.sampleRate = options.sampleRate;
@@ -50,7 +54,10 @@ export class PcmMixer extends Transform {
         const samplesPerBuffer = Math.floor(this.sampleRate * 0.04); // 40ms
         this.minBufferSize = samplesPerBuffer * this.bytesPerSample;
 
-        console.log(`[PcmMixer] Initialized mixer: ${this.sampleRate}Hz, ${this.channels}ch, ${this.bitDepth}-bit, minBuffer: ${this.minBufferSize} bytes`);
+        // Require 60ms of audio before starting output (3 chunks worth)
+        this.initialBufferThreshold = Math.floor(this.sampleRate * 0.06) * this.bytesPerSample;
+
+        console.log(`[PcmMixer] Initialized mixer: ${this.sampleRate}Hz, ${this.channels}ch, ${this.bitDepth}-bit, minBuffer: ${this.minBufferSize} bytes, initialThreshold: ${this.initialBufferThreshold} bytes`);
     }
 
     public addStream(streamInfo: PcmStreamInfo): boolean {
@@ -70,7 +77,8 @@ export class PcmMixer extends Transform {
             info: streamInfo,
             hasEnded: false,
         });
-        this.streamBuffers.set(streamInfo.id, Buffer.alloc(0));
+        this.streamBuffers.set(streamInfo.id, []);
+        this.streamBufferLengths.set(streamInfo.id, 0);
 
         // Set up stream handlers
         streamInfo.stream.on("data", (chunk: Buffer) => {
@@ -112,6 +120,7 @@ export class PcmMixer extends Transform {
 
         this.activeStreams.delete(streamId);
         this.streamBuffers.delete(streamId);
+        this.streamBufferLengths.delete(streamId);
 
         // Stop processing if no streams remain
         if (this.activeStreams.size === 0) {
@@ -130,30 +139,100 @@ export class PcmMixer extends Transform {
     }
 
     private handleStreamData(streamId: string, chunk: Buffer): void {
-        const existingBuffer = this.streamBuffers.get(streamId);
-        if (existingBuffer) {
-            this.streamBuffers.set(streamId, Buffer.concat([existingBuffer, chunk]));
+        const bufferList = this.streamBuffers.get(streamId);
+        if (bufferList) {
+            bufferList.push(chunk);
+            this.streamBufferLengths.set(streamId, (this.streamBufferLengths.get(streamId) ?? 0) + chunk.length);
         }
+    }
+
+    private consumeFromBuffer(streamId: string, byteCount: number): Buffer {
+        const bufferList = this.streamBuffers.get(streamId);
+        if (!bufferList || bufferList.length === 0) return Buffer.alloc(0);
+
+        const totalAvailable = this.streamBufferLengths.get(streamId) ?? 0;
+        const toConsume = Math.min(byteCount, totalAvailable);
+        if (toConsume === 0) return Buffer.alloc(0);
+
+        const collected: Buffer[] = [];
+        let collectedBytes = 0;
+
+        while (collectedBytes < toConsume && bufferList.length > 0) {
+            const front = bufferList[0]!;
+            const needed = toConsume - collectedBytes;
+
+            if (front.length <= needed) {
+                collected.push(front);
+                collectedBytes += front.length;
+                bufferList.shift();
+            } else {
+                collected.push(front.subarray(0, needed));
+                bufferList[0] = front.subarray(needed);
+                collectedBytes += needed;
+            }
+        }
+
+        this.streamBufferLengths.set(streamId, totalAvailable - collectedBytes);
+        return collected.length === 1 ? collected[0]! : Buffer.concat(collected);
     }
 
     private startProcessing(): void {
         if (this.isProcessing) return;
 
-        console.log(`[PcmMixer] Starting audio processing with ${this.activeStreams.size} streams`);
+        console.log(`[PcmMixer] Waiting for initial buffer fill before starting processing`);
         this.isProcessing = true;
 
-        // Process every 20ms to match the chunk size (20ms of audio at 48kHz)
-        this.processingInterval = setInterval(() => {
-            this.processAudio();
-        }, 20);
+        this.waitForInitialBuffer();
+    }
+
+    private waitForInitialBuffer(): void {
+        if (!this.isProcessing) return;
+
+        // Check if any stream has enough buffered data to start
+        let hasEnough = false;
+        for (const [streamId] of this.activeStreams.entries()) {
+            const totalBytes = this.streamBufferLengths.get(streamId) ?? 0;
+            if (totalBytes >= this.initialBufferThreshold) {
+                hasEnough = true;
+                break;
+            }
+        }
+
+        if (hasEnough) {
+            console.log(`[PcmMixer] Initial buffer threshold met, starting audio processing with ${this.activeStreams.size} streams`);
+            this.processingStartTime = performance.now();
+            this.chunkCount = 0;
+            this.scheduleNextChunk();
+            return;
+        }
+
+        this.processingTimeout = setTimeout(() => {
+            this.waitForInitialBuffer();
+        }, 5);
+    }
+
+    private scheduleNextChunk(): void {
+        if (!this.isProcessing) return;
+
+        this.processAudio();
+        this.chunkCount++;
+
+        // Calculate when the next chunk should fire based on absolute time
+        const nextChunkTime = this.processingStartTime + this.chunkCount * 20;
+        const now = performance.now();
+        const delay = Math.max(0, nextChunkTime - now);
+
+        this.processingTimeout = setTimeout(() => {
+            this.scheduleNextChunk();
+        }, delay);
     }
 
     private stopProcessing(): void {
         console.log(`[PcmMixer] Stopping audio processing`);
         this.isProcessing = false;
-        if (this.processingInterval) {
-            clearInterval(this.processingInterval);
-            this.processingInterval = null;
+        if (this.processingTimeout) {
+            clearTimeout(this.processingTimeout);
+            this.processingTimeout = null;
         }
     }
 
@@ -187,8 +266,8 @@ export class PcmMixer extends Transform {
         for (const [streamId, streamState] of this.activeStreams.entries()) {
             if (streamState.hasEnded) continue; // Skip ended streams
 
-            const buffer = this.streamBuffers.get(streamId);
-            if (buffer && buffer.length >= requiredBytes) {
+            const totalBytes = this.streamBufferLengths.get(streamId) ?? 0;
+            if (totalBytes >= requiredBytes) {
                 return true; // At least one stream has enough data
             }
         }
@@ -202,10 +281,10 @@ export class PcmMixer extends Transform {
         const streamsToRemove: string[] = [];
 
         for (const [streamId, streamState] of this.activeStreams.entries()) {
-            const buffer = this.streamBuffers.get(streamId);
+            const totalBytes = this.streamBufferLengths.get(streamId) ?? 0;
 
             // Remove stream if it has ended AND its buffer is empty (or very small)
-            if (streamState.hasEnded && (!buffer || buffer.length < this.bytesPerSample)) {
+            if (streamState.hasEnded && totalBytes < this.bytesPerSample) {
                 console.log(`[PcmMixer] Stream ${streamId} finished playing buffered data, removing`);
                 streamsToRemove.push(streamId);
             }
@@ -219,6 +298,7 @@ export class PcmMixer extends Transform {
             }
             this.activeStreams.delete(streamId);
             this.streamBuffers.delete(streamId);
+            this.streamBufferLengths.delete(streamId);
         }
 
         // Stop processing only if NO streams remain (not even ended ones with buffered data)
@@ -237,26 +317,24 @@ export class PcmMixer extends Transform {
         const streamVolumes: number[] = [];
 
         for (const streamId of streamIds) {
-            const buffer = this.streamBuffers.get(streamId);
             const streamState = this.activeStreams.get(streamId);
+            if (!streamState) continue;
 
-            if (!buffer || !streamState) continue;
+            const totalAvailable = this.streamBufferLengths.get(streamId) ?? 0;
 
-            if (buffer.length >= chunkSize) {
+            if (totalAvailable >= chunkSize) {
                 // Stream has enough data
-                const chunk = buffer.subarray(0, chunkSize);
+                const chunk = this.consumeFromBuffer(streamId, chunkSize);
                 chunks.push(chunk);
                 streamVolumes.push(streamState.info.volume);
-                this.streamBuffers.set(streamId, buffer.subarray(chunkSize));
             } else {
                 // Stream doesn't have enough data - pad with available data + silence
-                const availableData = buffer.length > 0 ? buffer : Buffer.alloc(0);
-                const silencePadding = Buffer.alloc(chunkSize - availableData.length);
-                const paddedChunk = Buffer.concat([availableData, silencePadding]);
+                const available = this.consumeFromBuffer(streamId, totalAvailable);
+                const silencePadding = Buffer.alloc(chunkSize - available.length);
+                const paddedChunk = available.length > 0 ? Buffer.concat([available, silencePadding]) : silencePadding;
 
                 chunks.push(paddedChunk);
                 streamVolumes.push(streamState.info.volume);
-                this.streamBuffers.set(streamId, Buffer.alloc(0)); // Clear the buffer since we used all available data
             }
         }
 
