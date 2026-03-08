@@ -39,12 +39,6 @@ export const createFfmpegService = (): FfmpegService => {
                 if (stderr) {
                     console.error("[FfmpegService] FFmpeg stderr:", stderr);
                 }
-            })
-            .on("stderr", stderrLine => {
-                // Only log actual errors, not progress info
-                if (stderrLine && !stderrLine.includes("frame=") && !stderrLine.includes("size=")) {
-                    console.error("[FfmpegService] FFmpeg:", stderrLine);
-                }
             });
 
         // Set input format if specified
