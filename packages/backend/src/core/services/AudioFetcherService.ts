@@ -191,5 +191,15 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
 };
 
 export const parseAudioSource = (source: string): audioSource => {
-    return source.startsWith("http") ? "url" : "soundboard";
+    const normalized = source.trim().toLowerCase();
+
+    if (normalized.startsWith("http")) {
+        if (normalized.includes("youtube.com/") || normalized.includes("youtu.be/")) {
+            return "youtube";
+        }
+
+        return "url";
+    }
+
+    return "soundboard";
 };
