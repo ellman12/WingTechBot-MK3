@@ -109,7 +109,7 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
             .setDescription("Play audio in the voice channel")
             .addStringOption(option => option.setName("audio-source").setDescription("Audio source (URL, sound name, 'random', '#tag', or comma-separated sounds)").setRequired(true).setAutocomplete(true))
             .addIntegerOption(option => option.setName("volume").setDescription("Volume level (0-200)").setRequired(false).setMinValue(0).setMaxValue(200))
-            .addBooleanOption(option => option.setName("preload").setDescription("If we should download fully first (for URLs").setRequired(false))
+            .addBooleanOption(option => option.setName("preload").setDescription("If we should download fully first (for URLs)").setRequired(false))
             .addIntegerOption(option => option.setName("repeat-amount").setDescription("How many times to repeat the sound").setRequired(false).setMinValue(1))
             .addStringOption(option => option.setName("repeat-delay").setDescription("Delay between each sound. Can be a number or a range.").setRequired(false))
             .addBooleanOption(option => option.setName("shuffle").setDescription("Randomize which sound plays on each repeat (requires repeat-amount > 1)").setRequired(false)),

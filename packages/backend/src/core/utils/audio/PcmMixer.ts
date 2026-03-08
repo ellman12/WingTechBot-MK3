@@ -190,19 +190,33 @@ export class PcmMixer extends Transform {
 
         // Check if any stream has enough buffered data to start
         let hasEnough = false;
-        for (const [streamId] of this.activeStreams.entries()) {
+        let allEnded = true;
+        let totalBuffered = 0;
+
+        for (const [streamId, streamState] of this.activeStreams.entries()) {
             const totalBytes = this.streamBufferLengths.get(streamId) ?? 0;
+            totalBuffered += totalBytes;
             if (totalBytes >= this.initialBufferThreshold) {
                 hasEnough = true;
-                break;
+            }
+            if (!streamState.hasEnded) {
+                allEnded = false;
             }
         }
 
-        if (hasEnough) {
-            console.log(`[PcmMixer] Initial buffer threshold met, starting audio processing with ${this.activeStreams.size} streams`);
+        // Start if threshold met, or if all streams ended with any data remaining
+        if (hasEnough || (allEnded && totalBuffered > 0)) {
+            console.log(`[PcmMixer] ${hasEnough ? "Initial buffer threshold met" : "All streams ended with buffered data"}, starting audio processing with ${this.activeStreams.size} streams`);
             this.processingStartTime = performance.now();
             this.chunkCount = 0;
             this.scheduleNextChunk();
+            return;
+        }
+
+        // If all streams ended with no data, stop
+        if (allEnded && totalBuffered === 0) {
+            console.log(`[PcmMixer] All streams ended with no buffered data, stopping`);
+            this.stopProcessing();
             return;
         }
 

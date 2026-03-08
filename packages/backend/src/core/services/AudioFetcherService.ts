@@ -70,7 +70,7 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
     };
 
     const fetchUrlAudio = async (link: string, abortSignal?: AbortSignal): Promise<AudioStreamWithMetadata> => {
-        if (link.startsWith("https://www.youtube.com/") || link.startsWith("https://youtu.be/")) {
+        if (parseAudioSource(link) === "youtube") {
             return fetchYoutubeAudio(link);
         }
 
