@@ -138,7 +138,7 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
         return connected;
     };
 
-    const playAudio = async (serverId: string, nameOrSource: string, volume: number = 1.0): Promise<string | null> => {
+    const playAudio = async (serverId: string, nameOrSource: string, volume?: number): Promise<string | null> => {
         console.log(`[DiscordVoiceService] Playing audio: ${nameOrSource} in server ${serverId}`);
 
         const state = voiceStates.get(serverId);
@@ -170,6 +170,9 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
             });
         }
 
+        // Apply server volume (0-200 mapped to 0.0-2.0) as default, allow per-sound override
+        const effectiveVolume = volume ?? state.volume / 100;
+
         try {
             // Create abort controller for the entire operation
             const abortController = new AbortController();
@@ -182,10 +185,10 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
             console.log(`[DiscordVoiceService] Creating PlayingSound with metadata:`, {
                 id: audioId,
                 source: nameOrSource,
-                volume,
+                volume: effectiveVolume,
             });
 
-            const audioSource = createPlayingSound(audioId, audioStream, volume, {
+            const audioSource = createPlayingSound(audioId, audioStream, effectiveVolume, {
                 source: nameOrSource,
                 server: serverId,
                 formatInfo: {

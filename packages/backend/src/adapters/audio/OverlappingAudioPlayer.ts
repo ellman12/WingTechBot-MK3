@@ -20,6 +20,7 @@ export class OverlappingAudioPlayer extends AudioPlayer {
     private readonly mixer: PcmMixer;
     private readonly playingAudio = new Map<string, PlayingAudioInfo>();
     private mixedResource: AudioResource | null = null;
+    private mixerOutput: Readable | null = null;
     private nextAudioId = 0;
 
     constructor(options: OverlappingAudioPlayerOptions = {}) {
@@ -43,6 +44,11 @@ export class OverlappingAudioPlayer extends AudioPlayer {
     }
 
     private setupMixerOutput(): void {
+        // Clean up previous output stream and resource
+        if (this.mixerOutput && !this.mixerOutput.destroyed) {
+            this.mixerOutput.destroy();
+        }
+
         // Clean up previous mixer listeners to prevent accumulation
         this.mixer.removeAllListeners("data");
         this.mixer.removeAllListeners("error");
@@ -64,6 +70,9 @@ export class OverlappingAudioPlayer extends AudioPlayer {
         this.mixer.on("error", error => {
             console.error(`[OverlappingAudioPlayer] Mixer error:`, error);
         });
+
+        // Track the output stream for cleanup on reconnect
+        this.mixerOutput = mixerOutput;
 
         // Create audio resource from mixer output
         this.mixedResource = createAudioResource(mixerOutput, {
