@@ -2,8 +2,7 @@
 // This structure contains validated format metadata that should be used
 // when processing audio with FFmpeg to avoid format inference errors.
 export type AudioFormatInfo = {
-    // Primary format name (e.g., 'mp3', 'opus', 'wav', 'matroska')
-    // Use this with FFmpeg's `-f` input flag
+    // Primary format/demuxer name (e.g., 'mp3', 'ogg', 'wav', 'matroska')
     format: string;
 
     // Container format name (may include multiple formats: 'ogg,opus,webm')

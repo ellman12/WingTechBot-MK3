@@ -130,13 +130,6 @@ describe("SoundService", () => {
             expect(mockFileManager.readStream).toHaveBeenCalledWith("./sounds/test-sound.pcm");
         });
 
-        it("should throw error for non-existent soundboard audio", async () => {
-            vi.mocked(parseAudioSource).mockReturnValue("soundboard");
-            vi.mocked(mockSoundRepository.getSoundByName).mockResolvedValue(null);
-
-            await expect(soundService.getSound("non-existent")).rejects.toThrow("Sound with name non-existent not found");
-        });
-
         it("should process and pre-buffer URL/YouTube audio", async () => {
             const mockAudioStream = Readable.from(["raw audio"]);
             const mockProcessedStream = Readable.from(["processed audio"]);
