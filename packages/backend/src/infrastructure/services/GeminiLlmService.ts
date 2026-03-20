@@ -30,7 +30,10 @@ export const createGeminiLlmService = ({ config }: GeminiLlmServiceDeps): Gemini
             parts: [{ text: m.content }],
         }));
 
-        const config: GenerateContentConfig = { systemInstruction };
+        const config: GenerateContentConfig = {
+            systemInstruction,
+            tools: [{ googleSearch: {} }, { codeExecution: {} }, { urlContext: {} }],
+        };
         const chat = ai.chats.create({ model, history, config });
         const response = await chat.sendMessage({ message: input });
         return response.text ?? "";
