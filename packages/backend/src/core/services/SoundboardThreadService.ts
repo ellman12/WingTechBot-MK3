@@ -2,6 +2,7 @@ import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeat
 import type { Config } from "@core/config/Config.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
+import { logger } from "@core/utils/logger.js";
 import { ChannelType, type Guild, type Message, MessageFlags, type TextChannel, ThreadAutoArchiveDuration, type ThreadChannel } from "discord.js";
 
 export type SoundboardThreadService = {
@@ -82,7 +83,7 @@ export const createSoundboardThreadService = ({ config, soundRepository, voiceSe
 
             await voiceService.playAudio(guildId, (closestSound ?? foundSounds[0]!).name);
         } catch (error) {
-            console.error("[SoundboardThreadService]", error);
+            logger.error("[SoundboardThreadService]", error);
         }
     }
 

@@ -1,4 +1,5 @@
 import type { BannedFeature } from "@core/entities/BannedFeature.js";
+import { logger } from "@core/utils/logger.js";
 import type { AvailableFeatures, BannedFeatures, DB } from "@db/types.js";
 import type { Kysely, Selectable } from "kysely";
 
@@ -19,7 +20,7 @@ export const transformBannedFeature = (dbBannedFeature: Selectable<BannedFeature
 };
 
 export const createBannedFeaturesRepository = (db: Kysely<DB>): BannedFeaturesRepository => {
-    console.log("[BannedFeaturesRepository] Initializing");
+    logger.debug("[BannedFeaturesRepository] Initializing");
 
     const banFeature = async (userId: string, bannedById: string, feature: AvailableFeatures): Promise<BannedFeature> => {
         if (userId.trim() === "" || bannedById.trim() === "") throw new Error("Invalid ID");

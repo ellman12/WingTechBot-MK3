@@ -1,4 +1,5 @@
 import type { Config } from "@core/config/Config.js";
+import { logger } from "@core/utils/logger.js";
 import xxhash from "xxhash-wasm";
 
 export type ErrorReportingService = {
@@ -31,24 +32,10 @@ export const createErrorReportingService = async ({ config }: ErrorReportingServ
     const DEDUPE_WINDOW_MS = 300000; // 5 minutes
     const recentErrorHashes = new Map<string, number>();
 
-    const originalConsoleError = console.error;
-
-    // Monkey-patch console.error to report errors to Discord
-    console.error = (...args: unknown[]): void => {
-        originalConsoleError(...args);
-
-        const firstArg = args[0];
-        const error = firstArg instanceof Error ? firstArg : new Error(String(firstArg));
-        const context = args.length > 1 ? { additionalArgs: args.slice(1) } : undefined;
-
-        void reportError(error, context);
-    };
-
-    console.log("[ErrorReportingService] Initialized - console.error intercepted");
     if (webhookUrl) {
-        console.log("[ErrorReportingService] Discord webhook configured");
+        logger.info("[ErrorReportingService] Discord webhook configured");
     } else {
-        console.log("[ErrorReportingService] No webhook URL configured, errors will not be sent to Discord");
+        logger.info("[ErrorReportingService] No webhook URL configured, errors will not be sent to Discord");
     }
 
     const cleanup = (): void => {
@@ -198,12 +185,12 @@ export const createErrorReportingService = async ({ config }: ErrorReportingServ
             });
 
             if (!response.ok) {
-                // Use original console.error to avoid error loop
-                originalConsoleError(`[ErrorReportingService] Webhook failed: ${response.status} ${response.statusText}`);
+                // Use raw console.error here (not logger) to avoid routing back through the reporter
+                console.error(`[ErrorReportingService] Webhook failed: ${response.status} ${response.statusText}`);
             }
         } catch (error) {
             // Never throw to avoid infinite loop
-            originalConsoleError("[ErrorReportingService] Webhook error:", error);
+            console.error("[ErrorReportingService] Webhook error:", error);
         }
     };
 
@@ -216,12 +203,12 @@ export const createErrorReportingService = async ({ config }: ErrorReportingServ
             const hash = generateErrorHash(errorType, message, stack);
 
             if (isDuplicate(hash)) {
-                originalConsoleError(`[ErrorReportingService] Skipping duplicate error: ${errorType}`);
+                console.error(`[ErrorReportingService] Skipping duplicate error: ${errorType}`);
                 return;
             }
 
             if (!isWithinRateLimit()) {
-                originalConsoleError(`[ErrorReportingService] Rate limit exceeded, skipping error: ${errorType}`);
+                console.error(`[ErrorReportingService] Rate limit exceeded, skipping error: ${errorType}`);
                 return;
             }
 
@@ -232,14 +219,18 @@ export const createErrorReportingService = async ({ config }: ErrorReportingServ
             await sendToWebhook(embed);
         } catch (error) {
             // Never throw to avoid error loop
-            originalConsoleError("[ErrorReportingService] Error in reportError:", error);
+            console.error("[ErrorReportingService] Error in reportError:", error);
         }
     };
 
     const shutdown = (): void => {
-        console.error = originalConsoleError;
-        console.log("[ErrorReportingService] Shutdown - console.error restored");
+        logger.setErrorReporter(null);
+        logger.info("[ErrorReportingService] Shutdown - error reporting detached");
     };
+
+    // Route logger.error(...) through Discord reporting. Replaces the previous global
+    // console.error monkey-patch with an explicit, scoped hook.
+    logger.setErrorReporter(reportError);
 
     return {
         reportError,

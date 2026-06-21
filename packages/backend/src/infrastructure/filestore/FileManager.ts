@@ -1,4 +1,5 @@
 import type { FileManager } from "@core/services/FileManager.js";
+import { logger } from "@core/utils/logger.js";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -12,9 +13,9 @@ export const createFileManager = (): FileManager => {
         try {
             await fs.promises.access(dir, fs.constants.F_OK);
         } catch {
-            console.log(`[FileManager] Creating directory: ${dir}`);
+            logger.debug(`[FileManager] Creating directory: ${dir}`);
             await fs.promises.mkdir(dir, { recursive: true });
-            console.log(`[FileManager] Directory created successfully: ${dir}`);
+            logger.debug(`[FileManager] Directory created successfully: ${dir}`);
         }
     };
 
@@ -31,7 +32,7 @@ export const createFileManager = (): FileManager => {
             return fs.promises.readFile(path, "binary");
         },
         readStream: (path: string): Readable => {
-            console.log(`[FileManager] Creating optimized read stream for: ${path}`);
+            logger.debug(`[FileManager] Creating optimized read stream for: ${path}`);
 
             // Optimized buffer settings for audio streaming
             const stream = fs.createReadStream(path, {
@@ -42,21 +43,21 @@ export const createFileManager = (): FileManager => {
 
             // Add stream monitoring
             stream.on("open", () => {
-                console.log(`[FileManager] File stream opened: ${path}`);
+                logger.debug(`[FileManager] File stream opened: ${path}`);
             });
 
             stream.on("error", error => {
-                console.error(`[FileManager] File stream error for ${path}:`, error);
+                logger.error(`[FileManager] File stream error for ${path}:`, error);
             });
 
             stream.on("end", () => {
-                console.log(`[FileManager] File stream ended: ${path}`);
+                logger.debug(`[FileManager] File stream ended: ${path}`);
             });
 
             return stream;
         },
         writeFile: async (filePath: string, content: string) => {
-            console.log(`[FileManager] Writing file: ${filePath}`);
+            logger.debug(`[FileManager] Writing file: ${filePath}`);
 
             try {
                 await ensureDirectoryExists(filePath);
@@ -64,21 +65,21 @@ export const createFileManager = (): FileManager => {
                 return new Promise<void>((resolve, reject) => {
                     fs.writeFile(filePath, content, "utf8", err => {
                         if (err) {
-                            console.error(`[FileManager] Error writing file ${filePath}:`, err);
+                            logger.error(`[FileManager] Error writing file ${filePath}:`, err);
                             reject(err);
                         } else {
-                            console.log(`[FileManager] File written successfully: ${filePath}`);
+                            logger.debug(`[FileManager] File written successfully: ${filePath}`);
                             resolve();
                         }
                     });
                 });
             } catch (error) {
-                console.error(`[FileManager] Error ensuring directory exists for ${filePath}:`, error);
+                logger.error(`[FileManager] Error ensuring directory exists for ${filePath}:`, error);
                 throw error;
             }
         },
         writeStream: async (filePath: string, content: Readable) => {
-            console.log(`[FileManager] Writing stream to file: ${filePath}`);
+            logger.debug(`[FileManager] Writing stream to file: ${filePath}`);
 
             try {
                 await ensureDirectoryExists(filePath);
@@ -89,17 +90,17 @@ export const createFileManager = (): FileManager => {
                     content.pipe(writeStream);
 
                     writeStream.on("finish", () => {
-                        console.log(`[FileManager] Stream written successfully: ${filePath}`);
+                        logger.debug(`[FileManager] Stream written successfully: ${filePath}`);
                         resolve();
                     });
 
                     writeStream.on("error", err => {
-                        console.error(`[FileManager] Error writing stream to ${filePath}:`, err);
+                        logger.error(`[FileManager] Error writing stream to ${filePath}:`, err);
                         reject(err);
                     });
                 });
             } catch (error) {
-                console.error(`[FileManager] Error ensuring directory exists for ${filePath}:`, error);
+                logger.error(`[FileManager] Error ensuring directory exists for ${filePath}:`, error);
                 throw error;
             }
         },

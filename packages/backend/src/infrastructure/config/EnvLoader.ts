@@ -1,3 +1,5 @@
+import { logger } from "@core/utils/logger.js";
+
 export const loadEnvironment = async (): Promise<void> => {
     // Skip loading .env file if:
     // 1. In CI environment (variables provided by CI/CD)
@@ -10,7 +12,7 @@ export const loadEnvironment = async (): Promise<void> => {
         await import("@dotenvx/dotenvx/config");
     } catch {
         if (process.env.NODE_ENV !== "test") {
-            console.warn("⚠️  Could not load .env file (this is OK if environment variables are set directly)");
+            logger.warn("⚠️  Could not load .env file (this is OK if environment variables are set directly)");
         }
     }
 };

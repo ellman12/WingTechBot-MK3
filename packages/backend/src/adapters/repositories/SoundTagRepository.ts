@@ -1,5 +1,6 @@
 import type { SoundTag } from "@core/entities/SoundTag.js";
 import type { SoundTagRepository } from "@core/repositories/SoundTagRepository.js";
+import { logger } from "@core/utils/logger.js";
 import { getItemsWithinDistance } from "@core/utils/searchUtils.js";
 import type { DB, Soundtags } from "@db/types.js";
 import type { Kysely, Selectable } from "kysely";
@@ -59,7 +60,7 @@ export const createSoundTagRepository = (db: Kysely<DB>): SoundTagRepository => 
     async function tryGetTagsWithinDistance(needle: string): Promise<(SoundTag & { distance: number })[]> {
         const availableTags = await getAllTags();
         const distances = getItemsWithinDistance(availableTags, needle, t => t.name, 3);
-        console.log(`[SoundTagRepository] SoundTags within distance of 3 to "${needle}":`, distances);
+        logger.debug(`[SoundTagRepository] SoundTags within distance of 3 to "${needle}":`, distances);
         return distances;
     }
 

@@ -2,6 +2,7 @@ import type { AudioFormatInfo } from "@core/entities/AudioFormatInfo.js";
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream.js";
 import { createAudioStreamWithFormat } from "@core/entities/AudioStream.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
+import { logger } from "@core/utils/logger.js";
 import { readStreamToBytes } from "@core/utils/streamUtils.js";
 import { Readable } from "stream";
 
@@ -41,21 +42,21 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
         try {
             const cached = await cacheService.getCached(link);
             if (cached) {
-                console.log(`[AudioFetcherService] Cache hit for YouTube: ${link}`);
+                logger.debug(`[AudioFetcherService] Cache hit for YouTube: ${link}`);
                 return cached;
             }
 
             const audioWithMetadata = await youtubeService.fetchAudioFromYoutube(link);
             if (!audioWithMetadata || !audioWithMetadata.stream) {
                 const error = new Error(`Failed to fetch audio from YouTube: ${link}`);
-                console.error(`[AudioFetcherService] ${error.message}`);
+                logger.error(`[AudioFetcherService] ${error.message}`);
                 throw error;
             }
 
             const audioBytes = await readStreamToBytes(audioWithMetadata.stream);
 
             cacheService.saveToCache(link, audioBytes, audioWithMetadata.formatInfo).catch(err => {
-                console.error(`[AudioFetcherService] Failed to cache audio:`, err);
+                logger.error(`[AudioFetcherService] Failed to cache audio:`, err);
             });
 
             if (audioWithMetadata.formatInfo) {
@@ -64,7 +65,7 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
                 return { stream: Readable.from(audioBytes) };
             }
         } catch (error) {
-            console.error(`[AudioFetcherService] Error fetching YouTube audio:`, error);
+            logger.error(`[AudioFetcherService] Error fetching YouTube audio:`, error);
             throw error;
         }
     };
@@ -77,7 +78,7 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
         try {
             const cached = await cacheService.getCached(link);
             if (cached) {
-                console.log(`[AudioFetcherService] Cache hit for URL: ${link}`);
+                logger.debug(`[AudioFetcherService] Cache hit for URL: ${link}`);
                 return cached;
             }
 
@@ -99,7 +100,7 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
 
             if (!response.ok || response.body == null) {
                 const error = new Error(`Failed to fetch audio from URL: ${link} (Status: ${response.status})`);
-                console.error(`[AudioFetcherService] ${error.message}`);
+                logger.error(`[AudioFetcherService] ${error.message}`);
                 throw error;
             }
 
@@ -110,7 +111,7 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
             const audioBytes = await readStreamToBytes(audioStream);
 
             cacheService.saveToCache(link, audioBytes).catch(err => {
-                console.error(`[AudioFetcherService] Failed to cache audio:`, err);
+                logger.error(`[AudioFetcherService] Failed to cache audio:`, err);
             });
 
             if (formatInfo) {
@@ -119,7 +120,7 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
 
             return { stream: Readable.from(audioBytes) };
         } catch (error) {
-            console.error(`[AudioFetcherService] Error fetching URL audio:`, error);
+            logger.error(`[AudioFetcherService] Error fetching URL audio:`, error);
 
             if (error instanceof Error) {
                 if (error.name === "AbortError") {
@@ -143,7 +144,7 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
 
             if (!sound) {
                 const error = new Error(`Sound not found: ${name}`);
-                console.error(`[AudioFetcherService] ${error.message}`);
+                logger.error(`[AudioFetcherService] ${error.message}`);
                 throw error;
             }
 
@@ -152,7 +153,7 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
             const fileExists = await fileManager.fileExists(filePath);
             if (!fileExists) {
                 const error = new Error(`Sound file does not exist: ${filePath}`);
-                console.error(`[AudioFetcherService] ${error.message}`);
+                logger.error(`[AudioFetcherService] ${error.message}`);
                 throw error;
             }
 
@@ -162,7 +163,7 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
                     const stream = fileManager.readStream(filePath);
                     return createAudioStreamWithFormat(stream, formatInfo);
                 } catch (error) {
-                    console.error(`[AudioFetcherService] Format detection failed for ${filePath}, falling back to assumed PCM:`, error);
+                    logger.error(`[AudioFetcherService] Format detection failed for ${filePath}, falling back to assumed PCM:`, error);
                 }
             }
 
@@ -179,7 +180,7 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
 
             return createAudioStreamWithFormat(stream, formatInfo);
         } catch (error) {
-            console.error(`[AudioFetcherService] Error fetching soundboard audio:`, error);
+            logger.error(`[AudioFetcherService] Error fetching soundboard audio:`, error);
             throw error;
         }
     };

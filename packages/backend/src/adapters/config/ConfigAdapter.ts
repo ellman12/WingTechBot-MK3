@@ -1,4 +1,5 @@
 import { type Config, configSchema } from "@core/config/Config.js";
+import { logger } from "@core/utils/logger.js";
 import { z } from "zod";
 
 export const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
@@ -49,9 +50,9 @@ export const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
         return configSchema.parse(rawConfig);
     } catch (error) {
         if (error instanceof z.ZodError) {
-            console.error("Configuration validation failed:");
+            logger.error("Configuration validation failed:");
             error.issues.forEach(err => {
-                console.error(`  - ${err.path.join(".")}: ${err.message}`);
+                logger.error(`  - ${err.path.join(".")}: ${err.message}`);
             });
             // Don't exit process in test environments - throw error instead
             if (process.env.NODE_ENV === "test" || process.env.CI) {

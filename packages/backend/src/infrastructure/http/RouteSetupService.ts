@@ -1,4 +1,5 @@
 import { initializeV1Routes } from "@application/routes/v1/routes.js";
+import { logger } from "@core/utils/logger.js";
 import type { DB } from "@db/types.js";
 import { getVersionRoutes } from "@infrastructure/http/api/RouteRegistry.js";
 import type { Application } from "express";
@@ -20,7 +21,7 @@ const setupVersionRoutes = (app: Application): void => {
     const v1Router = Router();
 
     v1Routes.forEach(route => {
-        console.log(`📍 Registering ${route.method.toUpperCase()} ${route.fullPath}`);
+        logger.debug(`📍 Registering ${route.method.toUpperCase()} ${route.fullPath}`);
 
         const expressPath = route.path.replace(/\{([^}]+)\}/g, ":$1");
 
@@ -41,7 +42,7 @@ const setupVersionRoutes = (app: Application): void => {
                 v1Router.delete(expressPath, route.handler);
                 break;
             default:
-                console.warn(`⚠️ Unknown HTTP method: ${route.method} for ${route.fullPath}`);
+                logger.warn(`⚠️ Unknown HTTP method: ${route.method} for ${route.fullPath}`);
         }
     });
 
@@ -50,7 +51,7 @@ const setupVersionRoutes = (app: Application): void => {
     const healthRoutes = getVersionRoutes("v1").filter(route => route.fullPath.startsWith("/health"));
 
     healthRoutes.forEach(route => {
-        console.log(`📍 Registering health route: ${route.method.toUpperCase()} ${route.fullPath}`);
+        logger.debug(`📍 Registering health route: ${route.method.toUpperCase()} ${route.fullPath}`);
         const expressPath = route.path.replace(/\{([^}]+)\}/g, ":$1");
 
         switch (route.method) {
@@ -70,7 +71,7 @@ const setupVersionRoutes = (app: Application): void => {
                 app.delete(expressPath, route.handler);
                 break;
             default:
-                console.warn(`⚠️ Unknown HTTP method: ${route.method} for ${route.fullPath}`);
+                logger.warn(`⚠️ Unknown HTTP method: ${route.method} for ${route.fullPath}`);
         }
     });
 };

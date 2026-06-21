@@ -1,4 +1,5 @@
 import type { Config } from "@core/config/Config.js";
+import { logger } from "@core/utils/logger.js";
 import type { DB } from "@db/types.js";
 import { setupSwaggerUI } from "@infrastructure/http/OpenApiGenerator.js";
 import { initializeApiRouter, setupRoutes as setupApiRoutes } from "@infrastructure/http/api/ApiRouter.js";
@@ -51,7 +52,7 @@ export const createExpressApp = (deps: ExpressAppDeps): ExpressApp => {
 
     const start = (): void => {
         app.listen(deps.config.port, () => {
-            console.log(`🚀 Server running on port ${deps.config.port}`);
+            logger.debug(`🚀 Server running on port ${deps.config.port}`);
         });
     };
 

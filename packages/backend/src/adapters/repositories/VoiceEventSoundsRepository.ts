@@ -1,4 +1,5 @@
 import type { VoiceEventSound } from "@core/entities/VoiceEventSound.js";
+import { logger } from "@core/utils/logger.js";
 import type { DB, VoiceEventSoundType, VoiceEventSounds } from "@db/types.js";
 import type { Kysely, Selectable } from "kysely";
 
@@ -39,7 +40,7 @@ export const createVoiceEventsSoundsRepository = (db: Kysely<DB>): VoiceEventSou
             throw new Error("Failed to add new VoiceEventSound");
         }
 
-        console.log("VoiceEventSound added:", newVoiceEventSound);
+        logger.debug("VoiceEventSound added:", newVoiceEventSound);
         return transformVoiceEventSound(newVoiceEventSound);
     }
 
@@ -47,11 +48,11 @@ export const createVoiceEventsSoundsRepository = (db: Kysely<DB>): VoiceEventSou
         const sound = await db.deleteFrom("voice_event_sounds").where("user_id", "=", userId).where("sound_id", "=", soundId).where("type", "=", type).returningAll().executeTakeFirst();
 
         if (!sound) {
-            console.error(`VoiceEventSound with user_id, sound_id, type ${userId}, ${soundId}, ${type} not found`);
+            logger.error(`VoiceEventSound with user_id, sound_id, type ${userId}, ${soundId}, ${type} not found`);
             return null;
         }
 
-        console.log(`VoiceEventSound with user_id, sound_id, type ${userId}, ${soundId}, ${type} deleted successfully`);
+        logger.debug(`VoiceEventSound with user_id, sound_id, type ${userId}, ${soundId}, ${type} deleted successfully`);
         return transformVoiceEventSound(sound);
     }
 

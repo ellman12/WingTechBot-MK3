@@ -3,6 +3,7 @@ import type { MessageRepository } from "@core/repositories/MessageRepository.js"
 import type { UnitOfWork } from "@core/repositories/UnitOfWork.js";
 import type { FileManager } from "@core/services/FileManager.js";
 import { executeBatchWithAdaptiveSize } from "@core/utils/batchUtils.js";
+import { logger } from "@core/utils/logger.js";
 import { ChannelType, type Guild, type Message, MessageFlags, type PartialMessage, type TextChannel } from "discord.js";
 import pRetry from "p-retry";
 
@@ -15,7 +16,7 @@ async function retryDiscordFetch<T>(fn: () => Promise<T>, context: string): Prom
         factor: 2, // Exponential backoff factor
         onFailedAttempt: error => {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.warn(`[MessageArchiveService] ${context} failed (attempt ${error.attemptNumber}/${error.retriesLeft + error.attemptNumber}): ${errorMessage}`);
+            logger.warn(`[MessageArchiveService] ${context} failed (attempt ${error.attemptNumber}/${error.retriesLeft + error.attemptNumber}): ${errorMessage}`);
         },
     });
 }
@@ -102,12 +103,12 @@ async function collectReactionData(discordMessage: Message) {
                     const apiError = error as { code: number };
 
                     if (apiError.code === 10008) {
-                        console.log(`[MessageArchiveService] Skipping reactions for deleted message: ${messageId}`);
+                        logger.debug(`[MessageArchiveService] Skipping reactions for deleted message: ${messageId}`);
                         return { reactions: [], emote: null };
                     }
 
                     if (apiError.code === 10014) {
-                        console.log(`[MessageArchiveService] Skipping reactions for deleted emoji: ${reaction.emoji.id}, ${reaction.emoji.name}`);
+                        logger.debug(`[MessageArchiveService] Skipping reactions for deleted emoji: ${reaction.emoji.id}, ${reaction.emoji.name}`);
                         return { reactions: [], emote: null };
                     }
                 }
@@ -130,7 +131,7 @@ function validMessage(message: Message): boolean {
 }
 
 export const createMessageArchiveService = ({ unitOfWork, messageRepository, fileManager }: MessageArchiveServiceDeps): MessageArchiveService => {
-    console.log("[MessageArchiveService] Creating message archive service");
+    logger.debug("[MessageArchiveService] Creating message archive service");
 
     const getChannelFetchCacheFilename = (channelId: string) => `channel-fetch-cache-${channelId}.json`;
 
@@ -227,7 +228,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
                 const processedMessages = Math.min(startIndex + Math.min((batchIndex + 1) * PARALLEL_BATCH_SIZE, remainingItems.length), items.length);
 
                 if (totalReactionsFetched > 0 && (totalReactionsFetched % REACTION_PROGRESS_INTERVAL === 0 || processedMessages === items.length)) {
-                    console.log(`⚡ Progress: ${totalReactionsFetched} reactions from ${processedMessages}/${items.length} messages`);
+                    logger.debug(`⚡ Progress: ${totalReactionsFetched} reactions from ${processedMessages}/${items.length} messages`);
                 }
 
                 if (reactionsSinceLastPersist >= REACTION_PERSIST_INTERVAL || processedMessages === items.length) {
@@ -240,7 +241,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
 
                     await saveChannelFetchCache(channelId, cached!);
                     const cachePath = fileManager.getCachePath(getChannelFetchCacheFilename(channelId));
-                    console.log(`💾 Persisted reactions progress to cache: ${cachePath} (reactions=${totalReactionsFetched}, processedMessages=${processedMessages})`);
+                    logger.debug(`💾 Persisted reactions progress to cache: ${cachePath} (reactions=${totalReactionsFetched}, processedMessages=${processedMessages})`);
 
                     reactionsSinceLastPersist = 0;
                 }
@@ -258,7 +259,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
 
     // Wrapper around fetchReactionsWithResume for fetching reactions from fresh Discord Message objects
     async function fetchReactionsInBatches(channel: TextChannel, messages: Message[], channelName: string, channelId: string) {
-        console.log(`⚡ Fetching reactions for ${messages.length} messages from #${channelName}...`);
+        logger.debug(`⚡ Fetching reactions for ${messages.length} messages from #${channelName}...`);
         return fetchReactionsWithResume(
             messages,
             channelId,
@@ -286,7 +287,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
 
     // Wrapper around fetchReactionsWithResume for refetching reactions from cached message IDs
     async function fetchReactionsForCachedMessages(channel: TextChannel, cachedMessages: ChannelFetchCache["discordMessages"], channelName: string, channelId: string) {
-        console.log(`⚡ Fetching reactions for ${cachedMessages.length} cached messages from #${channelName}...`);
+        logger.debug(`⚡ Fetching reactions for ${cachedMessages.length} cached messages from #${channelName}...`);
         return fetchReactionsWithResume(
             cachedMessages,
             channelId,
@@ -333,7 +334,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
 
             // Log progress
             if (newAccumulated.length % PROGRESS_INTERVAL === 0 && newAccumulated.length > 0) {
-                console.log(`📥 Fetched ${newAccumulated.length} messages from #${channel.name}`);
+                logger.debug(`📥 Fetched ${newAccumulated.length} messages from #${channel.name}`);
             }
 
             if (!hasMore || messages.length === 0) {
@@ -352,7 +353,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
     async function syncChannel(channel: TextChannel, endYear?: number): Promise<void> {
         const name = channel.name;
         const channelId = String(channel.id);
-        console.log(`🗨️ Begin syncing #${name}`);
+        logger.debug(`🗨️ Begin syncing #${name}`);
 
         // Try to load cached Discord data
         const cachedFetch = await loadChannelFetchCache(channelId);
@@ -363,7 +364,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
 
         // Use cache if available, otherwise fetch from Discord
         if (cachedFetch) {
-            console.log(`📦 Using cached data for #${name} (${cachedFetch.discordMessages.length} messages from ${cachedFetch.fetchedAt})`);
+            logger.debug(`📦 Using cached data for #${name} (${cachedFetch.discordMessages.length} messages from ${cachedFetch.fetchedAt})`);
 
             discordMessages = cachedFetch.discordMessages;
             allEmotes = cachedFetch.emotes;
@@ -385,7 +386,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
 
             if (needsReactionFetch) {
                 const isResume = (cachedFetch.reactionFetchState?.processedMessageIndex ?? 0) > 0;
-                console.log(
+                logger.debug(
                     isResume ? `⚠️ Cache has incomplete reactions (${cachedFetch.reactionFetchState?.processedMessageIndex}/${discordMessages.length} processed), resuming...` : `⚠️ Cache has messages but no reactions, fetching reactions now...`
                 );
 
@@ -419,7 +420,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
                     }))
                 );
 
-                console.log(`✅ Fetched reactions: ${allReactions.length} total reactions, ${allEmotes.length} emotes`);
+                logger.debug(`✅ Fetched reactions: ${allReactions.length} total reactions, ${allEmotes.length} emotes`);
 
                 // Update cache with reactions
                 await saveChannelFetchCache(channelId, {
@@ -428,13 +429,13 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
                     fetchedAt: new Date().toISOString(),
                 });
                 const cachePath = fileManager.getCachePath(getChannelFetchCacheFilename(channelId));
-                console.log(`💾 Updated cache with reactions: ${cachePath}`);
+                logger.debug(`💾 Updated cache with reactions: ${cachePath}`);
             } else {
-                console.log(`✅ Loaded from cache: ${discordMessages.length} messages, ${allReactions.length} reactions, ${allEmotes.length} emotes`);
+                logger.debug(`✅ Loaded from cache: ${discordMessages.length} messages, ${allReactions.length} reactions, ${allEmotes.length} emotes`);
             }
         } else {
             // Fetch all messages from Discord
-            console.log(`📥 Fetching messages from Discord for #${name}...`);
+            logger.debug(`📥 Fetching messages from Discord for #${name}...`);
             const freshMessages = await fetchAllMessages(channel, endYear);
 
             // Save messages immediately to cache (before expensive reaction fetching)
@@ -454,7 +455,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
                 emotes: [],
                 fetchedAt: new Date().toISOString(),
             });
-            console.log(`💾 Cached ${freshMessages.length} messages (reactions pending...)`);
+            logger.debug(`💾 Cached ${freshMessages.length} messages (reactions pending...)`);
 
             const allReactionDataByMessage = await fetchReactionsInBatches(channel, freshMessages, name, channelId);
 
@@ -491,7 +492,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
                 }))
             );
 
-            console.log(`✅ Fetched from Discord: ${discordMessages.length} messages, ${allReactions.length} reactions, ${allEmotes.length} emotes`);
+            logger.debug(`✅ Fetched from Discord: ${discordMessages.length} messages, ${allReactions.length} reactions, ${allEmotes.length} emotes`);
 
             // Save everything to cache
             await saveChannelFetchCache(channelId, {
@@ -500,7 +501,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
                 fetchedAt: new Date().toISOString(),
             });
             const cachePath = fileManager.getCachePath(getChannelFetchCacheFilename(channelId));
-            console.log(`💾 Saved to cache: ${cachePath}`);
+            logger.debug(`💾 Saved to cache: ${cachePath}`);
         }
 
         // Get existing messages from database
@@ -600,7 +601,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
         // Delete messages first (this will cascade delete reactions)
         if (messagesToDelete.length > 0) {
             await Promise.all(messagesToDelete.map(id => messageRepository.delete({ id })));
-            console.log(`🗑️ Deleted ${messagesToDelete.length} messages from #${name}`);
+            logger.debug(`🗑️ Deleted ${messagesToDelete.length} messages from #${name}`);
         }
 
         // Create messages: 7 params (id, authorId, channelId, content, referencedMessageId, createdAt, editedAt)
@@ -669,9 +670,9 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
         ].filter(Boolean);
 
         if (changes.length > 0) {
-            console.log(`✅ #${name}: ${changes.join(", ")}`);
+            logger.debug(`✅ #${name}: ${changes.join(", ")}`);
         } else {
-            console.log(`✅ #${name}: No changes`);
+            logger.debug(`✅ #${name}: No changes`);
         }
 
         // Clear cache after successful sync so next run fetches fresh data
@@ -680,7 +681,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
     }
 
     async function processAllChannels(guild: Guild, endYear?: number, channelIds?: string[], resume = false): Promise<void> {
-        console.log(`💬 Begin processing messages in ${channelIds ? `${channelIds.length} specified channel(s)` : "all channels"} ${endYear ? `for ${endYear}` : "for all years"}`);
+        logger.debug(`💬 Begin processing messages in ${channelIds ? `${channelIds.length} specified channel(s)` : "all channels"} ${endYear ? `for ${endYear}` : "for all years"}`);
         await guild.channels.fetch();
 
         // Filter to text channels and optionally to specific channel IDs
@@ -692,7 +693,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
         const existingProgress = resume ? await loadProgress(guildId) : null;
 
         if (existingProgress) {
-            console.log(`🔄 Resuming previous sync (${existingProgress.completedChannels.length}/${textChannels.length} channels completed)`);
+            logger.debug(`🔄 Resuming previous sync (${existingProgress.completedChannels.length}/${textChannels.length} channels completed)`);
             progress = existingProgress;
         } else {
             progress = {
@@ -707,7 +708,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
 
         const processChannel = async (channel: TextChannel) => {
             if (progress.completedChannels.includes(channel.id)) {
-                console.log(`⏭️ Skipping already completed channel: #${channel.name}`);
+                logger.debug(`⏭️ Skipping already completed channel: #${channel.name}`);
                 return;
             }
 
@@ -722,7 +723,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
 
         // Clean up progress file on successful completion
         await clearProgress(guildId);
-        console.log("💬 Finish processing all messages in all channels");
+        logger.debug("💬 Finish processing all messages in all channels");
     }
 
     async function messageCreated(message: Message): Promise<void> {
@@ -747,7 +748,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
             };
             await messageRepository.create(data);
         } catch (e: unknown) {
-            console.error("Error adding message to database", e, message.content);
+            logger.error("Error adding message to database", e, message.content);
         }
     }
 
@@ -766,7 +767,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
             if (e instanceof Error && e.message === "Message does not exist") {
                 return;
             }
-            console.error("Error removing message from database", e, message.content);
+            logger.error("Error removing message from database", e, message.content);
         }
     }
 
@@ -786,7 +787,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
                 editedAt: newMessage.editedAt,
             });
         } catch (e: unknown) {
-            console.error("Error updating content of message", e, newMessage.content);
+            logger.error("Error updating content of message", e, newMessage.content);
         }
     }
 
@@ -794,7 +795,9 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
         try {
             return await messageRepository.getAllMessages(year);
         } catch (e: unknown) {
-            console.error("Error getting all DB messages", e);
+            // Degrade to an empty result so callers don't crash, but surface the failure loudly
+            // (logger.error reports to the Discord error channel) so it isn't mistaken for "no data".
+            logger.error("Error getting all DB messages; returning empty result as fallback", e);
         }
 
         return [];
@@ -804,7 +807,9 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
         try {
             return await messageRepository.getNewestMessages(limit, channelId, withinMinutes);
         } catch (e: unknown) {
-            console.error("Error getting newest DB messages", e);
+            // Degrade to an empty result so callers don't crash, but surface the failure loudly
+            // (logger.error reports to the Discord error channel) so it isn't mistaken for "no data".
+            logger.error("Error getting newest DB messages; returning empty result as fallback", e);
         }
 
         return [];
@@ -815,7 +820,7 @@ export const createMessageArchiveService = ({ unitOfWork, messageRepository, fil
             const messages = await messageRepository.getNewestMessages(1);
             return messages.length > 0;
         } catch (e: unknown) {
-            console.error("Error checking if any messages exist", e);
+            logger.error("Error checking if any messages exist", e);
             return false;
         }
     }

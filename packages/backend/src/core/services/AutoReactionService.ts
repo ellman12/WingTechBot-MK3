@@ -1,6 +1,7 @@
 import type { Config } from "@core/config/Config.js";
 import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
+import { logger } from "@core/utils/logger.js";
 import { oneIn, randomArrayItem } from "@core/utils/probabilityUtils.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import type { Message, MessageReaction, PartialMessageReaction, PartialUser, TextChannel, User } from "discord.js";
@@ -56,7 +57,7 @@ export const reactionScoldMessages: Record<string, string[]> = {
 };
 
 export const createAutoReactionService = ({ config, discordChatService, geminiLlmService, llmInstructionRepo }: AutoReactionServiceDeps): AutoReactionService => {
-    console.log("[AutoReactionService] Creating AutoReactionService");
+    logger.debug("[AutoReactionService] Creating AutoReactionService");
 
     const autoReactions: Array<{ probabilityDenominator: number; handler: (message: Message) => Promise<boolean> }> = [
         { probabilityDenominator: config.autoReaction.funnySubstringsProbability, handler: checkForFunnySubstrings },
@@ -227,18 +228,18 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
                 reaction = await reaction.fetch();
 
                 if (message.author.id !== user.id) {
-                    console.log(`[AutoReactionService] Skipping reaction - not a self-reaction (author: ${message.author.id}, user: ${user.id})`);
+                    logger.debug(`[AutoReactionService] Skipping reaction - not a self-reaction (author: ${message.author.id}, user: ${user.id})`);
                     return;
                 }
 
                 const scoldMessages = reactionScoldMessages[reaction.emoji.name!];
                 if (!scoldMessages) return;
 
-                console.log(`[AutoReactionService] Sending scold message for self-reaction in channel ${message.channelId}`);
+                logger.debug(`[AutoReactionService] Sending scold message for self-reaction in channel ${message.channelId}`);
                 await message.channel.send(`${randomArrayItem(scoldMessages)} <@${user.id}>`);
             } catch (e: unknown) {
                 if (!isClientDestroyedError(e)) {
-                    console.error("Error checking if added reaction needs to be scolded", e);
+                    logger.error("Error checking if added reaction needs to be scolded", e);
                 }
             }
         },

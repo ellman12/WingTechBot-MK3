@@ -11,6 +11,7 @@ import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
+import { logger } from "@core/utils/logger.js";
 import { type ApplicationCommandOptionChoiceData, type AutocompleteFocusedOption, ChatInputCommandInteraction, Events, MessageFlags, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
 
 import type { DiscordBot } from "@/infrastructure/discord/DiscordBot.js";
@@ -83,30 +84,30 @@ export const deployCommands = async (
     guildId?: string
 ): Promise<void> => {
     try {
-        console.log("🚀 Deploying Discord commands...");
+        logger.debug("🚀 Deploying Discord commands...");
 
         const commandMap = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, bannedFeaturesRepository);
         const commands = Object.values(commandMap).map(command => command.data.toJSON());
 
-        console.log(`📋 Deploying ${commands.length} commands:`);
+        logger.debug(`📋 Deploying ${commands.length} commands:`);
         commands.forEach(cmd => {
-            console.log(`  - /${cmd.name}: ${cmd.description}`);
+            logger.debug(`  - /${cmd.name}: ${cmd.description}`);
         });
 
         const rest = new REST({ version: "10" }).setToken(token);
 
         if (guildId) {
-            console.log(`🎯 Deploying to guild: ${guildId}`);
+            logger.debug(`🎯 Deploying to guild: ${guildId}`);
             await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
-            console.log("✅ Commands deployed to guild successfully!");
+            logger.debug("✅ Commands deployed to guild successfully!");
         } else {
-            console.log("🌍 Deploying commands globally...");
+            logger.debug("🌍 Deploying commands globally...");
             await rest.put(Routes.applicationCommands(clientId), { body: commands });
-            console.log("✅ Commands deployed globally successfully!");
-            console.log("⏰ Note: Global commands may take up to 1 hour to appear in all servers");
+            logger.debug("✅ Commands deployed globally successfully!");
+            logger.debug("⏰ Note: Global commands may take up to 1 hour to appear in all servers");
         }
     } catch (error) {
-        console.error("❌ Failed to deploy commands:", error);
+        logger.error("❌ Failed to deploy commands:", error);
         throw error;
     }
 };
@@ -124,12 +125,12 @@ export const registerCommands = (
     bannedFeaturesRepository: BannedFeaturesRepository,
     registerEventHandler: DiscordBot["registerEventHandler"]
 ): void => {
-    console.log("🔄 Registering commands...");
+    logger.debug("🔄 Registering commands...");
 
     const commands = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, bannedFeaturesRepository);
-    console.log(`✅ Registered ${Object.keys(commands).length} Commands:`);
+    logger.debug(`✅ Registered ${Object.keys(commands).length} Commands:`);
     Object.keys(commands).forEach(command => {
-        console.log(`- ${command}`);
+        logger.debug(`- ${command}`);
     });
 
     //Normal slash commands
@@ -142,7 +143,7 @@ export const registerCommands = (
         try {
             await command.execute(interaction);
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             await interaction.reply({ content: "There was an error while executing this command!", flags: MessageFlags.Ephemeral });
         }
     });

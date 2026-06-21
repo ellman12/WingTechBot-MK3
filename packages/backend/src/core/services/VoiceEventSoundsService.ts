@@ -29,7 +29,11 @@ export const createVoiceEventSoundsService = ({ config, voiceEventSoundsReposito
         }
 
         const guild = newState.guild;
-        const userId = newState.member!.id;
+        const userId = newState.member?.id;
+        if (!userId) {
+            return;
+        }
+
         const availableSounds = await voiceEventSoundsRepository.getVoiceEventSounds({ userId, type });
         const sound = randomArrayItem(availableSounds);
 

@@ -1,4 +1,5 @@
 import type { Config } from "@core/config/Config.js";
+import { logger } from "@core/utils/logger.js";
 import { execFile } from "child_process";
 import { promisify } from "util";
 
@@ -100,7 +101,7 @@ export class FfprobeService {
         const timeout = options.timeout || 30000; // 30 second default
 
         try {
-            console.log(`[FfprobeService] Probing: ${input}`, { args });
+            logger.debug(`[FfprobeService] Probing: ${input}`, { args });
 
             const { stdout, stderr } = await execFileAsync(this.ffprobePath, args, {
                 timeout,
@@ -112,7 +113,7 @@ export class FfprobeService {
 
             // Check if ffprobe returned an error
             if (output.error) {
-                console.error("[FfprobeService] Probe returned error", {
+                logger.error("[FfprobeService] Probe returned error", {
                     input,
                     error: output.error,
                 });
@@ -121,7 +122,7 @@ export class FfprobeService {
 
             // Log any stderr output (warnings)
             if (stderr) {
-                console.log("[FfprobeService] Probe stderr", { stderr });
+                logger.debug("[FfprobeService] Probe stderr", { stderr });
             }
 
             return output;
@@ -132,7 +133,7 @@ export class FfprobeService {
                     throw new Error(`ffprobe timeout after ${timeout}ms for input: ${input}`);
                 }
 
-                console.error("[FfprobeService] Probe execution failed", {
+                logger.error("[FfprobeService] Probe execution failed", {
                     input,
                     error: error.message,
                     stack: error.stack,

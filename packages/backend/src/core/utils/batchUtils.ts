@@ -1,3 +1,5 @@
+import { logger } from "@core/utils/logger.js";
+
 // Calculate optimal batch size based on database parameter limits.
 // PostgreSQL has a limit of ~32,767 parameters per query.
 export function calculateOptimalBatchSize(paramsPerItem: number, maxParams = 30000): number {
@@ -34,7 +36,7 @@ export async function executeBatchWithAdaptiveSize<T>(items: T[], operation: (ba
     let batchSize = optimalBatchSize;
     let offset = 0;
 
-    console.log(`[${operationName}] Processing ${items.length} items with optimal batch size ${optimalBatchSize}`);
+    logger.debug(`[${operationName}] Processing ${items.length} items with optimal batch size ${optimalBatchSize}`);
 
     while (offset < items.length) {
         const batch = items.slice(offset, offset + batchSize);
@@ -46,11 +48,11 @@ export async function executeBatchWithAdaptiveSize<T>(items: T[], operation: (ba
             // If batch failed and we can retry with smaller size
             if (shouldRetryWithSmallerBatch(error) && batchSize > minBatchSize) {
                 batchSize = Math.floor(batchSize / 2);
-                console.log(`[${operationName}] Batch failed, retrying with size ${batchSize}`);
+                logger.debug(`[${operationName}] Batch failed, retrying with size ${batchSize}`);
                 // Don't increment offset - retry same batch
             } else {
                 // Unrecoverable error or already at minimum batch size
-                console.error(`[${operationName}] Batch operation failed:`, error);
+                logger.error(`[${operationName}] Batch operation failed:`, error);
                 throw error;
             }
         }

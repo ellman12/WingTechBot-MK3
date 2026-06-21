@@ -1,6 +1,7 @@
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream.js";
 import { extractFormatInfo } from "@core/entities/AudioStream.js";
 import type { AudioProcessingService } from "@core/services/AudioProcessingService.js";
+import { logger } from "@core/utils/logger.js";
 import type { FfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { PassThrough, Readable } from "stream";
 
@@ -30,7 +31,7 @@ export const createFfmpegAudioProcessingService = ({ ffmpeg }: FfmpegAudioServic
     return {
         deepProcessAudio: async (audio: Uint8Array, format?: string, container?: string): Promise<Uint8Array> => {
             const inputFormat = resolveInputFormat(format, container);
-            console.log(`[FfmpegAudioProcessingService] deepProcessAudio: format=${inputFormat || "auto-detect"}`);
+            logger.debug(`[FfmpegAudioProcessingService] deepProcessAudio: format=${inputFormat || "auto-detect"}`);
 
             const pcmAudio = await ffmpeg.convertAudio(audio, {
                 inputFormat,
@@ -48,7 +49,7 @@ export const createFfmpegAudioProcessingService = ({ ffmpeg }: FfmpegAudioServic
             const formatInfo = extractFormatInfo(audioWithMetadata);
             const inputFormat = resolveInputFormat(formatInfo?.format, formatInfo?.container, formatInfo?.codec);
 
-            console.log(`[FfmpegAudioProcessingService] processAudioStream: format=${inputFormat || "auto-detect"}`);
+            logger.debug(`[FfmpegAudioProcessingService] processAudioStream: format=${inputFormat || "auto-detect"}`);
 
             const processedStream = ffmpeg.convertStreamToStream(audioStream, {
                 inputFormat,
@@ -63,7 +64,7 @@ export const createFfmpegAudioProcessingService = ({ ffmpeg }: FfmpegAudioServic
             processedStream.pipe(bufferedStream, { end: true });
 
             processedStream.on("error", error => {
-                console.error(`[FfmpegAudioProcessingService] Processing stream error:`, error);
+                logger.error(`[FfmpegAudioProcessingService] Processing stream error:`, error);
                 bufferedStream.destroy(error);
             });
 

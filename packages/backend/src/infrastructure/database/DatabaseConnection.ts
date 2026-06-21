@@ -1,4 +1,5 @@
 import type { Config } from "@core/config/Config.js";
+import { logger } from "@core/utils/logger.js";
 import type { DB } from "@db/types.js";
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
@@ -33,7 +34,7 @@ export const createDatabaseConnection = (config: Config, schemaName?: string): D
         getKysely: () => kysely,
         connect: async () => {
             if (isConnected) {
-                console.log("✅ Database already connected");
+                logger.debug("✅ Database already connected");
                 return;
             }
             isConnected = true;
@@ -42,9 +43,9 @@ export const createDatabaseConnection = (config: Config, schemaName?: string): D
             try {
                 await kysely.destroy();
                 isConnected = false;
-                console.log("✅ Database disconnected successfully");
+                logger.debug("✅ Database disconnected successfully");
             } catch (error) {
-                console.error("❌ Database disconnection failed:", error);
+                logger.error("❌ Database disconnection failed:", error);
                 throw error;
             }
         },

@@ -2,6 +2,7 @@ import type { User } from "@core/entities/User.js";
 import type { MessageRepository } from "@core/repositories/MessageRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { UserRepository } from "@core/repositories/UserRepository.js";
+import { logger } from "@core/utils/logger.js";
 import type { Client, Guild, GuildMember, PartialGuildMember } from "discord.js";
 
 export type DiscordUserSyncService = {
@@ -65,7 +66,7 @@ export const createDiscordUserSyncService = (userRepository: UserRepository, mes
                     const { username, bot: isBot, createdAt } = user;
                     toCreate.push({ id, username, isBot, createdAt, joinedAt: null });
                 } catch {
-                    console.warn("[DiscordUserSyncService] Skipping unknown user", id);
+                    logger.warn("[DiscordUserSyncService] Skipping unknown user", id);
                 }
             }
         }
@@ -92,7 +93,7 @@ export const createDiscordUserSyncService = (userRepository: UserRepository, mes
                 await userRepository.create({ id, username, isBot, createdAt, joinedAt: member.joinedAt });
             }
         } catch (e: unknown) {
-            console.error("Error adding new guild member to users table", member, e);
+            logger.error("Error adding new guild member to users table", member, e);
         }
     };
 
@@ -103,13 +104,13 @@ export const createDiscordUserSyncService = (userRepository: UserRepository, mes
             const existing = await userRepository.findById(id);
 
             if (!existing) {
-                console.warn("Skipping guildMemberUpdate for nonexistent user", member);
+                logger.warn("Skipping guildMemberUpdate for nonexistent user", member);
                 return;
             }
 
             await userRepository.update(id, { username });
         } catch (e: unknown) {
-            console.error("Error updating guild member", member, e);
+            logger.error("Error updating guild member", member, e);
         }
     };
 
@@ -120,13 +121,13 @@ export const createDiscordUserSyncService = (userRepository: UserRepository, mes
             const existing = await userRepository.findById(id);
 
             if (!existing) {
-                console.warn("Skipping guildMemberRemove for nonexistent user", member);
+                logger.warn("Skipping guildMemberRemove for nonexistent user", member);
                 return;
             }
 
             await userRepository.update(id, { joinedAt: null });
         } catch (e: unknown) {
-            console.error("Error removing guild member", member, e);
+            logger.error("Error removing guild member", member, e);
         }
     };
 

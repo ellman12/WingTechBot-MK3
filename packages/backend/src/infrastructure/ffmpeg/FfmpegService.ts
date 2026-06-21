@@ -1,3 +1,4 @@
+import { logger } from "@core/utils/logger.js";
 import ffmpeg from "fluent-ffmpeg";
 import type { FfmpegCommand } from "fluent-ffmpeg";
 import { PassThrough, Readable } from "stream";
@@ -35,9 +36,9 @@ export const createFfmpegService = (): FfmpegService => {
                 "zerolatency", // Optimize for real-time streaming
             ])
             .on("error", (err, stdout, stderr) => {
-                console.error("[FfmpegService] FFmpeg error:", err.message);
+                logger.error("[FfmpegService] FFmpeg error:", err.message);
                 if (stderr) {
-                    console.error("[FfmpegService] FFmpeg stderr:", stderr);
+                    logger.error("[FfmpegService] FFmpeg stderr:", stderr);
                 }
             });
 
@@ -103,14 +104,14 @@ export const createFfmpegService = (): FfmpegService => {
         let cmd = createCommand(inputStream, { inputFormat: options.inputFormat });
         cmd = applyConvertOptions(cmd, options);
 
-        console.log(`[FfmpegService] Converting stream: ${options.inputFormat || "auto"} -> ${options.outputFormat} ` + `(${options.sampleRate || "?"}Hz, ${options.channels || "?"}ch, codec: ${options.codec})`);
+        logger.debug(`[FfmpegService] Converting stream: ${options.inputFormat || "auto"} -> ${options.outputFormat} ` + `(${options.sampleRate || "?"}Hz, ${options.channels || "?"}ch, codec: ${options.codec})`);
 
         cmd.on("error", err => {
-            console.error(`[FfmpegService] Stream conversion error: ${err.message}`);
+            logger.error(`[FfmpegService] Stream conversion error: ${err.message}`);
             outputStream.destroy(err);
         })
             .on("end", () => {
-                console.log("[FfmpegService] Stream conversion completed");
+                logger.debug("[FfmpegService] Stream conversion completed");
             })
             .pipe(outputStream, { end: true });
 

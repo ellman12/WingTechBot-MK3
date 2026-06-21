@@ -26,6 +26,7 @@ import type { SoundTagService } from "@core/services/SoundTagService.js";
 import type { SoundboardThreadService } from "@core/services/SoundboardThreadService.js";
 import type { VoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
+import { logger } from "@core/utils/logger.js";
 import { sleep } from "@core/utils/timeUtils.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, PresenceUpdateStatus, RESTEvents, type TextChannel } from "discord.js";
@@ -130,13 +131,13 @@ export const createDiscordBot = async ({
     const setupEventHandlers = (): void => {
         client.once(Events.ClientReady, async (readyClient: Client<true>) => {
             client.user!.setStatus(PresenceUpdateStatus.Invisible);
-            console.log(`🤖 Discord bot ready! Logged in as ${readyClient.user.tag}`);
-            console.log(`📊 Bot is in ${readyClient.guilds.cache.size} servers`);
+            logger.info(`🤖 Discord bot ready! Logged in as ${readyClient.user.tag}`);
+            logger.info(`📊 Bot is in ${readyClient.guilds.cache.size} servers`);
             isReadyState = true;
 
             if (!config.discord.skipCommandDeploymentOnStartup) {
                 try {
-                    console.log("⏱️  Deploying Discord commands...");
+                    logger.debug("⏱️  Deploying Discord commands...");
                     const deployStart = Date.now();
                     await deployCommands(
                         voiceEventSoundsRepository,
@@ -153,26 +154,26 @@ export const createDiscordBot = async ({
                         config.discord.clientId,
                         config.discord.serverId
                     );
-                    console.log(`✅ Commands deployed in ${Date.now() - deployStart}ms`);
+                    logger.debug(`✅ Commands deployed in ${Date.now() - deployStart}ms`);
                 } catch (error) {
-                    console.warn("⚠️ Failed to deploy commands automatically:", error);
-                    console.log("💡 You can deploy commands manually with: pnpm discord:deploy-commands");
+                    logger.warn("⚠️ Failed to deploy commands automatically:", error);
+                    logger.debug("💡 You can deploy commands manually with: pnpm discord:deploy-commands");
                 }
             } else {
-                console.log("⏩ Skipping command deployment (skipCommandDeploymentOnStartup = true)");
+                logger.debug("⏩ Skipping command deployment (skipCommandDeploymentOnStartup = true)");
             }
         });
 
         client.on(Events.Error, (error: Error) => {
-            console.error("❌ Discord client error:", error);
+            logger.error("❌ Discord client error:", error);
         });
 
         client.on(RESTEvents.RateLimited, rateLimitData => {
-            console.warn("⚠️ Rate limited:");
-            console.log(`Route: ${rateLimitData.route}`);
-            console.log(`Method: ${rateLimitData.method}`);
-            console.log(`Retry after: ${rateLimitData.retryAfter}ms`);
-            console.log(`Global: ${rateLimitData.global}`);
+            logger.warn("⚠️ Rate limited:");
+            logger.debug(`Route: ${rateLimitData.route}`);
+            logger.debug(`Method: ${rateLimitData.method}`);
+            logger.debug(`Retry after: ${rateLimitData.retryAfter}ms`);
+            logger.debug(`Global: ${rateLimitData.global}`);
         });
 
         registerCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, bannedFeaturesRepository, registerEventHandler);
@@ -189,47 +190,47 @@ export const createDiscordBot = async ({
 
     const start = async (): Promise<void> => {
         try {
-            console.log("🚀 Starting Discord bot...");
+            logger.debug("🚀 Starting Discord bot...");
             const botStartTime = Date.now();
 
-            console.log("⏱️  Creating Discord client...");
+            logger.debug("⏱️  Creating Discord client...");
             if (!client || isClientDestroyed) {
                 client = createClient();
                 isClientDestroyed = false;
                 setupEventHandlers();
             }
 
-            console.log(`✅ Client created in ${Date.now() - botStartTime}ms`);
+            logger.debug(`✅ Client created in ${Date.now() - botStartTime}ms`);
 
-            console.log("⏱️  Logging in to Discord...");
+            logger.debug("⏱️  Logging in to Discord...");
             const loginStart = Date.now();
             await client.login(config.discord.token);
 
-            console.log(`✅ Discord login and ready in ${Date.now() - loginStart}ms`);
+            logger.debug(`✅ Discord login and ready in ${Date.now() - loginStart}ms`);
 
-            console.log("⏱️  Fetching guild and channels...");
+            logger.debug("⏱️  Fetching guild and channels...");
             const guildStart = Date.now();
             const guild = await client.guilds.fetch(config.discord.serverId!);
             await guild.fetch();
             const botChannel = (await guild.channels.fetch(config.discord.botChannelId)) as TextChannel;
-            console.log(`✅ Guild and channels fetched in ${Date.now() - guildStart}ms`);
+            logger.debug(`✅ Guild and channels fetched in ${Date.now() - guildStart}ms`);
 
-            console.log("⏱️  Creating karma emotes...");
+            logger.debug("⏱️  Creating karma emotes...");
             const emotesStart = Date.now();
             await emoteRepository.createKarmaEmotes(guild);
-            console.log(`✅ Karma emotes created in ${Date.now() - emotesStart}ms`);
+            logger.debug(`✅ Karma emotes created in ${Date.now() - emotesStart}ms`);
 
             if (!config.discord.skipChannelProcessingOnStartup) {
                 const currentYear = new Date().getUTCFullYear();
-                console.log(`🔄 Processing messages for ${currentYear}`);
+                logger.debug(`🔄 Processing messages for ${currentYear}`);
                 await messageArchiveService.processAllChannels(guild, currentYear);
             }
 
             if (!config.discord.skipUserProcessingOnStartup) {
-                console.log("⏱️  Syncing users...");
+                logger.debug("⏱️  Syncing users...");
                 const userSyncStart = Date.now();
                 await discordUserSyncService.syncUsers(client, guild);
-                console.log(`✅ Users synced in ${Date.now() - userSyncStart}ms`);
+                logger.debug(`✅ Users synced in ${Date.now() - userSyncStart}ms`);
             }
 
             await soundboardThreadService.findOrCreateSoundboardThread(guild);
@@ -239,26 +240,26 @@ export const createDiscordBot = async ({
             if (config.server.environment === "production") {
                 const systemInstruction = await llmInstructionRepo.getInstruction("discordStatus");
                 const status = await geminiLlmService.generateMessage("", [], systemInstruction);
-                console.log(`✏ Setting Discord status to: "${status}"`);
+                logger.debug(`✏ Setting Discord status to: "${status}"`);
                 client.user!.setActivity(status);
 
                 const description = `Version: ${process.env.GIT_TAG}\nCommit: ${process.env.GIT_COMMIT}\nhttps://github.com/ellman12/WingTechBot-MK3`;
-                console.log(`Setting Discord bot description to ${description}`);
+                logger.debug(`Setting Discord bot description to ${description}`);
                 await client.application!.edit({ description });
 
                 await botChannel.send("WTB3 online and ready");
             }
 
-            console.log(`✅ Discord bot fully started in ${Date.now() - botStartTime}ms`);
+            logger.debug(`✅ Discord bot fully started in ${Date.now() - botStartTime}ms`);
         } catch (error) {
-            console.error("❌ Failed to start Discord bot:", error);
+            logger.error("❌ Failed to start Discord bot:", error);
             throw error;
         }
     };
 
     const stop = async (): Promise<void> => {
         try {
-            console.log("🛑 Stopping Discord bot...");
+            logger.debug("🛑 Stopping Discord bot...");
             isReadyState = false;
 
             await sleep(50);
@@ -267,9 +268,9 @@ export const createDiscordBot = async ({
 
             await client.destroy();
             isClientDestroyed = true;
-            console.log("✅ Discord bot stopped");
+            logger.debug("✅ Discord bot stopped");
         } catch (error) {
-            console.error("❌ Error stopping Discord bot:", error);
+            logger.error("❌ Error stopping Discord bot:", error);
             throw error;
         }
     };

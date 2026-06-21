@@ -1,6 +1,7 @@
+import { logger } from "@core/utils/logger.js";
 import { Transform, type TransformCallback } from "stream";
 
-import { getSampleByteIndex, mixSamples, readPcmSample, writePcmSample } from "./pcmUtils.js";
+import { mixPcmBuffers } from "./pcmUtils.js";
 
 export type PcmStreamInfo = {
     readonly id: string;
@@ -57,21 +58,21 @@ export class PcmMixer extends Transform {
         // Require 60ms of audio before starting output (3 chunks worth)
         this.initialBufferThreshold = Math.floor(this.sampleRate * 0.06) * this.bytesPerSample;
 
-        console.log(`[PcmMixer] Initialized mixer: ${this.sampleRate}Hz, ${this.channels}ch, ${this.bitDepth}-bit, minBuffer: ${this.minBufferSize} bytes, initialThreshold: ${this.initialBufferThreshold} bytes`);
+        logger.debug(`[PcmMixer] Initialized mixer: ${this.sampleRate}Hz, ${this.channels}ch, ${this.bitDepth}-bit, minBuffer: ${this.minBufferSize} bytes, initialThreshold: ${this.initialBufferThreshold} bytes`);
     }
 
     public addStream(streamInfo: PcmStreamInfo): boolean {
         if (this.activeStreams.size >= this.maxConcurrentStreams) {
-            console.warn(`[PcmMixer] Maximum concurrent streams (${this.maxConcurrentStreams}) reached`);
+            logger.warn(`[PcmMixer] Maximum concurrent streams (${this.maxConcurrentStreams}) reached`);
             return false;
         }
 
         if (this.activeStreams.has(streamInfo.id)) {
-            console.warn(`[PcmMixer] Stream ${streamInfo.id} already exists`);
+            logger.warn(`[PcmMixer] Stream ${streamInfo.id} already exists`);
             return false;
         }
 
-        console.log(`[PcmMixer] Adding stream: ${streamInfo.id} with volume ${streamInfo.volume}`);
+        logger.debug(`[PcmMixer] Adding stream: ${streamInfo.id} with volume ${streamInfo.volume}`);
 
         this.activeStreams.set(streamInfo.id, {
             info: streamInfo,
@@ -86,7 +87,7 @@ export class PcmMixer extends Transform {
         });
 
         streamInfo.stream.on("end", () => {
-            console.log(`[PcmMixer] Stream ${streamInfo.id} ended - marking as ended but keeping buffered data`);
+            logger.debug(`[PcmMixer] Stream ${streamInfo.id} ended - marking as ended but keeping buffered data`);
             const streamState = this.activeStreams.get(streamInfo.id);
             if (streamState) {
                 streamState.hasEnded = true;
@@ -95,7 +96,7 @@ export class PcmMixer extends Transform {
         });
 
         streamInfo.stream.on("error", error => {
-            console.error(`[PcmMixer] Stream ${streamInfo.id} error:`, error);
+            logger.error(`[PcmMixer] Stream ${streamInfo.id} error:`, error);
             this.removeStream(streamInfo.id);
         });
 
@@ -112,7 +113,7 @@ export class PcmMixer extends Transform {
             return false;
         }
 
-        console.log(`[PcmMixer] Force removing stream: ${streamId}`);
+        logger.debug(`[PcmMixer] Force removing stream: ${streamId}`);
         const streamState = this.activeStreams.get(streamId);
         if (streamState) {
             streamState.info.onEnd?.(); // Call onEnd when force removing
@@ -179,7 +180,7 @@ export class PcmMixer extends Transform {
     private startProcessing(): void {
         if (this.isProcessing) return;
 
-        console.log(`[PcmMixer] Waiting for initial buffer fill before starting processing`);
+        logger.debug(`[PcmMixer] Waiting for initial buffer fill before starting processing`);
         this.isProcessing = true;
 
         this.waitForInitialBuffer();
@@ -206,7 +207,7 @@ export class PcmMixer extends Transform {
 
         // Start if threshold met, or if all streams ended with any data remaining
         if (hasEnough || (allEnded && totalBuffered > 0)) {
-            console.log(`[PcmMixer] ${hasEnough ? "Initial buffer threshold met" : "All streams ended with buffered data"}, starting audio processing with ${this.activeStreams.size} streams`);
+            logger.debug(`[PcmMixer] ${hasEnough ? "Initial buffer threshold met" : "All streams ended with buffered data"}, starting audio processing with ${this.activeStreams.size} streams`);
             this.processingStartTime = performance.now();
             this.chunkCount = 0;
             this.scheduleNextChunk();
@@ -215,7 +216,7 @@ export class PcmMixer extends Transform {
 
         // If all streams ended with no data, stop
         if (allEnded && totalBuffered === 0) {
-            console.log(`[PcmMixer] All streams ended with no buffered data, stopping`);
+            logger.debug(`[PcmMixer] All streams ended with no buffered data, stopping`);
             this.stopProcessing();
             return;
         }
@@ -242,7 +243,7 @@ export class PcmMixer extends Transform {
     }
 
     private stopProcessing(): void {
-        console.log(`[PcmMixer] Stopping audio processing`);
+        logger.debug(`[PcmMixer] Stopping audio processing`);
         this.isProcessing = false;
         if (this.processingTimeout) {
             clearTimeout(this.processingTimeout);
@@ -299,7 +300,7 @@ export class PcmMixer extends Transform {
 
             // Remove stream if it has ended AND its buffer is empty (or very small)
             if (streamState.hasEnded && totalBytes < this.bytesPerSample) {
-                console.log(`[PcmMixer] Stream ${streamId} finished playing buffered data, removing`);
+                logger.debug(`[PcmMixer] Stream ${streamId} finished playing buffered data, removing`);
                 streamsToRemove.push(streamId);
             }
         }
@@ -317,7 +318,7 @@ export class PcmMixer extends Transform {
 
         // Stop processing only if NO streams remain (not even ended ones with buffered data)
         if (this.activeStreams.size === 0) {
-            console.log(`[PcmMixer] All streams finished, stopping processing`);
+            logger.debug(`[PcmMixer] All streams finished, stopping processing`);
             this.stopProcessing();
         }
     }
@@ -352,66 +353,8 @@ export class PcmMixer extends Transform {
             }
         }
 
-        // Mix the chunks
-        return this.mixPcmChunks(chunks, streamVolumes);
-    }
-
-    private mixPcmChunks(chunks: Buffer[], volumes: number[]): Buffer {
-        if (chunks.length === 0) return Buffer.alloc(0);
-
-        const firstChunk = chunks[0];
-        if (!firstChunk) return Buffer.alloc(0);
-
-        if (chunks.length === 1) {
-            // Apply volume to single stream
-            const volume = volumes[0] ?? 1.0;
-            return this.applyVolume(firstChunk, volume);
-        }
-
-        const chunkSize = firstChunk.length;
-        const samplesCount = chunkSize / this.bytesPerSample;
-        const mixedBuffer = Buffer.alloc(chunkSize);
-
-        // Mix samples
-        for (let sampleIndex = 0; sampleIndex < samplesCount; sampleIndex++) {
-            for (let channel = 0; channel < this.channels; channel++) {
-                const byteIndex = getSampleByteIndex(sampleIndex, channel, this.bytesPerSample);
-
-                // Collect samples from all chunks
-                const samples: number[] = [];
-                for (let i = 0; i < chunks.length; i++) {
-                    const chunk = chunks[i];
-                    if (!chunk || chunk.length <= byteIndex + 1) continue;
-
-                    const sample = readPcmSample(chunk, byteIndex);
-                    samples.push(sample);
-                }
-
-                // Mix and write the result
-                const mixedSample = mixSamples(samples, volumes);
-                writePcmSample(mixedBuffer, byteIndex, mixedSample);
-            }
-        }
-
-        return mixedBuffer;
-    }
-
-    private applyVolume(buffer: Buffer, volume: number): Buffer {
-        if (volume === 1.0) return buffer;
-
-        const samplesCount = buffer.length / this.bytesPerSample;
-        const volumeBuffer = Buffer.alloc(buffer.length);
-
-        for (let sampleIndex = 0; sampleIndex < samplesCount; sampleIndex++) {
-            for (let channel = 0; channel < this.channels; channel++) {
-                const byteIndex = getSampleByteIndex(sampleIndex, channel, this.bytesPerSample);
-                const sample = readPcmSample(buffer, byteIndex);
-                const volumeSample = sample * volume;
-                writePcmSample(volumeBuffer, byteIndex, volumeSample);
-            }
-        }
-
-        return volumeBuffer;
+        // Mix the chunks (typed-array hot path lives in pcmUtils)
+        return mixPcmBuffers(chunks, streamVolumes);
     }
 
     override _transform(_chunk: Buffer, _encoding: BufferEncoding, callback: TransformCallback): void {
@@ -421,7 +364,7 @@ export class PcmMixer extends Transform {
     }
 
     override _flush(callback: TransformCallback): void {
-        console.log(`[PcmMixer] Flushing mixer`);
+        logger.debug(`[PcmMixer] Flushing mixer`);
         this.stopProcessing();
         callback();
     }

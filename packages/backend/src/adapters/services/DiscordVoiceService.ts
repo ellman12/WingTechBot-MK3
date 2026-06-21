@@ -2,6 +2,7 @@ import { OverlappingAudioPlayer } from "@adapters/audio/OverlappingAudioPlayer.j
 import { createPlayingSound } from "@core/entities/PlayingSound.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
+import { logger } from "@core/utils/logger.js";
 import { AudioPlayerStatus, type VoiceConnection, VoiceConnectionStatus, joinVoiceChannel } from "@discordjs/voice";
 import type { Guild, VoiceChannel } from "discord.js";
 
@@ -25,36 +26,36 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
 
     const connect = async (guild: Guild, channelId: string): Promise<void> => {
         const serverId = guild.id;
-        console.log(`[DiscordVoiceService] Attempting to connect to channel ${channelId} in server ${serverId}`);
+        logger.debug(`[DiscordVoiceService] Attempting to connect to channel ${channelId} in server ${serverId}`);
 
         try {
             const channel = (await guild.channels.fetch(channelId)) as VoiceChannel;
             if (!channel || !channel.isVoiceBased()) {
                 const error = new Error("Invalid voice channel");
-                console.error(`[DiscordVoiceService] ${error.message}`);
+                logger.error(`[DiscordVoiceService] ${error.message}`);
                 throw error;
             }
 
             // Disconnect if already connected
             if (voiceStates.has(serverId)) {
-                console.log(`[DiscordVoiceService] Already connected to server ${serverId}, disconnecting first`);
+                logger.debug(`[DiscordVoiceService] Already connected to server ${serverId}, disconnecting first`);
                 await disconnect(serverId);
             }
 
-            console.log(`[DiscordVoiceService] Creating voice connection`);
+            logger.debug(`[DiscordVoiceService] Creating voice connection`);
             const connection = joinVoiceChannel({ channelId: channelId, guildId: serverId, adapterCreator: channel.guild.voiceAdapterCreator });
-            console.log(`[DiscordVoiceService] Voice connection created`);
+            logger.debug(`[DiscordVoiceService] Voice connection created`);
 
-            console.log(`[DiscordVoiceService] Creating overlapping audio player`);
+            logger.debug(`[DiscordVoiceService] Creating overlapping audio player`);
             const player = new OverlappingAudioPlayer({ sampleRate: 48000, channels: 2, bitDepth: 16, maxConcurrentStreams: 8 });
-            console.log(`[DiscordVoiceService] Overlapping audio player created`);
+            logger.debug(`[DiscordVoiceService] Overlapping audio player created`);
 
-            console.log(`[DiscordVoiceService] Subscribing player to connection`);
+            logger.debug(`[DiscordVoiceService] Subscribing player to connection`);
             connection.subscribe(player);
-            console.log(`[DiscordVoiceService] Player subscribed to connection`);
+            logger.debug(`[DiscordVoiceService] Player subscribed to connection`);
 
             connection.on("stateChange", (oldState, newState) => {
-                console.log(`[VOICE SERVICE] Voice connection state change in server ${serverId}: ${oldState.status} -> ${newState.status}`);
+                logger.debug(`[VOICE SERVICE] Voice connection state change in server ${serverId}: ${oldState.status} -> ${newState.status}`);
                 const state = voiceStates.get(serverId);
                 if (state) {
                     state.isReady = newState.status === VoiceConnectionStatus.Ready;
@@ -62,51 +63,51 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
             });
 
             connection.on("error", error => {
-                console.error(`[VOICE SERVICE] Voice connection error in server ${serverId}:`, error);
+                logger.error(`[VOICE SERVICE] Voice connection error in server ${serverId}:`, error);
             });
 
             player.on("error", error => {
-                console.error(`[VOICE SERVICE] Audio player error in server ${serverId}:`, error);
-                console.error(`[VOICE SERVICE] Error details:`, { name: error.name, message: error.message, stack: error.stack });
+                logger.error(`[VOICE SERVICE] Audio player error in server ${serverId}:`, error);
+                logger.error(`[VOICE SERVICE] Error details:`, { name: error.name, message: error.message, stack: error.stack });
             });
 
             // Set up player event handlers
             player.on(AudioPlayerStatus.Playing, () => {
                 const state = voiceStates.get(serverId);
                 if (state) {
-                    console.log(`[VOICE SERVICE] Audio player in server ${serverId} is now playing.`);
-                    console.log(`[VOICE SERVICE] Player status: ${player.state.status}`);
-                    console.log(`[VOICE SERVICE] Player is now playing.`);
+                    logger.debug(`[VOICE SERVICE] Audio player in server ${serverId} is now playing.`);
+                    logger.debug(`[VOICE SERVICE] Player status: ${player.state.status}`);
+                    logger.debug(`[VOICE SERVICE] Player is now playing.`);
                 }
             });
 
             player.on(AudioPlayerStatus.Idle, () => {
                 const state = voiceStates.get(serverId);
                 if (state) {
-                    console.log(`[VOICE SERVICE] Audio player in server ${serverId} is idle.`);
-                    console.log(`[VOICE SERVICE] Player is now idle.`);
-                    console.log(`[VOICE SERVICE] Idle reason: ${player.state.status}`);
+                    logger.debug(`[VOICE SERVICE] Audio player in server ${serverId} is idle.`);
+                    logger.debug(`[VOICE SERVICE] Player is now idle.`);
+                    logger.debug(`[VOICE SERVICE] Idle reason: ${player.state.status}`);
                 }
             });
 
             player.on(AudioPlayerStatus.Buffering, () => {
-                console.log(`[VOICE SERVICE] Audio player in server ${serverId} is buffering.`);
+                logger.debug(`[VOICE SERVICE] Audio player in server ${serverId} is buffering.`);
             });
 
             player.on(AudioPlayerStatus.AutoPaused, () => {
-                console.log(`[VOICE SERVICE] Audio player in server ${serverId} auto-paused.`);
+                logger.debug(`[VOICE SERVICE] Audio player in server ${serverId} auto-paused.`);
             });
 
             player.on(AudioPlayerStatus.Paused, () => {
-                console.log(`[VOICE SERVICE] Audio player in server ${serverId} paused.`);
+                logger.debug(`[VOICE SERVICE] Audio player in server ${serverId} paused.`);
             });
 
-            console.log(`[DiscordVoiceService] Storing voice state for server ${serverId}`);
+            logger.debug(`[DiscordVoiceService] Storing voice state for server ${serverId}`);
             voiceStates.set(serverId, { connection, player, volume: 100, isReady: connection.state.status === VoiceConnectionStatus.Ready, audioIdCounter: 0 });
-            console.log(`[DiscordVoiceService] Successfully connected to voice channel ${channel.name} in server ${serverId}`);
+            logger.debug(`[DiscordVoiceService] Successfully connected to voice channel ${channel.name} in server ${serverId}`);
         } catch (error) {
-            console.error(`[DiscordVoiceService] Failed to connect to voice channel:`, error);
-            console.error(`[DiscordVoiceService] Error details:`, {
+            logger.error(`[DiscordVoiceService] Failed to connect to voice channel:`, error);
+            logger.error(`[DiscordVoiceService] Error details:`, {
                 message: error instanceof Error ? error.message : "Unknown error",
                 stack: error instanceof Error ? error.stack : undefined,
                 serverId,
@@ -117,41 +118,41 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
     };
 
     const disconnect = async (serverId: string): Promise<void> => {
-        console.log(`[DiscordVoiceService] Attempting to disconnect from server ${serverId}`);
+        logger.debug(`[DiscordVoiceService] Attempting to disconnect from server ${serverId}`);
         const state = voiceStates.get(serverId);
         if (state) {
-            console.log(`[DiscordVoiceService] Stopping audio player for server ${serverId}`);
+            logger.debug(`[DiscordVoiceService] Stopping audio player for server ${serverId}`);
             state.player.stop();
-            console.log(`[DiscordVoiceService] Destroying voice connection for server ${serverId}`);
+            logger.debug(`[DiscordVoiceService] Destroying voice connection for server ${serverId}`);
             state.connection.destroy();
-            console.log(`[DiscordVoiceService] Removing voice state for server ${serverId}`);
+            logger.debug(`[DiscordVoiceService] Removing voice state for server ${serverId}`);
             voiceStates.delete(serverId);
-            console.log(`[DiscordVoiceService] Successfully disconnected from server ${serverId}`);
+            logger.debug(`[DiscordVoiceService] Successfully disconnected from server ${serverId}`);
         } else {
-            console.log(`[DiscordVoiceService] No voice state found for server ${serverId}, already disconnected`);
+            logger.debug(`[DiscordVoiceService] No voice state found for server ${serverId}, already disconnected`);
         }
     };
 
     const isConnected = (serverId: string): boolean => {
         const connected = voiceStates.has(serverId);
-        console.log(`[DiscordVoiceService] Connection status check for server ${serverId}: ${connected}`);
+        logger.debug(`[DiscordVoiceService] Connection status check for server ${serverId}: ${connected}`);
         return connected;
     };
 
     const playAudio = async (serverId: string, nameOrSource: string, volume?: number): Promise<string | null> => {
-        console.log(`[DiscordVoiceService] Playing audio: ${nameOrSource} in server ${serverId}`);
+        logger.debug(`[DiscordVoiceService] Playing audio: ${nameOrSource} in server ${serverId}`);
 
         const state = voiceStates.get(serverId);
         if (!state) {
             const error = new Error("Not connected to voice channel");
-            console.error(`[DiscordVoiceService] ${error.message} for server ${serverId}`);
+            logger.error(`[DiscordVoiceService] ${error.message} for server ${serverId}`);
             throw error;
         }
 
         // Wait for connection to be ready
         const isReady = () => state.isReady || state.connection.state.status === VoiceConnectionStatus.Ready;
         if (!isReady()) {
-            console.log(`[DiscordVoiceService] Waiting for connection to be ready (current status: ${state.connection.state.status})...`);
+            logger.debug(`[DiscordVoiceService] Waiting for connection to be ready (current status: ${state.connection.state.status})...`);
             await new Promise<void>((resolve, reject) => {
                 const timeout = setTimeout(() => {
                     reject(new Error(`Connection timeout - voice connection not ready after 10 seconds (status: ${state.connection.state.status})`));
@@ -182,7 +183,7 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
             const audioStream = await soundService.getSound(nameOrSource, abortController.signal);
             if (audioStream === null) return null;
 
-            console.log(`[DiscordVoiceService] Creating PlayingSound with metadata:`, {
+            logger.debug(`[DiscordVoiceService] Creating PlayingSound with metadata:`, {
                 id: audioId,
                 source: nameOrSource,
                 volume: effectiveVolume,
@@ -209,17 +210,17 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
 
             // Add error handling for stream
             audioSource.stream.on("error", error => {
-                console.error(`[DiscordVoiceService] Audio stream error:`, error);
+                logger.error(`[DiscordVoiceService] Audio stream error:`, error);
                 audioSource.abort();
             });
 
             // Add audio source to the player
             const resultId = state.player.addAudioSource(audioSource);
 
-            console.log(`[DiscordVoiceService] Added audio ${resultId} (${state.player.getActiveAudioCount()} active)`);
+            logger.debug(`[DiscordVoiceService] Added audio ${resultId} (${state.player.getActiveAudioCount()} active)`);
             return resultId;
         } catch (error) {
-            console.error(`[DiscordVoiceService] Failed to play audio ${nameOrSource}:`, error);
+            logger.error(`[DiscordVoiceService] Failed to play audio ${nameOrSource}:`, error);
             throw new Error(`Failed to play audio: ${error}`);
         }
     };

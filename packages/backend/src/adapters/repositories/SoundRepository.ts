@@ -1,5 +1,6 @@
 import { transformSoundTag } from "@adapters/repositories/SoundTagRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
+import { logger } from "@core/utils/logger.js";
 import { getItemsWithinDistance } from "@core/utils/searchUtils.js";
 import type { DB, Sounds, Soundtags } from "@db/types.js";
 import { type Kysely, type Selectable, sql } from "kysely";
@@ -35,7 +36,7 @@ export const createSoundRepository = (db: Kysely<DB>): SoundRepository => {
             throw new Error("Failed to add sound");
         }
 
-        console.log("Sound added:", newSound.name);
+        logger.debug("Sound added:", newSound.name);
 
         return transformSound(newSound);
     }
@@ -53,7 +54,7 @@ export const createSoundRepository = (db: Kysely<DB>): SoundRepository => {
             throw new Error(`Sound with name "${name}" not found`);
         }
 
-        console.log(`Sound "${name}" deleted successfully`);
+        logger.debug(`Sound "${name}" deleted successfully`);
     }
 
     async function getAllSounds(): Promise<Sound[]> {
@@ -86,7 +87,7 @@ export const createSoundRepository = (db: Kysely<DB>): SoundRepository => {
     async function tryGetSoundsWithinDistance(needle: string): Promise<(Sound & { distance: number })[]> {
         const availableSounds = await getAllSounds();
         const distances = getItemsWithinDistance(availableSounds, needle, t => t.name, 3);
-        console.log(`[SoundRepository] Sounds within distance of 3 to "${needle}":`, distances);
+        logger.debug(`[SoundRepository] Sounds within distance of 3 to "${needle}":`, distances);
         return distances;
     }
 

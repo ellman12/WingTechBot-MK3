@@ -1,3 +1,4 @@
+import { logger } from "@core/utils/logger.js";
 import { randomUUID } from "crypto";
 import * as fs from "fs";
 import * as os from "os";
@@ -16,7 +17,7 @@ export class AudioFormatDetectionService {
 
     // Detect audio format from a file path.
     async detectFromFile(filePath: string): Promise<AudioFormatInfo> {
-        console.log("[AudioFormatDetection] Detecting format from file", { filePath });
+        logger.debug("[AudioFormatDetection] Detecting format from file", { filePath });
 
         try {
             const output = await this.ffprobeService.probeAudio(filePath);
@@ -32,7 +33,7 @@ export class AudioFormatDetectionService {
 
     // Detect audio format from a URL.
     async detectFromUrl(url: string, timeout: number = 30000): Promise<AudioFormatInfo> {
-        console.log("[AudioFormatDetection] Detecting format from URL", { url });
+        logger.debug("[AudioFormatDetection] Detecting format from URL", { url });
 
         try {
             const output = await this.ffprobeService.probeAudio(url, timeout);
@@ -51,7 +52,7 @@ export class AudioFormatDetectionService {
     // as ffprobe cannot probe streams directly. For large streams, consider
     // using detectFromUrl if the source is a URL.
     async detectFromStream(stream: Readable, maxSizeBytes: number = 100 * 1024 * 1024): Promise<AudioFormatInfo> {
-        console.log("[AudioFormatDetection] Detecting format from stream", { maxSizeBytes });
+        logger.debug("[AudioFormatDetection] Detecting format from stream", { maxSizeBytes });
 
         let tempFilePath: string | null = null;
 
@@ -65,7 +66,7 @@ export class AudioFormatDetectionService {
             // Probe the temp file
             const format = await this.detectFromFile(tempFilePath);
 
-            console.log("[AudioFormatDetection] Format detected from stream", { format });
+            logger.debug("[AudioFormatDetection] Format detected from stream", { format });
 
             return format;
         } catch (error) {
@@ -89,7 +90,7 @@ export class AudioFormatDetectionService {
     // Fast format detection using minimal data.
     // Useful for quick validation before full processing.
     async detectFast(input: string): Promise<AudioFormatInfo> {
-        console.log("[AudioFormatDetection] Fast format detection", { input });
+        logger.debug("[AudioFormatDetection] Fast format detection", { input });
 
         try {
             const output = await this.ffprobeService.probeFast(input);
@@ -149,7 +150,7 @@ export class AudioFormatDetectionService {
             });
         }
 
-        console.log("[AudioFormatDetection] Format parsed successfully", {
+        logger.debug("[AudioFormatDetection] Format parsed successfully", {
             formatInfo,
             context,
         });

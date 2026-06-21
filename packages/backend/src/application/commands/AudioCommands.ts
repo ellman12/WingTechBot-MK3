@@ -1,6 +1,7 @@
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { SoundService } from "@core/services/SoundService.js";
+import { logger } from "@core/utils/logger.js";
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
 import type { Command } from "./Commands.js";
@@ -81,14 +82,14 @@ export const createAudioCommands = ({ soundService, discordChatService, commandC
                     return;
                 }
 
-                console.log(`[AudioCommands] Adding sound "${formattedSoundName}" from URL: ${url}`);
+                logger.debug(`[AudioCommands] Adding sound "${formattedSoundName}" from URL: ${url}`);
                 await soundService.addSound(formattedSoundName, url);
 
                 await interaction.editReply({
                     content: `Sound "${soundName}" added successfully!`,
                 });
             } catch (error) {
-                console.error(`[AudioCommands] Error adding sound "${soundName}":`, error);
+                logger.error(`[AudioCommands] Error adding sound "${soundName}":`, error);
                 await interaction.editReply({ content: `Failed to add sound: ${error instanceof Error ? error.message : "Unknown error"}` });
             }
         },

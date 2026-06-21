@@ -3,6 +3,7 @@ import type { Config } from "@core/config/Config.js";
 import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
+import { logger } from "@core/utils/logger.js";
 import { ApiError } from "@google/genai";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import { type Message, MessageFlags, type TextChannel } from "discord.js";
@@ -51,7 +52,7 @@ export const createLlmConversationService = ({ config, discordChatService, messa
             const previousMessages = (await messageArchiveService.getNewestDBMessages(channel.id, 10, withinMinutes)).filter(m => m.id !== message.id);
 
             if (config.server.environment === "development") {
-                console.log(`Previous messages within ${withinMinutes} minutes:`, previousMessages);
+                logger.debug(`Previous messages within ${withinMinutes} minutes:`, previousMessages);
             }
 
             const content = await discordChatService.replaceUserRoleAndChannelMentions(message);

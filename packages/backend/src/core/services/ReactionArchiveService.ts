@@ -1,6 +1,7 @@
 import type { MessageRepository } from "@core/repositories/MessageRepository.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
+import { logger } from "@core/utils/logger.js";
 import type { Message, MessageReaction, OmitPartialGroupDMChannel, PartialMessage, PartialMessageReaction, PartialUser, User } from "discord.js";
 
 export type ReactionArchiveService = {
@@ -23,11 +24,11 @@ const isClientDestroyedError = (error: unknown): boolean => {
 };
 
 export const createReactionArchiveService = ({ messageRepository, reactionRepository, emoteRepository }: ReactionArchiveServiceDeps): ReactionArchiveService => {
-    console.log("[ReactionArchiveService] Creating reaction archive service");
+    logger.debug("[ReactionArchiveService] Creating reaction archive service");
 
     return {
         addReaction: async (reaction, user): Promise<void> => {
-            console.log(`[ReactionArchiveService] addReaction called - user: ${user.id}, emoji: ${reaction.emoji.name}`);
+            logger.debug(`[ReactionArchiveService] addReaction called - user: ${user.id}, emoji: ${reaction.emoji.name}`);
             try {
                 const message = await reaction.message.fetch();
                 const channel = message.channel;
@@ -52,9 +53,9 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
 
                 const data = { giverId: user.id, receiverId: message.author.id, channelId: channel.id, messageId: message.id, emoteId: reactionEmote.id };
                 await reactionRepository.create(data);
-                console.log(`[ReactionArchiveService] ✅ Successfully saved reaction - emoji: ${emoteName}, channel: ${channel.id}`);
+                logger.debug(`[ReactionArchiveService] ✅ Successfully saved reaction - emoji: ${emoteName}, channel: ${channel.id}`);
             } catch (e: unknown) {
-                console.error(`[ReactionArchiveService] ❌ Error in addReaction - emoji: ${reaction.emoji.name}, error:`, e);
+                logger.error(`[ReactionArchiveService] ❌ Error in addReaction - emoji: ${reaction.emoji.name}, error:`, e);
                 if (e && typeof e === "object" && "code" in e) {
                     const apiError = e as { code: number };
                     if (apiError.code === 10003 || apiError.code === 10008) {
@@ -63,7 +64,7 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
                 }
 
                 if (!isClientDestroyedError(e)) {
-                    console.error("Error adding reaction to message", e);
+                    logger.error("Error adding reaction to message", e);
                 }
             }
         },
@@ -81,7 +82,7 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
                 const reactionEmote = await emoteRepository.findByNameAndDiscordId(emoteName, reaction.emoji.id ?? "");
 
                 if (!reactionEmote) {
-                    console.warn("Skipping removal of reaction because reaction emote not found");
+                    logger.warn("Skipping removal of reaction because reaction emote not found");
                     return;
                 }
 
@@ -89,7 +90,7 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
                 await reactionRepository.delete(data);
             } catch (e: unknown) {
                 if (!isClientDestroyedError(e)) {
-                    console.error("Error removing reaction from message", e);
+                    logger.error("Error removing reaction from message", e);
                 }
             }
         },
@@ -100,7 +101,7 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
                 await reactionRepository.deleteReactionsForMessage(message.id);
             } catch (e: unknown) {
                 if (!isClientDestroyedError(e)) {
-                    console.error("Error removing reaction from message", e);
+                    logger.error("Error removing reaction from message", e);
                 }
             }
         },
@@ -123,7 +124,7 @@ export const createReactionArchiveService = ({ messageRepository, reactionReposi
                 await reactionRepository.deleteReactionsForEmote(reaction.message.id, emote.id);
             } catch (e: unknown) {
                 if (!isClientDestroyedError(e)) {
-                    console.error("Error removing reactions for emote", e);
+                    logger.error("Error removing reactions for emote", e);
                 }
             }
         },

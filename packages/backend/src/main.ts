@@ -28,6 +28,7 @@ import { createSoundService } from "@core/services/SoundService.js";
 import { createSoundTagService } from "@core/services/SoundTagService.js";
 import { createSoundboardThreadService } from "@core/services/SoundboardThreadService.js";
 import { createVoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
+import { logger } from "@core/utils/logger.js";
 import { runMigrations } from "@db/migrations.js";
 import type { DB } from "@db/types.js";
 import { loadEnvironment } from "@infrastructure/config/EnvLoader.js";
@@ -61,10 +62,10 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
 
     await databaseConnection.connect();
 
-    console.log("⏱️  Running database migrations...");
+    logger.info("⏱️  Running database migrations...");
     const migrationsStart = Date.now();
     await runMigrations(schemaName);
-    console.log(`✅ Migrations completed in ${Date.now() - migrationsStart}ms`);
+    logger.info(`✅ Migrations completed in ${Date.now() - migrationsStart}ms`);
 
     const db = databaseConnection.getKysely();
     const serverConfig: ServerConfig = {
@@ -158,23 +159,23 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
 
     const start = async (): Promise<void> => {
         try {
-            console.log("🚀 Starting WingTechBot MK3...");
+            logger.info("🚀 Starting WingTechBot MK3...");
             const startTime = Date.now();
 
-            console.log("⏱️  [1/2] Starting Discord bot...");
+            logger.info("⏱️  [1/2] Starting Discord bot...");
             const discordStart = Date.now();
             await discordBot.start();
-            console.log(`✅ [1/2] Discord bot started in ${Date.now() - discordStart}ms`);
+            logger.info(`✅ [1/2] Discord bot started in ${Date.now() - discordStart}ms`);
 
-            console.log("⏱️  [2/2] Starting Express server...");
+            logger.info("⏱️  [2/2] Starting Express server...");
             const expressStart = Date.now();
             expressApp.start();
-            console.log(`✅ [2/2] Express server started in ${Date.now() - expressStart}ms`);
+            logger.info(`✅ [2/2] Express server started in ${Date.now() - expressStart}ms`);
 
-            console.log(`✅ Application started successfully in ${Date.now() - startTime}ms!`);
+            logger.info(`✅ Application started successfully in ${Date.now() - startTime}ms!`);
             isReadyState = true;
         } catch (error) {
-            console.error("❌ Failed to start application:", error);
+            logger.error("❌ Failed to start application:", error);
             throw error;
         }
     };
@@ -183,7 +184,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
         isReadyState = false;
 
         try {
-            console.log("🛑 Shutting down application...");
+            logger.info("🛑 Shutting down application...");
 
             await discordBot.stop();
 
@@ -191,9 +192,9 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
 
             await databaseConnection.disconnect();
 
-            console.log("✅ Application shut down gracefully");
+            logger.info("✅ Application shut down gracefully");
         } catch (error) {
-            console.error("❌ Error during shutdown:", error);
+            logger.error("❌ Error during shutdown:", error);
             throw error;
         }
     };
@@ -218,7 +219,7 @@ const setupGracefulShutdown = (app: App): void => {
             await app.stop();
             process.exit(exitCode);
         } catch (error) {
-            console.error("❌ Error during shutdown:", error);
+            logger.error("❌ Error during shutdown:", error);
             process.exit(1);
         }
     };
@@ -227,20 +228,20 @@ const setupGracefulShutdown = (app: App): void => {
 
     signals.forEach(signal => {
         process.on(signal, () => {
-            console.log(`\n📡 Received ${signal}. Starting graceful shutdown...`);
+            logger.info(`\n📡 Received ${signal}. Starting graceful shutdown...`);
             void shutdown();
         });
     });
 
     process.on("uncaughtException", error => {
-        console.error("❌ Uncaught Exception:", error);
+        logger.error("❌ Uncaught Exception:", error);
         void app.errorReportingService.reportError(error, { source: "uncaughtException", willShutdown: true });
 
         void shutdown(1);
     });
 
     process.on("unhandledRejection", (reason, promise) => {
-        console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+        logger.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
         const error = reason instanceof Error ? reason : new Error(String(reason));
         void app.errorReportingService.reportError(error, { source: "unhandledRejection", promise: String(promise), willShutdown: false });
     });
@@ -253,7 +254,7 @@ if (process.env.NODE_ENV !== "test" && !process.env.CI) {
             await app.start();
             setupGracefulShutdown(app);
         } catch (error) {
-            console.error("❌ Failed to start application:", error);
+            logger.error("❌ Failed to start application:", error);
             process.exit(1);
         }
     };

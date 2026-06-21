@@ -1,3 +1,5 @@
+import { logger } from "@core/utils/logger.js";
+
 import type { ApiVersion, ApiVersionConfig } from "./types.js";
 import type { RouteRegistryEntry } from "./types.js";
 
@@ -19,7 +21,7 @@ export const registerVersion = (config: ApiVersionConfig): void => {
         routes.get(config.version)?.push(registryEntry);
     });
 
-    console.log(`✅ Registered ${config.routes.length} routes for API version ${config.version}`);
+    logger.debug(`✅ Registered ${config.routes.length} routes for API version ${config.version}`);
 };
 
 export const getVersionRoutes = (version: ApiVersion): RouteRegistryEntry[] => {
