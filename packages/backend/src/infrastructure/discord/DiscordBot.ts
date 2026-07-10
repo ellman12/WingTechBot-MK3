@@ -238,7 +238,7 @@ export const createDiscordBot = async ({
 
             if (config.server.environment === "production") {
                 const systemInstruction = await llmInstructionRepo.getInstruction("discordStatus");
-                const status = await geminiLlmService.generateMessage("", [], systemInstruction);
+                const status = await geminiLlmService.generateResponse("", [], systemInstruction);
                 console.log(`✏ Setting Discord status to: "${status}"`);
                 client.user!.setActivity(status);
 

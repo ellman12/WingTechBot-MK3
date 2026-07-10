@@ -6,7 +6,7 @@ import { type GenerateContentConfig, GoogleGenAI } from "@google/genai";
 const model = "gemini-2.5-flash";
 
 export type GeminiLlmService = {
-    readonly generateMessage: (input: string, previousMessages?: Message[], systemInstruction?: string) => Promise<string>;
+    readonly generateResponse: (input: string, previousMessages?: Message[], systemInstruction?: string) => Promise<string>;
 };
 
 export type GeminiLlmServiceDeps = {
@@ -24,7 +24,7 @@ export const createGeminiLlmService = ({ config }: GeminiLlmServiceDeps): Gemini
     const ai = new GoogleGenAI({ apiKey });
 
     //Generates a message with optional previous messages.
-    async function generateMessage(input: string, messages: Message[] = [], systemInstruction = "") {
+    async function generateResponse(input: string, messages: Message[] = [], systemInstruction = "") {
         const history = messages.map(m => ({
             role: m.authorId === botId ? "model" : "user",
             parts: [{ text: m.content }],
@@ -39,7 +39,5 @@ export const createGeminiLlmService = ({ config }: GeminiLlmServiceDeps): Gemini
         return response.text ?? "";
     }
 
-    return {
-        generateMessage,
-    };
+    return { generateResponse };
 };

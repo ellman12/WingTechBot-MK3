@@ -246,7 +246,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
             followUpToInteraction: vi.fn().mockResolvedValue(undefined),
         },
         geminiLlmService: geminiLlmService || {
-            generateMessage: vi.fn().mockResolvedValue(""),
+            generateResponse: vi.fn().mockResolvedValue(""),
         },
         llmConversationService: llmConversationService || {
             handleMessageCreated: vi.fn().mockResolvedValue(undefined),

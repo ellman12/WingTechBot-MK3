@@ -58,7 +58,7 @@ describe("AutoReactionService - Elliott Reminder", () => {
     };
 
     const mockGeminiLlmService: GeminiLlmService = {
-        generateMessage: vi.fn(),
+        generateResponse: vi.fn(),
     };
 
     const mockLlmInstructionRepo: LlmInstructionRepository = {
