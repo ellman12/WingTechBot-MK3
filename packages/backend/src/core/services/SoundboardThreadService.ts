@@ -58,7 +58,7 @@ export const createSoundboardThreadService = ({ config, soundRepository, voiceSe
             const guild = message.guild!;
             const guildId = guild.id;
             const channel = message.channel as TextChannel;
-            const content = message.content;
+            const content = message.content.toLowerCase();
             const foundSounds = await soundRepository.tryGetSoundsWithinDistance(content);
             if (foundSounds.length === 0) {
                 return;
