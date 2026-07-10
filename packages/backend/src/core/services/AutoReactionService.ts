@@ -141,9 +141,8 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         void discordChatService.sendTypingIndicator(controller.signal, channel);
 
         try {
-            const content = await discordChatService.replaceUserRoleAndChannelMentions(message);
             const systemInstruction = await llmInstructionRepo.getInstruction("nekoize");
-            const response = await geminiLlmService.generateResponse(content, [], systemInstruction);
+            const response = await geminiLlmService.generateResponse(message, [], systemInstruction);
             await message.reply(response);
             return true;
         } finally {
