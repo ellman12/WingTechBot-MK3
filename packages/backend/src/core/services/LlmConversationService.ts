@@ -54,9 +54,8 @@ export const createLlmConversationService = ({ config, discordChatService, messa
                 console.log(`Previous messages within ${withinMinutes} minutes:`, previousMessages);
             }
 
-            const content = await discordChatService.replaceUserRoleAndChannelMentions(message);
             const systemInstruction = await llmInstructionRepo.getInstruction("generalChat");
-            const response = await geminiLlmService.generateResponse(content, previousMessages, systemInstruction);
+            const response = await geminiLlmService.generateResponse(message, previousMessages, systemInstruction);
             await discordChatService.sendMessage(response, channel);
         } catch (e: unknown) {
             if (e instanceof ApiError) {

@@ -105,7 +105,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
     }
 
     if (options.autoReactionService || options.llmConversationService) {
-        geminiLlmService = createGeminiLlmService({ config });
+        geminiLlmService = createGeminiLlmService({ config, discordChatService });
 
         if (options.autoReactionService) {
             autoReactionService = createAutoReactionService({
@@ -247,6 +247,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
         },
         geminiLlmService: geminiLlmService || {
             generateResponse: vi.fn().mockResolvedValue(""),
+            generateStandaloneMessage: vi.fn().mockResolvedValue(""),
         },
         llmConversationService: llmConversationService || {
             handleMessageCreated: vi.fn().mockResolvedValue(undefined),

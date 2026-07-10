@@ -1,5 +1,7 @@
 // Calculate optimal batch size based on database parameter limits.
 // PostgreSQL has a limit of ~32,767 parameters per query.
+import type { TextChannel } from "discord.js";
+
 export function calculateOptimalBatchSize(paramsPerItem: number, maxParams = 30000): number {
     if (paramsPerItem <= 0) {
         throw new Error("paramsPerItem must be positive");
@@ -55,4 +57,19 @@ export async function executeBatchWithAdaptiveSize<T>(items: T[], operation: (ba
             }
         }
     }
+}
+
+//Batch-resolves display names for the given Discord user IDs.
+export async function resolveAuthorNames(channel: TextChannel, authorIds: string[]) {
+    const names = new Map<string, string>();
+    if (authorIds.length === 0) return names;
+
+    try {
+        const members = await channel.guild.members.fetch({ user: authorIds });
+        members.forEach(member => names.set(member.id, member.displayName));
+    } catch (e: unknown) {
+        console.warn("Failed to batch-fetch guild members for LLM context", e);
+    }
+
+    return names;
 }

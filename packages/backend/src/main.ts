@@ -122,9 +122,9 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
         messageRepository,
         fileManager,
     });
-    const geminiLlmService = createGeminiLlmService({ config });
     const voiceService = createDiscordVoiceService({ soundService });
     const discordChatService = createDiscordChatService({ config });
+    const geminiLlmService = createGeminiLlmService({ config, discordChatService });
     const llmConversationService = createLlmConversationService({ config, discordChatService, geminiLlmService, messageArchiveService, llmInstructionRepo, bannedFeaturesRepository });
     const soundboardThreadService = createSoundboardThreadService({ config, soundRepository, voiceService, bannedFeaturesRepository });
     const autoReactionService = createAutoReactionService({ config, discordChatService, geminiLlmService, llmInstructionRepo });
