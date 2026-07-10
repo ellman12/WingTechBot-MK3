@@ -37,9 +37,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         }
 
         const existing = await findMessageById(id);
-        if (existing) {
-            return existing;
-        }
+        if (existing) return existing;
 
         const values = { id, author_id: authorId, channel_id: channelId, content, referenced_message_id: referencedMessageId, created_at: createdAt, edited_at: editedAt };
         const message = await db.insertInto("messages").values(values).returningAll().executeTakeFirst();
@@ -53,14 +51,10 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
     const deleteMessage = async (data: DeleteMessageData): Promise<Message> => {
         const { id } = data;
         const message = await findMessageById(id);
-        if (!message) {
-            throw new Error("Message does not exist");
-        }
+        if (!message) throw new Error("Message does not exist");
 
         const result = await db.deleteFrom("messages").where("id", "=", id).executeTakeFirst();
-        if (result.numDeletedRows <= 0) {
-            throw new Error("Failed to delete message");
-        }
+        if (result.numDeletedRows <= 0) throw new Error("Failed to delete message");
 
         return message;
     };
@@ -69,60 +63,38 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         const { id, content, editedAt } = data;
 
         const existing = await findMessageById(id);
-        if (!existing) {
-            throw new Error("Message does not exist");
-        }
+        if (!existing) throw new Error("Message does not exist");
 
         const updated = await db.updateTable("messages").set({ content, edited_at: editedAt }).where("id", "=", id).returningAll().executeTakeFirst();
 
-        if (!updated) {
-            throw new Error("Failed to update message");
-        }
+        if (!updated) throw new Error("Failed to update message");
 
         return transformMessage(updated);
     };
 
-    //Gets all messages (optionally filtered by year) and their reactions as an array.
-    const getAllMessages = async (year?: number): Promise<Message[]> => {
-        const result = await db
+    const getBaseMessagesQuery = (year?: number) =>
+        db
             .selectFrom("messages as m")
             .leftJoin("reactions", "reactions.message_id", "m.id")
             .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.giver_id IS NOT NULL), '[]')`.as("reactions")])
             .groupBy("m.id")
             .orderBy("m.created_at")
-            .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year!))
-            .execute();
+            .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year!));
 
+    //Gets all messages (optionally filtered by year) and their reactions as an array.
+    const getAllMessages = async (year?: number): Promise<Message[]> => {
+        const result = await getBaseMessagesQuery(year).execute();
         return result.map(m => transformMessage(m, m.reactions));
     };
 
-    //Identical to getAllMessages but returns Map of messages with their ids for keys.
-    const getAllMessagesAsMap = async (year?: number): Promise<Map<string, Message>> => {
-        return new Map((await getAllMessages(year)).map(m => [m.id, m]));
-    };
-
-    //Gets all messages for a specific channel (optionally filtered by year) with their reactions
+    //Gets all messages for a specific channel (optionally filtered by year) with their reactions.
     const getMessagesForChannel = async (channelId: string, year?: number): Promise<Message[]> => {
-        const result = await db
-            .selectFrom("messages as m")
-            .where("m.channel_id", "=", channelId)
-            .leftJoin("reactions", "reactions.message_id", "m.id")
-            .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.giver_id IS NOT NULL), '[]')`.as("reactions")])
-            .groupBy("m.id")
-            .orderBy("m.created_at")
-            .$if(year !== undefined, qb => qb.where(sql`extract(year from ${sql.ref("m.created_at")})`, "=", year!))
-            .execute();
-
+        const result = await getBaseMessagesQuery(year).where("m.channel_id", "=", channelId).execute();
         return result.map(m => transformMessage(m, m.reactions));
     };
 
     const getNewestMessages = async (limit: number, channelId?: string, withinMinutes?: number): Promise<Message[]> => {
-        const result = await db
-            .selectFrom("messages as m")
-            .leftJoin("reactions", "reactions.message_id", "m.id")
-            .select(["m.id", "m.author_id", "m.channel_id", "m.content", "m.referenced_message_id", "m.created_at", "m.edited_at", sql<Reactions[]>`COALESCE(JSON_AGG(reactions) FILTER (WHERE reactions.giver_id IS NOT NULL), '[]')`.as("reactions")])
-            .groupBy("m.id")
-            .orderBy("m.created_at", "desc")
+        const result = await getBaseMessagesQuery()
             .limit(limit)
             .$if(withinMinutes !== undefined, qb => qb.where("m.created_at", ">=", sql<Date>`NOW() - make_interval(mins => ${withinMinutes})`))
             .$if(channelId !== undefined, qb => qb.where("m.channel_id", "=", channelId!))
@@ -137,9 +109,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
     };
 
     const batchCreateMessages = async (messages: CreateMessageData[]): Promise<void> => {
-        if (messages.length === 0) {
-            return;
-        }
+        if (messages.length === 0) return;
 
         // Validate all messages
         for (const data of messages) {
@@ -172,9 +142,7 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
     };
 
     const batchUpdateMessages = async (messages: Array<{ id: string; content: string; editedAt: Date | null }>): Promise<void> => {
-        if (messages.length === 0) {
-            return;
-        }
+        if (messages.length === 0) return;
 
         // Use Kysely's query builder with a CTE to batch update all messages in a single query
         const values = messages.map(m => sql`(${m.id}, ${m.content}, ${m.editedAt}::timestamptz)`);
@@ -198,7 +166,6 @@ export const createMessageRepository = (db: Kysely<DB>): MessageRepository => {
         delete: deleteMessage,
         edit: editMessage,
         getAllMessages,
-        getAllMessagesAsMap,
         getMessagesForChannel,
         getNewestMessages,
         getUniqueAuthorIds,
