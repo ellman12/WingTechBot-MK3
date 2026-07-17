@@ -223,9 +223,9 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                     }
 
                     console.log(`[VoiceCommands] Playing premixed repeated sound: ${repeatedSoundName}`);
-                    await voiceService.playAudio(interaction.guildId, repeatedSoundName, normalizedVolume);
+                    await voiceService.playAudio(interaction.guildId, repeatedSoundName, interaction.user.id, "Command", normalizedVolume);
                 } else {
-                    await voiceService.playAudio(interaction.guildId, randomArrayItem(soundsForPlayback)!, normalizedVolume);
+                    await voiceService.playAudio(interaction.guildId, randomArrayItem(soundsForPlayback)!, interaction.user.id, "Command", normalizedVolume);
                 }
             } catch (error) {
                 console.error(`[VoiceCommands] Error playing audio in guild ${interaction.guildId}:`, error);

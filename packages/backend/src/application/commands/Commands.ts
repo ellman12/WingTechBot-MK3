@@ -1,9 +1,10 @@
 import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import { createBannedFeaturesCommands } from "@application/commands/BannedFeaturesCommands.js";
+import { createPlayedSoundsCommands } from "@application/commands/PlayedSoundsCommands.js";
 import { createReactionCommands } from "@application/commands/ReactionCommands.js";
 import { createVoiceEventSoundsCommands } from "@application/commands/VoiceEventSoundsCommands.js";
-import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
+import type { PlayedSoundsRepository } from "@core/repositories/PlayedSoundsRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
@@ -28,11 +29,11 @@ export type Command = {
 export const createCommands = (
     voiceEventSoundsRepository: VoiceEventSoundsRepository,
     soundRepository: SoundRepository,
+    playedSoundsRepository: PlayedSoundsRepository,
     soundService: SoundService,
     soundTagService: SoundTagService,
     voiceService: VoiceService,
     reactionRepository: ReactionRepository,
-    emoteRepository: ReactionEmoteRepository,
     discordChatService: DiscordChatService,
     commandChoicesService: CommandChoicesService,
     bannedFeaturesRepository: BannedFeaturesRepository
@@ -41,6 +42,7 @@ export const createCommands = (
         createVoiceEventSoundsCommands({ voiceEventSoundsRepository, soundRepository, commandChoicesService }),
         createAudioCommands({ soundService, discordChatService, commandChoicesService }),
         createReactionCommands({ reactionRepository, discordChatService }),
+        createPlayedSoundsCommands({ soundRepository, playedSoundsRepository, discordChatService, commandChoicesService }),
         createSoundTagCommands({ soundTagService, discordChatService, commandChoicesService }),
         createVoiceCommands({ voiceService, soundService, commandChoicesService, bannedFeaturesRepository }),
         createBannedFeaturesCommands({ bannedFeaturesRepository, discordChatService }),
@@ -70,11 +72,11 @@ export const createCommands = (
 export const deployCommands = async (
     voiceEventSoundsRepository: VoiceEventSoundsRepository,
     soundRepository: SoundRepository,
+    playedSoundsRepository: PlayedSoundsRepository,
     soundService: SoundService,
     soundTagService: SoundTagService,
     voiceService: VoiceService,
     reactionRepository: ReactionRepository,
-    emoteRepository: ReactionEmoteRepository,
     discordChatService: DiscordChatService,
     commandChoicesService: CommandChoicesService,
     bannedFeaturesRepository: BannedFeaturesRepository,
@@ -85,7 +87,7 @@ export const deployCommands = async (
     try {
         console.log("🚀 Deploying Discord commands...");
 
-        const commandMap = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, bannedFeaturesRepository);
+        const commandMap = createCommands(voiceEventSoundsRepository, soundRepository, playedSoundsRepository, soundService, soundTagService, voiceService, reactionRepository, discordChatService, commandChoicesService, bannedFeaturesRepository);
         const commands = Object.values(commandMap).map(command => command.data.toJSON());
 
         console.log(`📋 Deploying ${commands.length} commands:`);
@@ -114,11 +116,11 @@ export const deployCommands = async (
 export const registerCommands = (
     voiceEventSoundsRepository: VoiceEventSoundsRepository,
     soundRepository: SoundRepository,
+    playedSoundsRepository: PlayedSoundsRepository,
     soundService: SoundService,
     soundTagService: SoundTagService,
     voiceService: VoiceService,
     reactionRepository: ReactionRepository,
-    emoteRepository: ReactionEmoteRepository,
     discordChatService: DiscordChatService,
     commandChoicesService: CommandChoicesService,
     bannedFeaturesRepository: BannedFeaturesRepository,
@@ -126,7 +128,8 @@ export const registerCommands = (
 ): void => {
     console.log("🔄 Registering commands...");
 
-    const commands = createCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, bannedFeaturesRepository);
+    const commands = createCommands(voiceEventSoundsRepository, soundRepository, playedSoundsRepository, soundService, soundTagService, voiceService, reactionRepository, discordChatService, commandChoicesService, bannedFeaturesRepository);
+
     console.log(`✅ Registered ${Object.keys(commands).length} Commands:`);
     Object.keys(commands).forEach(command => {
         console.log(`- ${command}`);

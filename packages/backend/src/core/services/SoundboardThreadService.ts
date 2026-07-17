@@ -58,6 +58,7 @@ export const createSoundboardThreadService = ({ config, soundRepository, voiceSe
             const guild = message.guild!;
             const guildId = guild.id;
             const channel = message.channel as TextChannel;
+            const userId = message.author.id;
             const content = message.content.toLowerCase();
             const foundSounds = await soundRepository.tryGetSoundsWithinDistance(content);
             if (foundSounds.length === 0) {
@@ -80,7 +81,7 @@ export const createSoundboardThreadService = ({ config, soundRepository, voiceSe
                 await voiceService.connect(message.guild!, config.discord.defaultVoiceChannelId);
             }
 
-            await voiceService.playAudio(guildId, (closestSound ?? foundSounds[0]!).name);
+            await voiceService.playAudio(guildId, (closestSound ?? foundSounds[0]!).name, userId, "Thread");
         } catch (error) {
             console.error("[SoundboardThreadService]", error);
         }
