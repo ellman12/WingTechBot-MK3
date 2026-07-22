@@ -3,20 +3,17 @@ import { createMessageRepository } from "@adapters/repositories/MessageRepositor
 import { createReactionEmoteRepository, defaultKarmaValues } from "@adapters/repositories/ReactionEmoteRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 import type { CreateMessageData } from "@core/entities/Message.js";
+import type { UserRepository } from "@core/repositories/UserRepository.js";
 import { sleep } from "@core/utils/timeUtils.js";
 import type { DB } from "@db/types.js";
 import type { DiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { type Guild, type Message, type TextChannel } from "discord.js";
 import { promises as fs } from "fs";
-import { Kysely, Migrator, PostgresDialect, sql } from "kysely";
+import { Kysely, PostgresDialect, sql } from "kysely";
 import path from "path";
 import { Pool } from "pg";
 import { DataType, newDb } from "pg-mem";
-import { pathToFileURL } from "url";
 
-import type { App } from "@/main";
-
-import { createTesterDiscordBot } from "../integration/testBot/TesterDiscordBot.js";
 import { type TestReactionEmote, validEmotes } from "../testData/reactionEmotes.js";
 
 const migrationsDir = path.resolve(__dirname, "../../database/migrations");
@@ -24,82 +21,6 @@ const migrationsDir = path.resolve(__dirname, "../../database/migrations");
 // Normalizes schema names to lowercase because PostgreSQL lowercases unquoted identifiers.
 function sanitizeSchemaName(schemaName: string): string {
     return schemaName.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
-}
-
-// Sets search_path in connection string to ensure all pool connections use the correct schema.
-function buildSchemaConnectionString(baseDatabaseUrl: string, schemaName: string): string {
-    const sanitizedSchema = sanitizeSchemaName(schemaName);
-    const separator = baseDatabaseUrl.includes("?") ? "&" : "?";
-    return `${baseDatabaseUrl}${separator}options=-csearch_path=${sanitizedSchema}`;
-}
-
-// Verifies schema isolation by checking current_schema() matches expected.
-async function verifyCurrentSchema(db: Kysely<DB>, expectedSchema: string): Promise<void> {
-    const sanitizedSchema = sanitizeSchemaName(expectedSchema);
-    const result = await sql<{ current_schema: string }>`SELECT current_schema()`.execute(db);
-    const currentSchema = result.rows[0]?.current_schema;
-
-    if (currentSchema !== sanitizedSchema) {
-        throw new Error(`Schema verification failed: expected '${sanitizedSchema}', got '${currentSchema}'. ` + `This indicates the search_path is not properly configured.`);
-    }
-}
-
-// Creates a migration provider compatible with both test and production environments.
-function createMigrationProvider() {
-    return {
-        async getMigrations() {
-            const files = await fs.readdir(migrationsDir);
-            const migrations: Record<string, { up: (db: Kysely<DB>) => Promise<void>; down: (db: Kysely<DB>) => Promise<void> }> = {};
-
-            for (const file of files) {
-                if (file.endsWith(".d.ts") || file === "index.ts" || file === "index.js") {
-                    continue;
-                }
-
-                const fileExt = file.split(".").pop();
-                if (fileExt === "ts" || fileExt === "js") {
-                    const name = file.replace(`.${fileExt}`, "");
-                    const filePath = pathToFileURL(path.join(migrationsDir, file)).href;
-                    const migration = await import(filePath);
-                    migrations[name] = { up: migration.up, down: migration.down };
-                }
-            }
-
-            return migrations;
-        },
-    };
-}
-
-// Runs migrations in a specific schema. Sets migrationTableSchema to prevent
-// migration tables from being created in the public schema, which breaks test isolation.
-async function runMigrationsInSchema(db: Kysely<DB>, schemaName: string): Promise<void> {
-    const sanitizedSchema = sanitizeSchemaName(schemaName);
-
-    await verifyCurrentSchema(db, schemaName);
-
-    const migrationProvider = createMigrationProvider();
-
-    const migrator = new Migrator({
-        db,
-        provider: migrationProvider,
-        migrationTableSchema: sanitizedSchema,
-    });
-
-    const { error, results } = await migrator.migrateToLatest();
-
-    if (error) {
-        console.error(`❌ Migration failed for schema ${sanitizedSchema}:`, error);
-        throw error;
-    }
-
-    if (results && results.length > 0) {
-        console.log(
-            `✅ Migrations executed for schema ${sanitizedSchema}:`,
-            results.map(r => r.migrationName)
-        );
-    } else {
-        console.log(`✅ Schema ${sanitizedSchema} is up to date`);
-    }
 }
 
 // Executes a schema DDL operation (CREATE/DROP) using a temporary connection
@@ -164,15 +85,6 @@ export async function getTestingGuild(bot: DiscordBot): Promise<Guild> {
     return bot.client.guilds.fetch(guildId);
 }
 
-export async function getTestingChannel(bot: DiscordBot): Promise<TextChannel> {
-    const config = loadConfig();
-    const botChannelId = config.discord.botChannelId;
-
-    const guild = await getTestingGuild(bot);
-    await guild.channels.fetch();
-    return guild.channels.cache.get(botChannelId) as TextChannel;
-}
-
 export async function getTestingEmotes(bot: DiscordBot): Promise<TestReactionEmote[]> {
     const guild = await getTestingGuild(bot);
     const emotes: TestReactionEmote[] = [
@@ -214,37 +126,6 @@ export const dropTestSchema = async (schemaName: string, databaseUrl: string): P
         },
         schemaName
     );
-};
-
-// Recreates a test schema by dropping and recreating it, then running all migrations.
-// This is used in beforeEach hooks to ensure a clean database state for each test.
-export const recreateDatabase = async (app: App, schemaName: string, baseDatabaseUrl: string): Promise<void> => {
-    const sanitizedSchema = sanitizeSchemaName(schemaName);
-
-    // Drop and recreate the schema using a public schema connection
-    // We can't drop a schema from a connection that has it in search_path
-    await executeSchemaOperation(
-        baseDatabaseUrl,
-        async (db, schema) => {
-            await sql`DROP SCHEMA IF EXISTS ${sql.id(schema)} CASCADE; CREATE SCHEMA ${sql.id(schema)}`.execute(db);
-        },
-        schemaName
-    );
-
-    // Create a fresh connection pool scoped to the schema for running migrations
-    const schemaConnectionString = buildSchemaConnectionString(baseDatabaseUrl, schemaName);
-    const schemaPool = new Pool({ connectionString: schemaConnectionString });
-    const schemaDb = new Kysely<DB>({ dialect: new PostgresDialect({ pool: schemaPool }) });
-
-    try {
-        // Set search_path explicitly as a safety measure
-        await sql`SET search_path TO ${sql.id(sanitizedSchema)}`.execute(schemaDb);
-
-        // Run migrations in the fresh schema (includes the critical migrationTableSchema fix)
-        await runMigrationsInSchema(schemaDb, schemaName);
-    } finally {
-        await schemaDb.destroy();
-    }
 };
 
 // Track all created test channels for cleanup
@@ -356,18 +237,11 @@ export async function createTestReactions(db: Kysely<DB>, messageCount: number, 
     expect(foundReactions.length).toEqual(expectedReactions);
 }
 
-export async function setUpIntegrationTest(app: App) {
-    const bot = app.discordBot;
-    const channel = await getTestingChannel(bot);
-    const emotes = await getTestingEmotes(bot);
-
-    const db = app.getDatabase();
-
-    const testerBot = await createTesterDiscordBot();
-    const testerChannel = await getTestingChannel(testerBot);
-    const testerBotId = testerBot.client.user!.id;
-
-    return { bot, channel, emotes, testerBot, testerChannel, db, testerBotId };
+export async function createFakeUsers(usersRepo: UserRepository, totalUsers: number) {
+    for (let i = 1; i <= totalUsers; i++) {
+        const id = (111 * i).toString();
+        await usersRepo.create({ id, username: `user${id}`, createdAt: new Date(), joinedAt: new Date(), isBot: false });
+    }
 }
 
 //Creates fake message and reaction data in the DB.

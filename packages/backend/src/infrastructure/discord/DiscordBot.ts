@@ -11,6 +11,7 @@ import { registerSoundboardThreadEventHandlers } from "@application/eventHandler
 import { registerVoiceEventSoundsEventHandlers } from "@application/eventHandlers/VoiceEventSounds.js";
 import type { Config } from "@core/config/Config.js";
 import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
+import type { PlayedSoundsRepository } from "@core/repositories/PlayedSoundsRepository.js";
 import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
@@ -36,6 +37,7 @@ export type DiscordBotDeps = {
     readonly config: Config;
     readonly voiceEventSoundsRepository: VoiceEventSoundsRepository;
     readonly soundRepository: SoundRepository;
+    readonly playedSoundsRepository: PlayedSoundsRepository;
     readonly soundService: SoundService;
     readonly soundTagService: SoundTagService;
     readonly reactionRepository: ReactionRepository;
@@ -68,6 +70,7 @@ export const createDiscordBot = async ({
     config,
     voiceEventSoundsRepository,
     soundRepository,
+    playedSoundsRepository,
     soundService,
     soundTagService,
     reactionRepository,
@@ -141,11 +144,11 @@ export const createDiscordBot = async ({
                     await deployCommands(
                         voiceEventSoundsRepository,
                         soundRepository,
+                        playedSoundsRepository,
                         soundService,
                         soundTagService,
                         voiceService,
                         reactionRepository,
-                        emoteRepository,
                         discordChatService,
                         commandChoicesService,
                         bannedFeaturesRepository,
@@ -175,7 +178,7 @@ export const createDiscordBot = async ({
             console.log(`Global: ${rateLimitData.global}`);
         });
 
-        registerCommands(voiceEventSoundsRepository, soundRepository, soundService, soundTagService, voiceService, reactionRepository, emoteRepository, discordChatService, commandChoicesService, bannedFeaturesRepository, registerEventHandler);
+        registerCommands(voiceEventSoundsRepository, soundRepository, playedSoundsRepository, soundService, soundTagService, voiceService, reactionRepository, discordChatService, commandChoicesService, bannedFeaturesRepository, registerEventHandler);
 
         registerDiscordUserSyncEvents(discordUserSyncService, registerEventHandler);
         registerMessageArchiveEvents(messageArchiveService, registerEventHandler);

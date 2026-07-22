@@ -4,6 +4,7 @@ import { createBannedFeaturesRepository } from "@adapters/repositories/BannedFea
 import { createUnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
 import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
+import { createPlayedSoundsRepository } from "@adapters/repositories/PlayedSoundsRepository.js";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
@@ -81,6 +82,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
 
     const userRepository = createUserRepository(db);
     const soundRepository = createSoundRepository(db);
+    const playedSoundsRepository = createPlayedSoundsRepository(db);
     const voiceEventSoundsRepository = createVoiceEventsSoundsRepository(db);
     const soundTagRepository = createSoundTagRepository(db);
     const messageRepository = createMessageRepository(db);
@@ -122,7 +124,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
         messageRepository,
         fileManager,
     });
-    const voiceService = createDiscordVoiceService({ soundService });
+    const voiceService = createDiscordVoiceService({ soundRepository, playedSoundsRepository, soundService });
     const discordChatService = createDiscordChatService({ config });
     const geminiLlmService = createGeminiLlmService({ config, discordChatService });
     const llmConversationService = createLlmConversationService({ config, discordChatService, geminiLlmService, messageArchiveService, llmInstructionRepo, bannedFeaturesRepository });
@@ -135,6 +137,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
         config,
         voiceEventSoundsRepository,
         soundRepository,
+        playedSoundsRepository,
         soundService,
         soundTagService,
         reactionRepository,

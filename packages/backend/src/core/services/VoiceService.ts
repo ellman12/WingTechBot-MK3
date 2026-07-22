@@ -1,10 +1,11 @@
+import type { PlayedSoundSource } from "@db/types.js";
 import type { Guild } from "discord.js";
 
 export type VoiceService = {
     readonly connect: (guild: Guild, channelId: string) => Promise<void>;
     readonly disconnect: (serverId: string) => Promise<void>;
     readonly isConnected: (serverId: string) => boolean;
-    readonly playAudio: (serverId: string, nameOrSource: string, volume?: number) => Promise<string | null>;
+    readonly playAudio: (serverId: string, nameOrSource: string, userId: string, playedSoundSource: PlayedSoundSource, volume?: number) => Promise<string | null>;
     readonly stopAudio: (serverId: string) => Promise<void>;
     readonly stopAudioById: (serverId: string, audioId: string) => Promise<boolean>;
     readonly stopAllAudio: (serverId: string) => Promise<void>;

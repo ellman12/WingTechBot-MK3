@@ -1,11 +1,16 @@
 import { OverlappingAudioPlayer } from "@adapters/audio/OverlappingAudioPlayer.js";
 import { createPlayingSound } from "@core/entities/PlayingSound.js";
+import type { PlayedSoundsRepository } from "@core/repositories/PlayedSoundsRepository.js";
+import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
+import type { PlayedSoundSource } from "@db/types.js";
 import { AudioPlayerStatus, type VoiceConnection, VoiceConnectionStatus, joinVoiceChannel } from "@discordjs/voice";
 import type { Guild, VoiceChannel } from "discord.js";
 
 export type DiscordVoiceServiceDeps = {
+    readonly soundRepository: SoundRepository;
+    readonly playedSoundsRepository: PlayedSoundsRepository;
     readonly soundService: SoundService;
 };
 
@@ -17,7 +22,7 @@ type VoiceState = {
     audioIdCounter: number;
 };
 
-export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceDeps): VoiceService => {
+export const createDiscordVoiceService = ({ soundRepository, playedSoundsRepository, soundService }: DiscordVoiceServiceDeps): VoiceService => {
     const voiceStates = new Map<string, VoiceState>();
 
     // Note: We no longer create AudioResources for individual streams
@@ -138,7 +143,7 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
         return connected;
     };
 
-    const playAudio = async (serverId: string, nameOrSource: string, volume?: number): Promise<string | null> => {
+    const playAudio = async (serverId: string, nameOrSource: string, userId: string, playedSoundSource: PlayedSoundSource, volume?: number): Promise<string | null> => {
         console.log(`[DiscordVoiceService] Playing audio: ${nameOrSource} in server ${serverId}`);
 
         const state = voiceStates.get(serverId);
@@ -215,6 +220,12 @@ export const createDiscordVoiceService = ({ soundService }: DiscordVoiceServiceD
 
             // Add audio source to the player
             const resultId = state.player.addAudioSource(audioSource);
+
+            const soundId = (await soundRepository.getSoundByName(nameOrSource))?.id;
+
+            if (soundId) {
+                await playedSoundsRepository.addPlayedSound({ userId, soundId, source: playedSoundSource });
+            }
 
             console.log(`[DiscordVoiceService] Added audio ${resultId} (${state.player.getActiveAudioCount()} active)`);
             return resultId;

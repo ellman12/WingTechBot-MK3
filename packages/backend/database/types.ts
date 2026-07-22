@@ -8,6 +8,8 @@ export type AvailableFeatures = "LlmConversations" | "Reactions" | "Soundboard";
 
 export type Generated<T> = T extends ColumnType<infer S, infer I, infer U> ? ColumnType<S, I | undefined, U> : ColumnType<T, T | undefined, T>;
 
+export type PlayedSoundSource = "Command" | "Thread" | "VoiceEvent";
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export type VoiceEventSoundType = "UserJoin" | "UserLeave";
@@ -27,6 +29,14 @@ export interface Messages {
     edited_at: Timestamp | null;
     id: string;
     referenced_message_id: string | null;
+}
+
+export interface PlayedSounds {
+    id: Generated<number>;
+    played_at: Generated<Timestamp>;
+    sound_id: number;
+    source: PlayedSoundSource;
+    user_id: string;
 }
 
 export interface ReactionEmotes {
@@ -84,6 +94,7 @@ export interface VoiceEventSounds {
 export interface DB {
     banned_features: BannedFeatures;
     messages: Messages;
+    played_sounds: PlayedSounds;
     reaction_emotes: ReactionEmotes;
     reactions: Reactions;
     sound_soundtags: SoundSoundtags;

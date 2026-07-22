@@ -7,18 +7,19 @@ import { createReactionRepository } from "@adapters/repositories/ReactionReposit
 import { createUserRepository } from "@adapters/repositories/UserRepository.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import type { Config } from "@core/config/Config.js";
+import type { PlayedSoundsRepository } from "@core/repositories/PlayedSoundsRepository.js";
 import type { SoundRepository } from "@core/repositories/SoundRepository.js";
-import { createAutoReactionService } from "@core/services/AutoReactionService.js";
 import type { AutoReactionService } from "@core/services/AutoReactionService.js";
+import { createAutoReactionService } from "@core/services/AutoReactionService.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import { createDiscordChatService } from "@core/services/DiscordChatService.js";
 import { createDiscordUserSyncService } from "@core/services/DiscordUserSyncService.js";
-import { createLlmConversationService } from "@core/services/LlmConversationService.js";
 import type { LlmConversationService } from "@core/services/LlmConversationService.js";
-import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
+import { createLlmConversationService } from "@core/services/LlmConversationService.js";
 import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
-import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
+import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
 import type { ReactionArchiveService } from "@core/services/ReactionArchiveService.js";
+import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
 import type { SoundboardThreadService } from "@core/services/SoundboardThreadService.js";
@@ -29,8 +30,8 @@ import type { DB } from "@db/types.js";
 import { createDatabaseConnection } from "@infrastructure/database/DatabaseConnection.js";
 import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { createFileManager } from "@infrastructure/filestore/FileManager.js";
-import { createGeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
+import { createGeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import type { ThreadChannel } from "discord.js";
 import type { Kysely } from "kysely";
 import { Readable } from "stream";
@@ -138,6 +139,12 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
         tryGetSoundsWithinDistance: vi.fn().mockResolvedValue([]),
     });
 
+    const createStubPlayedSoundsRepository = (): PlayedSoundsRepository => ({
+        addPlayedSound: vi.fn().mockResolvedValue({}),
+        getSoundPlayCount: vi.fn().mockResolvedValue({}),
+        getSoundPlayCounts: vi.fn().mockResolvedValue({}),
+    });
+
     const createStubVoiceEventSoundsRepository = (): VoiceEventSoundsRepository => ({
         addVoiceEventSound: vi.fn().mockResolvedValue({ userId: "", soundId: 0, type: "UserJoin" as const }),
         deleteVoiceEventSound: vi.fn().mockResolvedValue(null),
@@ -193,6 +200,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
         config,
         voiceEventSoundsRepository: createStubVoiceEventSoundsRepository(),
         soundRepository: createStubSoundRepository(),
+        playedSoundsRepository: createStubPlayedSoundsRepository(),
         soundService: createStubSoundService(),
         soundTagService: createStubSoundTagService(),
         reactionRepository: reactionRepository || {

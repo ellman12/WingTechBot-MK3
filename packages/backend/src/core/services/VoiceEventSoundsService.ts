@@ -16,6 +16,8 @@ export type VoiceEventSoundsServiceDeps = {
 };
 
 export const createVoiceEventSoundsService = ({ config, voiceEventSoundsRepository, voiceService }: VoiceEventSoundsServiceDeps): VoiceEventSoundsService => {
+    const botId = config.discord.clientId;
+
     function getEventType(oldState: VoiceState, newState: VoiceState): VoiceEventSoundType | "" {
         if (oldState.channelId === null && newState.channelId !== null) return "UserJoin";
         if (oldState.channelId !== null && newState.channelId === null) return "UserLeave";
@@ -41,7 +43,7 @@ export const createVoiceEventSoundsService = ({ config, voiceEventSoundsReposito
             await voiceService.connect(guild, config.discord.defaultVoiceChannelId);
         }
 
-        await voiceService.playAudio(guild.id, sound.soundName!);
+        await voiceService.playAudio(guild.id, sound.soundName!, botId, "VoiceEvent");
     }
 
     return {
