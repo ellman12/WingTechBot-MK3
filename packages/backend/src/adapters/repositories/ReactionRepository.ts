@@ -113,21 +113,23 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
     };
 
     //Get all the reactions this user has received, optionally filtering by year and/or specific givers. Ignores self-reactions (unless it's in giverIds).
-    const getReactionsReceived = async (receiverId: string, year?: number, giverIds?: string[]): Promise<EmoteTotals> => {
+    const getReactionsReceived = async (receiverId: string, year?: number, giverIds?: string[], limit?: number): Promise<EmoteTotals> => {
         const query = getBaseReactionsQuery(year)
             .where("r.receiver_id", "=", receiverId)
             .$if(giverIds !== undefined && giverIds.length > 0, qb => qb.where("r.giver_id", "in", giverIds!)) //Filter by giverIds if present. This can include receiverId.
-            .$if(giverIds === undefined || giverIds.length === 0, qb => qb.where("r.giver_id", "!=", receiverId)); //Get reactions from all users except receiverId.
+            .$if(giverIds === undefined || giverIds.length === 0, qb => qb.where("r.giver_id", "!=", receiverId)) //Get reactions from all users except receiverId.
+            .$if(limit !== undefined && limit > 0, qb => qb.limit(limit!));
 
         return (await query.execute()).map(formatReactionQueryResult);
     };
 
     //Gets all the reactions this user has given, optionally filtering by year and/or specific receivers. Ignores self-reactions (unless it's the only receiverId specified).
-    const getReactionsGiven = async (giverId: string, year?: number, receiverIds?: string[]): Promise<EmoteTotals> => {
+    const getReactionsGiven = async (giverId: string, year?: number, receiverIds?: string[], limit?: number): Promise<EmoteTotals> => {
         const query = getBaseReactionsQuery(year)
             .where("r.giver_id", "=", giverId)
             .$if(receiverIds !== undefined && receiverIds.length > 0, qb => qb.where("r.receiver_id", "in", receiverIds!)) //Filter by receiverIds if present. This can include giverId.
-            .$if(receiverIds === undefined || receiverIds.length === 0, qb => qb.where("r.receiver_id", "!=", giverId)); //Get reactions from all users except receiverId.
+            .$if(receiverIds === undefined || receiverIds.length === 0, qb => qb.where("r.receiver_id", "!=", giverId)) //Get reactions from all users except receiverId.
+            .$if(limit !== undefined && limit > 0, qb => qb.limit(limit!));
 
         return (await query.execute()).map(formatReactionQueryResult);
     };

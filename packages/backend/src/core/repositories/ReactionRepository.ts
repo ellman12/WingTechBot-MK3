@@ -39,9 +39,9 @@ export type ReactionRepository = {
 
     getKarmaAndAwards(userId: string, year?: number): Promise<EmoteTotals>;
 
-    getReactionsReceived(receiverId: string, year?: number, giverIds?: string[]): Promise<EmoteTotals>;
+    getReactionsReceived(receiverId: string, year?: number, giverIds?: string[], limit?: number): Promise<EmoteTotals>;
 
-    getReactionsGiven(giverId: string, year?: number, receiverIds?: string[]): Promise<EmoteTotals>;
+    getReactionsGiven(giverId: string, year?: number, receiverIds?: string[], limit?: number): Promise<EmoteTotals>;
 
     getEmoteLeaderboard(year?: number, includeSelfReactions?: boolean, limit?: number): Promise<EmoteTotals>;
 
