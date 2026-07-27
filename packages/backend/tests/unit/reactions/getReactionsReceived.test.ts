@@ -86,4 +86,52 @@ describe.concurrent("getReactionsReceived", () => {
         emotes = await reactions.getReactionsReceived("101", 1969, ["123", "456"]);
         expect(emotes).toHaveLength(0);
     });
+
+    it("respects the limit parameter when specified", async () => {
+        const { db, reactions, banned } = await setUpTest();
+
+        await banned.banFeature("bannedUser", "admin", "Reactions");
+        await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
+        await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
+
+        const emotes = await reactions.getReactionsReceived("101", year, undefined, 3);
+        expect(emotes).toHaveLength(3);
+    });
+
+    it("returns all results when limit exceeds the number of available results", async () => {
+        const { db, reactions, banned } = await setUpTest();
+
+        await banned.banFeature("bannedUser", "admin", "Reactions");
+        await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
+        await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
+
+        const emotes = await reactions.getReactionsReceived("101", year, undefined, 100);
+        expect(emotes).toHaveLength(reactionsPerMessage);
+    });
+
+    it("ignores the limit when it is zero or negative", async () => {
+        const { db, reactions, banned } = await setUpTest();
+
+        await banned.banFeature("bannedUser", "admin", "Reactions");
+        await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
+        await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
+
+        let emotes = await reactions.getReactionsReceived("101", year, undefined, 0);
+        expect(emotes).toHaveLength(reactionsPerMessage);
+
+        emotes = await reactions.getReactionsReceived("101", year, undefined, -1);
+        expect(emotes).toHaveLength(reactionsPerMessage);
+    });
+
+    it("applies the limit alongside a giverIds filter", async () => {
+        const { db, reactions, banned } = await setUpTest();
+
+        await banned.banFeature("bannedUser", "admin", "Reactions");
+        await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
+        await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
+
+        //This would normally return 6 rows, so passing limit=3 and asserting toHaveLength(3) is actually testing that the limit truncates something.
+        const emotes = await reactions.getReactionsReceived("101", year, ["101"], 3);
+        expect(emotes).toHaveLength(3);
+    });
 });

@@ -41,9 +41,11 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
         const primary = direction === "received" ? "receiver" : "giver";
         const secondary = direction === "received" ? "giver" : "receiver";
 
-        const primaryUser = interaction.options.getUser(primary) ?? interaction.user;
-        const year = interaction.options.getNumber("year") ?? undefined;
-        const secondaryMentionable = interaction.options.getMentionable(secondary);
+        const options = interaction.options;
+        const primaryUser = options.getUser(primary) ?? interaction.user;
+        const year = options.getNumber("year") ?? undefined;
+        const secondaryMentionable = options.getMentionable(secondary);
+        const limit = options.getNumber("limit") ?? 10;
 
         const userFilter = secondaryMentionable instanceof GuildMember ? secondaryMentionable : undefined;
         const roleFilter = secondaryMentionable instanceof Role ? secondaryMentionable : undefined;
@@ -65,7 +67,7 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
         }
 
         const repoFn = direction === "received" ? reactionRepository.getReactionsReceived : reactionRepository.getReactionsGiven;
-        const result = await repoFn(primaryUser.id, year, filterIds);
+        const result = await repoFn(primaryUser.id, year, filterIds, limit);
 
         if (result.length === 0) {
             await interaction.reply(`No reactions ${direction}${name ? (direction === "received" ? ` from ${name}` : ` to ${name}`) : ""}${year ? ` for ${year}` : ""}`);
@@ -74,7 +76,9 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
 
         const messageHeader = direction === "received" ? `${primaryUser.username} received\n` : `${primaryUser.username} gave\n`;
         const messageBody = result.reduce((previous, current) => previous + `* ${current.count} ${formatEmoji(current.name, current.discordId)}\n`, messageHeader);
-        const response = `${messageBody}${name ? (direction === "received" ? `from ${name} ` : `to ${name} `) : ""}${year ? `for ${year}` : ""}`;
+        const filters = [`${name ? (direction === "received" ? `from ${name} ` : `to ${name} `) : ""}`, `${year ? `for ${year} ` : ""}`].filter(Boolean).join(" ");
+        const limitNote = result.length >= limit ? `\n*Showing the top ${limit} results*` : "";
+        const response = `${messageBody}${filters}${limitNote}`;
         await discordChatService.replyToInteraction(interaction, response);
     }
 
@@ -84,7 +88,8 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
             .setDescription("Shows reactions you or a user has received")
             .addUserOption(option => option.setName("receiver").setDescription("The user to get reactions received for, defaulting to you").setRequired(false))
             .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by").setRequired(false))
-            .addMentionableOption(option => option.setName("giver").setDescription("The user or role that gave the reactions").setRequired(false)),
+            .addMentionableOption(option => option.setName("giver").setDescription("The user or role that gave the reactions").setRequired(false))
+            .addNumberOption(option => option.setName("limit").setDescription("Limit the size of the result").setRequired(false).setMinValue(1)),
         execute: interaction => handleReactions(interaction, "received"),
     };
 
@@ -94,7 +99,8 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
             .setDescription("Shows reactions you or a user has given")
             .addUserOption(option => option.setName("giver").setDescription("The user to get reactions given for, defaulting to you").setRequired(false))
             .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by").setRequired(false))
-            .addMentionableOption(option => option.setName("receiver").setDescription("The user or role that received the reactions").setRequired(false)),
+            .addMentionableOption(option => option.setName("receiver").setDescription("The user or role that received the reactions").setRequired(false))
+            .addNumberOption(option => option.setName("limit").setDescription("Limit the size of the result").setRequired(false).setMinValue(1)),
         execute: interaction => handleReactions(interaction, "given"),
     };
 

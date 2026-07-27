@@ -82,4 +82,54 @@ describe.concurrent("getReactionsGiven", () => {
         emotes = await reactions.getReactionsGiven("301", 1969, ["123", "456"]);
         expect(emotes).toHaveLength(0);
     });
+
+    it("respects the limit parameter when specified", async () => {
+        const { db, reactions, banned } = await setUpTest();
+
+        await banned.banFeature("bannedUser", "admin", "Reactions");
+        await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
+        await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
+
+        // giverId "101"'s self-reactions cover all 6 emotes; unlimited this returns reactionsPerMessage rows
+        const emotes = await reactions.getReactionsGiven("101", year, ["101"], 3);
+        expect(emotes).toHaveLength(3);
+    });
+
+    it("returns all results when limit exceeds the number of available results", async () => {
+        const { db, reactions, banned } = await setUpTest();
+
+        await banned.banFeature("bannedUser", "admin", "Reactions");
+        await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
+        await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
+
+        // giver "301" only ever reacted with one emote (j=1), across all 5 messages, so this is always 1 row
+        const emotes = await reactions.getReactionsGiven("301", year, undefined, 100);
+        expect(emotes).toHaveLength(1);
+    });
+
+    it("ignores the limit when it is zero or negative", async () => {
+        const { db, reactions, banned } = await setUpTest();
+
+        await banned.banFeature("bannedUser", "admin", "Reactions");
+        await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
+        await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
+
+        let emotes = await reactions.getReactionsGiven("101", year, ["101"], 0);
+        expect(emotes).toHaveLength(reactionsPerMessage);
+
+        emotes = await reactions.getReactionsGiven("101", year, ["101"], -1);
+        expect(emotes).toHaveLength(reactionsPerMessage);
+    });
+
+    it("applies the limit alongside a receiverIds filter", async () => {
+        const { db, reactions, banned } = await setUpTest();
+
+        await banned.banFeature("bannedUser", "admin", "Reactions");
+        await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
+        await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
+
+        // "999999" doesn't match anything, proving the filter is still applied alongside the limit rather than bypassed
+        const emotes = await reactions.getReactionsGiven("101", year, ["101", "999999"], 3);
+        expect(emotes).toHaveLength(3);
+    });
 });
