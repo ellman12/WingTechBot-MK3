@@ -108,7 +108,7 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
         execute: async (interaction: ChatInputCommandInteraction) => {
             const year = interaction.options.getNumber("year") ?? undefined;
             const includeSelfReactions = interaction.options.getBoolean("include-self-reactions") ?? false;
-            const limit = interaction.options.getNumber("limit") ?? 15;
+            const limit = interaction.options.getNumber("limit") ?? 10;
 
             const leaderboard = await reactionRepository.getEmoteLeaderboard(year, includeSelfReactions, limit);
 
