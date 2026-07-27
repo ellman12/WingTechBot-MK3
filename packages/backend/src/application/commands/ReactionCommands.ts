@@ -69,14 +69,17 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
         const repoFn = direction === "received" ? reactionRepository.getReactionsReceived : reactionRepository.getReactionsGiven;
         const result = await repoFn(primaryUser.id, year, filterIds, limit);
 
+        const fromToText = name ? (direction === "received" ? `from ${name}` : `to ${name}`) : "";
+        const forYearText = year ? `for ${year}` : "";
+        const filters = [fromToText, forYearText].filter(Boolean).join(" ");
+
         if (result.length === 0) {
-            await interaction.reply(`No reactions ${direction}${name ? (direction === "received" ? ` from ${name}` : ` to ${name}`) : ""}${year ? ` for ${year}` : ""}`);
+            await interaction.reply(`No reactions ${direction} ${filters}`);
             return;
         }
 
         const messageHeader = direction === "received" ? `${primaryUser.username} received\n` : `${primaryUser.username} gave\n`;
         const messageBody = result.reduce((previous, current) => previous + `* ${current.count} ${formatEmoji(current.name, current.discordId)}\n`, messageHeader);
-        const filters = [`${name ? (direction === "received" ? `from ${name} ` : `to ${name} `) : ""}`, `${year ? `for ${year} ` : ""}`].filter(Boolean).join(" ");
         const limitNote = result.length >= limit ? `\n*Showing the top ${limit} results*` : "";
         const response = `${messageBody}${filters}${limitNote}`;
         await discordChatService.replyToInteraction(interaction, response);
