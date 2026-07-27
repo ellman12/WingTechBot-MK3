@@ -193,7 +193,7 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
                 return;
             }
 
-            const entries = topMessages.map(entry => `${entry.count} ${getJumpUrl(interaction.guildId!, interaction.channelId, entry.messageId)}`);
+            const entries = topMessages.map(entry => `${entry.count} ${getJumpUrl(interaction.guildId!, entry.channelId, entry.messageId)}`);
 
             const messageHeader = `Top ${limit} messages for ${emoteName} for ${receiver.displayName} ${year ? `for ${year}` : ""}\n`;
             const response = `${messageHeader}${entries.join("\n")}`;
