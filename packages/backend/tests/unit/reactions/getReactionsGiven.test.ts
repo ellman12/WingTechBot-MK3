@@ -4,15 +4,21 @@ import { createReactionRepository } from "@adapters/repositories/ReactionReposit
 import { validEmotes } from "../../testData/reactionEmotes.js";
 import { createFakeMessagesAndReactions, createTestDb } from "../../utils/testUtils.js";
 
+const setUpTest = async () => {
+    const db = await createTestDb();
+    const reactions = createReactionRepository(db);
+    const banned = createBannedFeaturesRepository(db);
+
+    return { db, reactions, banned };
+};
+
 describe.concurrent("getReactionsGiven", () => {
     const year = new Date().getUTCFullYear();
     const messages = 5;
     const reactionsPerMessage = 6;
 
     it("returns the correct reactions when no receiverIds specified, ignoring banned users", async () => {
-        const db = await createTestDb();
-        const reactions = createReactionRepository(db);
-        const banned = createBannedFeaturesRepository(db);
+        const { db, reactions, banned } = await setUpTest();
 
         await banned.banFeature("bannedUser", "admin", "Reactions");
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
@@ -24,9 +30,7 @@ describe.concurrent("getReactionsGiven", () => {
     });
 
     it("returns the correct reactions when receiverIds are specified, ignoring banned users", async () => {
-        const db = await createTestDb();
-        const reactions = createReactionRepository(db);
-        const banned = createBannedFeaturesRepository(db);
+        const { db, reactions, banned } = await setUpTest();
 
         await banned.banFeature("bannedUser", "admin", "Reactions");
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
@@ -42,9 +46,7 @@ describe.concurrent("getReactionsGiven", () => {
     });
 
     it("returns self-reactions when specified for giverId, ignoring banned users", async () => {
-        const db = await createTestDb();
-        const reactions = createReactionRepository(db);
-        const banned = createBannedFeaturesRepository(db);
+        const { db, reactions, banned } = await setUpTest();
 
         await banned.banFeature("bannedUser", "admin", "Reactions");
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
@@ -56,9 +58,7 @@ describe.concurrent("getReactionsGiven", () => {
     });
 
     it("returns empty array for nonexistent users", async () => {
-        const db = await createTestDb();
-        const reactions = createReactionRepository(db);
-        const banned = createBannedFeaturesRepository(db);
+        const { db, reactions, banned } = await setUpTest();
 
         await banned.banFeature("bannedUser", "admin", "Reactions");
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
@@ -72,8 +72,7 @@ describe.concurrent("getReactionsGiven", () => {
     });
 
     it("returns empty array for year with no data", async () => {
-        const db = await createTestDb();
-        const reactions = createReactionRepository(db);
+        const { db, reactions } = await setUpTest();
 
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
 
