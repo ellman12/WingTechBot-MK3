@@ -58,7 +58,7 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
             name = userFilter.user.username;
         } else if (roleFilter) {
             filterIds = roleFilter.name === "@everyone" ? undefined : roleFilter.members.map(m => m.id);
-            name = roleFilter.name;
+            name = roleFilter.name.replace("@", "");
         }
 
         if (secondaryMentionable !== null && !userFilter && !roleFilter) {
