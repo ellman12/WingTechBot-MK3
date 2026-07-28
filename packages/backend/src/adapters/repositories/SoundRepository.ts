@@ -56,30 +56,22 @@ export const createSoundRepository = (db: Kysely<DB>): SoundRepository => {
         console.log(`Sound "${name}" deleted successfully`);
     }
 
-    async function getAllSounds(): Promise<Sound[]> {
-        const sounds = await db
+    const getAllSoundsBaseQuery = () =>
+        db
             .selectFrom("sounds as s")
             .leftJoin("sound_soundtags as st", "s.id", "st.sound")
             .leftJoin("soundtags as t", "st.tag", "t.id")
             .select(["s.id", "s.name", "s.path", "s.created_at", sql<Selectable<Soundtags>[]>`COALESCE(JSON_AGG(t) FILTER (WHERE t.id IS NOT NULL), '[]')`.as("soundtags")])
             .groupBy(["s.id", "s.name"])
-            .orderBy("s.name")
-            .execute();
+            .orderBy("s.name");
 
+    async function getAllSounds(): Promise<Sound[]> {
+        const sounds = await getAllSoundsBaseQuery().execute();
         return sounds.map(s => transformSound(s, s.soundtags));
     }
 
     async function getAllSoundsWithTagName(tagName: string): Promise<Sound[]> {
-        const sounds = await db
-            .selectFrom("sounds as s")
-            .leftJoin("sound_soundtags as st", "s.id", "st.sound")
-            .leftJoin("soundtags as t", "st.tag", "t.id")
-            .select(["s.id", "s.name", "s.path", "s.created_at", sql<Selectable<Soundtags>[]>`COALESCE(JSON_AGG(t) FILTER (WHERE t.id IS NOT NULL), '[]')`.as("soundtags")])
-            .where("t.name", "=", tagName)
-            .groupBy(["s.id", "s.name"])
-            .orderBy("s.name")
-            .execute();
-
+        const sounds = await getAllSoundsBaseQuery().where("t.name", "=", tagName).execute();
         return sounds.map(s => transformSound(s, s.soundtags));
     }
 
