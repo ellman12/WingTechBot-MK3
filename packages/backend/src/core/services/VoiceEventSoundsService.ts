@@ -26,18 +26,13 @@ export const createVoiceEventSoundsService = ({ config, voiceEventSoundsReposito
 
     async function voiceStateUpdate(oldState: VoiceState, newState: VoiceState) {
         const type = getEventType(oldState, newState);
-        if (!type) {
-            return;
-        }
+        if (!type) return;
 
         const guild = newState.guild;
         const userId = newState.member!.id;
         const availableSounds = await voiceEventSoundsRepository.getVoiceEventSounds({ userId, type });
         const sound = randomArrayItem(availableSounds);
-
-        if (!sound) {
-            return;
-        }
+        if (!sound) return;
 
         if (!voiceService.isConnected(guild.id)) {
             await voiceService.connect(guild, config.discord.defaultVoiceChannelId);
