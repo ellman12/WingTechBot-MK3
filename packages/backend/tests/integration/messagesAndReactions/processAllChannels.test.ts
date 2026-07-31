@@ -3,7 +3,7 @@ import type { Message, TextChannel } from "discord.js";
 
 import { getTestConfig } from "../../setup.js";
 import { type MinimalTestBot, createMinimalTestBot } from "../../utils/createMinimalTestBot.js";
-import { cleanupAllTestChannels, createTemporaryTestChannel, createTestSchema, deleteTestChannel, dropTestSchema } from "../../utils/testUtils.js";
+import { createTemporaryTestChannel, createTestSchema } from "../../utils/testUtils.js";
 import { createTesterDiscordBot } from "../testBot/TesterDiscordBot.js";
 
 const timeout = 360 * 1000;
@@ -29,38 +29,6 @@ describe("processAllChannels", async () => {
 
         testerBot = await createTesterDiscordBot();
     }, timeout);
-
-    afterEach(async () => {
-        if (testChannel && minimalBot) {
-            minimalBot.allowedChannels.delete(testChannel.id);
-            // Re-fetch the channel from the current bot's client to ensure we have a valid token
-            const guild = await minimalBot.bot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-            const currentChannel = (await guild.channels.fetch(testChannel.id)) as TextChannel;
-            if (currentChannel) {
-                await deleteTestChannel(currentChannel);
-            }
-            testChannel = null;
-            await sleep(3000); // Allow bot operations to complete after channel deletion
-        }
-    });
-
-    afterAll(async () => {
-        if (minimalBot) {
-            // cleanupAllTestChannels already checks if bot is ready, so safe to call
-            await cleanupAllTestChannels(minimalBot.bot);
-            // Only stop if still ready (cleanupAllTestChannels might have skipped if not ready)
-            if (minimalBot.bot.isReady()) {
-                await minimalBot.bot.stop();
-            }
-            await minimalBot.db.destroy();
-
-            const testConfig = getTestConfig();
-            await dropTestSchema(schemaName, testConfig.database.url);
-        }
-        if (testerBot) {
-            await testerBot.client.destroy();
-        }
-    });
 
     it("should read all messages and reactions on load", testReadAllMessagesAndReactionsOnLoad, timeout);
 
