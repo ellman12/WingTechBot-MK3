@@ -18,8 +18,8 @@ export type VoiceEventSoundsServiceDeps = {
 
 //Delays in ms for each event type before the sound is played.
 const soundDelays = {
-    UserJoin: 250, //Ensures the person who joined can also hear their sound. Gives time for their connection to init.
-    UserLeave: 45, //Ensures others can hear this sound after the "leave call" Discord sound plays.
+    UserJoin: 475, //Ensures the person who joined can also hear their sound. Gives time for their connection to init.
+    UserLeave: 55, //Ensures others can hear this sound after the "leave call" Discord sound plays.
 };
 
 export const createVoiceEventSoundsService = ({ config, voiceEventSoundsRepository, voiceService }: VoiceEventSoundsServiceDeps): VoiceEventSoundsService => {
