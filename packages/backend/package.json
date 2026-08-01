@@ -47,7 +47,6 @@
         "@discordjs/voice": "^0.19.2",
         "@dotenvx/dotenvx": "^1.51.4",
         "@google/genai": "^2.15.0",
-        "@wingtechbot-mk3/types": "workspace:*",
         "commander": "^15.0.0",
         "compression": "^1.8.1",
         "cors": "^2.8.6",
