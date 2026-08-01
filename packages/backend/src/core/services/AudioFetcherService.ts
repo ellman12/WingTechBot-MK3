@@ -123,13 +123,13 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
 
             if (error instanceof Error) {
                 if (error.name === "AbortError") {
-                    throw new Error(`Request timeout or cancelled while fetching: ${link}`);
+                    throw new Error(`Request timeout or cancelled while fetching: ${link}`, { cause: error });
                 }
                 if (error.message.includes("ETIMEDOUT")) {
-                    throw new Error(`Connection timeout while fetching: ${link}`);
+                    throw new Error(`Connection timeout while fetching: ${link}`, { cause: error });
                 }
                 if (error.message.includes("ENOTFOUND")) {
-                    throw new Error(`Host not found: ${link}`);
+                    throw new Error(`Host not found: ${link}`, { cause: error });
                 }
             }
 

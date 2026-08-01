@@ -117,7 +117,7 @@ export const createDiscordVoiceService = ({ soundRepository, playedSoundsReposit
                 serverId,
                 channelId,
             });
-            throw new Error(`Failed to connect to voice channel: ${error}`);
+            throw new Error(`Failed to connect to voice channel: ${error}`, { cause: error });
         }
     };
 
@@ -231,7 +231,7 @@ export const createDiscordVoiceService = ({ soundRepository, playedSoundsReposit
             return resultId;
         } catch (error) {
             console.error(`[DiscordVoiceService] Failed to play audio ${nameOrSource}:`, error);
-            throw new Error(`Failed to play audio: ${error}`);
+            throw new Error(`Failed to play audio: ${error}`, { cause: error });
         }
     };
 

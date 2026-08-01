@@ -153,7 +153,7 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
     function applyCaseFromOriginal(original: string, target: string): string {
         const hasOneL = /^eliot/i.test(original);
         let result = "";
-        let origIndex = 0;
+        let origIndex;
 
         for (let i = 0; i < target.length; i++) {
             const targetChar = target[i];
