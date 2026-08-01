@@ -1,7 +1,7 @@
 import type { DB } from "@db/types.js";
 import { promises as fs } from "fs";
-import { Kysely, Migrator, PostgresDialect } from "kysely";
-import type { Migration } from "kysely";
+import { Kysely, PostgresDialect } from "kysely";
+import { type Migration, Migrator } from "kysely/migration";
 import { join } from "path";
 import { Pool } from "pg";
 import { pathToFileURL } from "url";
