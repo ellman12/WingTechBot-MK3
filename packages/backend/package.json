@@ -1,7 +1,7 @@
 {
     "name": "backend",
     "version": "1.0.0",
-    "description": "ExpressJS TypeScript backend with Discord bot functionality following hexagonal architecture",
+    "description": "ExpressJS TypeScript backend with Discord bot functionality",
     "main": "dist/src/main.js",
     "type": "module",
     "scripts": {
@@ -27,8 +27,6 @@
         "db:migrate": "tsx scripts/run-migrations.ts",
         "db:migrate:rollback": "tsx scripts/rollback-migrations.ts",
         "db:migrate:clear": "tsx scripts/clear-migration-state.ts",
-        "discord:clear-commands": "tsx scripts/clear-discord-commands.ts",
-        "discord:sync-messages": "tsx scripts/sync-messages.ts",
         "docker:up": "docker compose -f compose.yaml up --build",
         "docker:up:detached": "docker compose -f compose.yaml up --build -d",
         "docker:down": "docker compose -f compose.yaml down",
@@ -67,8 +65,7 @@
         "sodium-native": "^5.1.0",
         "swagger-ui-express": "^5.0.1",
         "xxhash-wasm": "^1.1.0",
-        "zod": "^4.4.3",
-        "zod-openapi": "^6.0.0"
+        "zod": "^4.4.3"
     },
     "devDependencies": {
         "@snazzah/davey": "^0.1.12",
@@ -80,7 +77,6 @@
         "@types/node": "^26.1.2",
         "@types/pg": "^8.20.3",
         "@types/swagger-ui-express": "^4.1.8",
-        "@vitest/ui": "^4.1.10",
         "nodemon": "^3.1.14",
         "pg-mem": "^3.0.14",
         "ts-node": "^10.9.2",
