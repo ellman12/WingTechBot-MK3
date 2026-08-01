@@ -1,7 +1,7 @@
+import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { AudioFormatInfo } from "@core/entities/AudioFormatInfo.js";
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream.js";
 import { createAudioStreamWithFormat } from "@core/entities/AudioStream.js";
-import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import { readStreamToBytes } from "@core/utils/streamUtils.js";
 import { Readable } from "stream";
 

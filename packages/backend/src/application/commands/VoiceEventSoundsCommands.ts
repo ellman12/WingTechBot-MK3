@@ -1,6 +1,6 @@
+import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import type { Command } from "@application/commands/Commands.js";
-import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { VoiceEventSoundType } from "@db/types.js";
 import { type APIApplicationCommandOptionChoice, type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";

@@ -1,5 +1,5 @@
-import type { PlayedSoundsRepository } from "@core/repositories/PlayedSoundsRepository.js";
-import type { SoundRepository } from "@core/repositories/SoundRepository.js";
+import type { PlayedSoundsRepository } from "@adapters/repositories/PlayedSoundsRepository.js";
+import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import { type DiscordChatService, MESSAGE_LENGTH_LIMIT } from "@core/services/DiscordChatService.js";
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";

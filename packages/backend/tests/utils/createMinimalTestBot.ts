@@ -2,13 +2,13 @@ import { createBannedFeaturesRepository } from "@adapters/repositories/BannedFea
 import { createUnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
 import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
+import type { PlayedSoundsRepository } from "@adapters/repositories/PlayedSoundsRepository.js";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
+import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import { createUserRepository } from "@adapters/repositories/UserRepository.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import type { Config } from "@core/config/Config.js";
-import type { PlayedSoundsRepository } from "@core/repositories/PlayedSoundsRepository.js";
-import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { AutoReactionService } from "@core/services/AutoReactionService.js";
 import { createAutoReactionService } from "@core/services/AutoReactionService.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";

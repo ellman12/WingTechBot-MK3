@@ -1,5 +1,5 @@
+import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { Config } from "@core/config/Config.js";
-import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { parseAudioSource } from "@core/services/AudioFetcherService.js";
 import type { AudioProcessingService } from "@core/services/AudioProcessingService.js";
@@ -9,6 +9,10 @@ import { Readable } from "stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getTestConfig } from "../../../setup.js";
+
+// Mock parseAudioSource from AudioFetcherService
+
+// Mock parseAudioSource from AudioFetcherService
 
 // Mock parseAudioSource from AudioFetcherService
 vi.mock("@core/services/AudioFetcherService", async () => {

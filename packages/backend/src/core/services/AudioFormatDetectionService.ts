@@ -1,10 +1,10 @@
+import type { FfprobeService } from "@infrastructure/ffmpeg/FfprobeService.js";
 import { randomUUID } from "crypto";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { Readable } from "stream";
 
-import type { FfprobeService } from "../../infrastructure/ffmpeg/FfprobeService.js";
 import type { AudioFormatInfo } from "../entities/AudioFormatInfo.js";
 import { isValidAudioFormat } from "../entities/AudioFormatInfo.js";
 import { CorruptedAudioError, FormatDetectionError, UnsupportedFormatError } from "../errors/AudioErrors.js";

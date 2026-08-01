@@ -1,6 +1,6 @@
+import type { UnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
+import type { MessageRepository } from "@adapters/repositories/MessageRepository.js";
 import type { CreateMessageData, Message as DBMessage } from "@core/entities/Message.js";
-import type { MessageRepository } from "@core/repositories/MessageRepository.js";
-import type { UnitOfWork } from "@core/repositories/UnitOfWork.js";
 import type { FileManager } from "@core/services/FileManager.js";
 import { executeBatchWithAdaptiveSize } from "@core/utils/batchUtils.js";
 import { ChannelType, type Guild, type Message, MessageFlags, type PartialMessage, type TextChannel } from "discord.js";

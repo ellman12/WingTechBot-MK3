@@ -1,8 +1,60 @@
+import { KarmaEmoteNames } from "@adapters/repositories/ReactionEmoteRepository.js";
 import type { CreateReactionData, DeleteReactionData, FindReactionData, Reaction } from "@core/entities/Reaction.js";
-import { karmaEmoteNames } from "@core/repositories/ReactionEmoteRepository.js";
-import type { EmoteTotals, KarmaLeaderboardEntry, ReactionRepository, TopMessage } from "@core/repositories/ReactionRepository.js";
 import type { DB, Reactions } from "@db/types.js";
 import { type Kysely, type Selectable, sql } from "kysely";
+
+export type ReactionRepository = {
+    find(data: FindReactionData): Promise<Reaction | null>;
+    findForMessage(messageId: string): Promise<Reaction[]>;
+    create(data: CreateReactionData): Promise<Reaction>;
+    delete(data: DeleteReactionData): Promise<void>;
+    deleteReactionsForMessage(messageId: string): Promise<void>;
+    deleteReactionsForEmote(messageId: string, emoteId: number): Promise<void>;
+
+    batchCreate(reactions: CreateReactionData[]): Promise<void>;
+    batchDelete(reactions: DeleteReactionData[]): Promise<void>;
+
+    getKarmaAndAwards(userId: string, year?: number): Promise<EmoteTotals>;
+
+    getReactionsReceived(receiverId: string, year?: number, giverIds?: string[], limit?: number): Promise<EmoteTotals>;
+
+    getReactionsGiven(giverId: string, year?: number, receiverIds?: string[], limit?: number): Promise<EmoteTotals>;
+
+    getEmoteLeaderboard(year?: number, includeSelfReactions?: boolean, limit?: number): Promise<EmoteTotals>;
+
+    getKarmaLeaderboard(year?: number, includeSelfReactions?: boolean, filterFormerMembers?: boolean, filterUnknown?: boolean): Promise<KarmaLeaderboardEntry[]>;
+
+    getTopMessages(authorId: string, emoteName: string, year?: number, limit?: number): Promise<TopMessage[]>;
+
+    getUniqueUserIds(): Promise<string[]>;
+};
+
+//Each emote and how many received, given, etc.
+export type EmoteTotal = {
+    readonly name: string;
+    readonly discordId: string;
+    readonly count: number;
+    readonly totalKarma: number;
+};
+
+export type EmoteTotals = EmoteTotal[];
+
+//Used for getKarmaLeaderboard().
+export type KarmaLeaderboardEntry = {
+    readonly userId: string;
+    readonly username: string | null;
+    readonly count: number;
+    readonly totalKarma: number;
+};
+
+//Used for getTopMessages().
+export type TopMessage = {
+    readonly messageId: string;
+    readonly channelId: string;
+    readonly emoteId: number;
+    readonly emoteName: string;
+    readonly count: number;
+};
 
 type UnformattedReactionQueryResult = { name: string; discordId: string; count: string | number | bigint; totalKarma: string | number | bigint };
 
@@ -100,11 +152,11 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
 
     //Calculates a user's karma and awards, optionally for a year. Ignores self-reactions.
     const getKarmaAndAwards = async (receiverId: string, year?: number): Promise<EmoteTotals> => {
-        const query = getBaseReactionsQuery(year).where("r.receiver_id", "=", receiverId).where("r.giver_id", "!=", receiverId).where("re.name", "in", karmaEmoteNames);
+        const query = getBaseReactionsQuery(year).where("r.receiver_id", "=", receiverId).where("r.giver_id", "!=", receiverId).where("re.name", "in", KarmaEmoteNames);
         const emotes = (await query.execute()).map(formatReactionQueryResult);
 
         //Fills in missing karma emotes with 0 values if not already present.
-        return karmaEmoteNames.map(name => ({
+        return KarmaEmoteNames.map(name => ({
             name,
             discordId: emotes.find(r => r.name === name)?.discordId ?? "",
             count: emotes.find(r => r.name === name)?.count ?? 0,

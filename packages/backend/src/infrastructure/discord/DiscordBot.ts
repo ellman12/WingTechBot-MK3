@@ -1,4 +1,9 @@
 import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
+import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
+import type { PlayedSoundsRepository } from "@adapters/repositories/PlayedSoundsRepository.js";
+import type { ReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
+import type { ReactionRepository } from "@adapters/repositories/ReactionRepository.js";
+import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
 import { registerAutoReactionEvents } from "@application/eventHandlers/AutoReaction.js";
@@ -10,11 +15,6 @@ import { registerReactionArchiveEvents } from "@application/eventHandlers/Reacti
 import { registerSoundboardThreadEventHandlers } from "@application/eventHandlers/SoundboardThreadService.js";
 import { registerVoiceEventSoundsEventHandlers } from "@application/eventHandlers/VoiceEventSounds.js";
 import type { Config } from "@core/config/Config.js";
-import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
-import type { PlayedSoundsRepository } from "@core/repositories/PlayedSoundsRepository.js";
-import type { ReactionEmoteRepository } from "@core/repositories/ReactionEmoteRepository.js";
-import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
-import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { AutoReactionService } from "@core/services/AutoReactionService.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";

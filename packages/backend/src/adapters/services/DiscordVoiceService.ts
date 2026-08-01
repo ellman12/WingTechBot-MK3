@@ -1,7 +1,7 @@
 import { OverlappingAudioPlayer } from "@adapters/audio/OverlappingAudioPlayer.js";
+import type { PlayedSoundsRepository } from "@adapters/repositories/PlayedSoundsRepository.js";
+import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import { createPlayingSound } from "@core/entities/PlayingSound.js";
-import type { PlayedSoundsRepository } from "@core/repositories/PlayedSoundsRepository.js";
-import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import type { PlayedSoundSource } from "@db/types.js";
