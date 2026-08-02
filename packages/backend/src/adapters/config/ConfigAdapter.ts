@@ -55,7 +55,7 @@ export const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
             });
             // Don't exit process in test environments - throw error instead
             if (process.env.NODE_ENV === "test" || process.env.CI) {
-                throw new Error("Configuration validation failed. See errors above.");
+                throw new Error("Configuration validation failed. See errors above.", { cause: error });
             }
             process.exit(1);
         }

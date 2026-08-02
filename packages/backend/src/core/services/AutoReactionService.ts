@@ -1,5 +1,5 @@
+import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import type { Config } from "@core/config/Config.js";
-import type { LlmInstructionRepository } from "@core/repositories/LlmInstructionRepository.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import { oneIn, randomArrayItem } from "@core/utils/probabilityUtils.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
@@ -153,7 +153,7 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
     function applyCaseFromOriginal(original: string, target: string): string {
         const hasOneL = /^eliot/i.test(original);
         let result = "";
-        let origIndex = 0;
+        let origIndex;
 
         for (let i = 0; i < target.length; i++) {
             const targetChar = target[i];

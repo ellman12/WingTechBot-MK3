@@ -14,7 +14,7 @@ This project is organized as a monorepo with the following structure:
 ```
 WingTechBot-MK3/
 ├── packages/
-│   ├── backend/          # Express.js API & Discord Bot
+│   ├── backend/          # Discord Bot
 │   └── frontend/         # React Web Application
 ├── package.json          # Root workspace configuration
 └── README.md            # This file
@@ -24,12 +24,10 @@ WingTechBot-MK3/
 
 ### Backend (`packages/backend/`)
 
-- **Express.js** - Web framework
 - **TypeScript** - Type safety
 - **Discord.js** - Discord bot functionality
 - **Kysely** - Type-safe SQL query builder
 - **Vitest** - Testing framework
-- **Hexagonal Architecture** - Clean code organization
 
 ### Frontend (`packages/frontend/`)
 
@@ -62,20 +60,6 @@ pnpm install
 
 #### Start both backend and frontend:
 
-```bash
-pnpm dev:all
-```
-
-#### Start individual services:
-
-```bash
-# Backend only (Discord bot + API)
-pnpm dev
-
-# Frontend only (React app)
-pnpm dev:frontend
-```
-
 #### Database Operations:
 
 ```bash
@@ -93,8 +77,6 @@ pnpm build
 
 # Build specific packages
 pnpm build:backend
-pnpm build:frontend
-pnpm build:types
 ```
 
 #### Code Quality:
@@ -121,14 +103,13 @@ pnpm test
 
 # Run tests for specific packages
 pnpm test:backend
-pnpm test:frontend
 ```
 
 ## 📁 Package Details
 
 ### Backend Package
 
-The backend serves as both a Discord bot and a REST API. It follows hexagonal architecture principles with clear separation of concerns.
+The backend serves as a Discord bot.
 
 **Structure:**
 
@@ -138,20 +119,6 @@ packages/backend/src/
 ├── application/        # Use cases and application logic
 ├── core/              # Domain models and business logic
 ├── infrastructure/    # Framework and external concerns
-```
-
-### Frontend Package
-
-A modern React application with state-of-the-art tooling for building user interfaces.
-
-**Structure:**
-
-```
-packages/frontend/src/
-├── components/       # Reusable UI components
-├── hooks/            # Custom React hooks
-├── stores/           # Zustand state stores
-└── App.tsx           # Main application component
 ```
 
 ## 🐳 Docker Support

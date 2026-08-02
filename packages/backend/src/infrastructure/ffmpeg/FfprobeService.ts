@@ -129,7 +129,7 @@ export class FfprobeService {
             // Handle execution errors
             if (error instanceof Error) {
                 if ("killed" in error && error.killed) {
-                    throw new Error(`ffprobe timeout after ${timeout}ms for input: ${input}`);
+                    throw new Error(`ffprobe timeout after ${timeout}ms for input: ${input}`, { cause: error });
                 }
 
                 console.error("[FfprobeService] Probe execution failed", {
@@ -139,7 +139,7 @@ export class FfprobeService {
                 });
             }
 
-            throw new Error(`ffprobe failed for input ${input}: ${error}`);
+            throw new Error(`ffprobe failed for input ${input}: ${error}`, { cause: error });
         }
     }
 

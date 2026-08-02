@@ -37,7 +37,6 @@ import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/Disco
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { FfprobeService } from "@infrastructure/ffmpeg/FfprobeService.js";
 import { createFileManager } from "@infrastructure/filestore/FileManager.js";
-import { type ServerConfig, createExpressApp } from "@infrastructure/http/ExpressApp.js";
 import { type ErrorReportingService, createErrorReportingService } from "@infrastructure/services/ErrorReportingService.js";
 import { createGeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import type { Kysely } from "kysely";
@@ -68,11 +67,6 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
     console.log(`✅ Migrations completed in ${Date.now() - migrationsStart}ms`);
 
     const db = databaseConnection.getKysely();
-    const serverConfig: ServerConfig = {
-        port: config.server.port,
-        nodeEnv: process.env.NODE_ENV || "development",
-        corsOrigin: process.env.CORS_ORIGIN || false,
-    };
 
     const fileManager = createFileManager();
     const ffmpeg = createFfmpegService();
@@ -132,7 +126,6 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
     const autoReactionService = createAutoReactionService({ config, discordChatService, geminiLlmService, llmInstructionRepo });
     const voiceEventSoundsService = createVoiceEventSoundsService({ config, voiceEventSoundsRepository, voiceService });
 
-    const expressApp = createExpressApp({ db, config: serverConfig, appConfig: config });
     const discordBot = await createDiscordBot({
         config,
         voiceEventSoundsRepository,
@@ -164,15 +157,10 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
             console.log("🚀 Starting WingTechBot MK3...");
             const startTime = Date.now();
 
-            console.log("⏱️  [1/2] Starting Discord bot...");
+            console.log("⏱️  Starting Discord bot...");
             const discordStart = Date.now();
             await discordBot.start();
-            console.log(`✅ [1/2] Discord bot started in ${Date.now() - discordStart}ms`);
-
-            console.log("⏱️  [2/2] Starting Express server...");
-            const expressStart = Date.now();
-            expressApp.start();
-            console.log(`✅ [2/2] Express server started in ${Date.now() - expressStart}ms`);
+            console.log(`✅ Discord bot started in ${Date.now() - discordStart}ms`);
 
             console.log(`✅ Application started successfully in ${Date.now() - startTime}ms!`);
             isReadyState = true;

@@ -12,7 +12,7 @@
     "endOfLine": "lf",
     "embeddedLanguageFormatting": "auto",
     "singleAttributePerLine": false,
-    "plugins": ["@trivago/prettier-plugin-sort-imports", "prettier-plugin-tailwindcss"],
+    "plugins": ["@trivago/prettier-plugin-sort-imports"],
     "importOrder": ["^react$", "^react-(.*)$", "^@/(.*)$", "^[./]"],
     "importOrderSeparation": true,
     "importOrderSortSpecifiers": true

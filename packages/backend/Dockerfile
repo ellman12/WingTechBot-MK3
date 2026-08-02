@@ -29,7 +29,6 @@ ENV OPUS_LIBRARY_PATH=/usr/lib/libopus.so.0
 # Copy package files from monorepo root
 COPY package*.json pnpm-lock.yaml* ./
 COPY packages/backend/package.json ./packages/backend/
-COPY packages/types/package.json ./packages/types/
 
 # Copy migrations early to invalidate cache when they change
 COPY packages/backend/database/migrations ./packages/backend/database/migrations

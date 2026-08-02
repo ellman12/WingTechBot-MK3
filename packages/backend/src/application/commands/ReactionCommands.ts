@@ -1,5 +1,5 @@
-import { karmaEmoteNames } from "@core/repositories/ReactionEmoteRepository.js";
-import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
+import { KarmaEmoteNames } from "@adapters/repositories/ReactionEmoteRepository.js";
+import type { ReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 import { type DiscordChatService, MESSAGE_LENGTH_LIMIT } from "@core/services/DiscordChatService.js";
 import { formatEmoji } from "@core/utils/emojiUtils.js";
 import { getJumpUrl } from "@core/utils/messageUtils.js";
@@ -22,7 +22,7 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
             .addUserOption(option => option.setName("user").setDescription("Defaults to you").setRequired(false))
             .addNumberOption(option => option.setName("year").setDescription("Defaults to this year").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
-            const emojis = (await interaction.guild!.emojis.fetch()).filter(e => karmaEmoteNames.includes(e.name));
+            const emojis = (await interaction.guild!.emojis.fetch()).filter(e => KarmaEmoteNames.includes(e.name));
             const karmaEmotes = Array.from(emojis.values());
 
             const user = interaction.options.getUser("user") ?? interaction.user;

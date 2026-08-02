@@ -1,9 +1,22 @@
 import type { ReactionEmote, UpdateReactionEmoteData } from "@core/entities/ReactionEmote.js";
-import { type ReactionEmoteRepository, karmaEmoteNames } from "@core/repositories/ReactionEmoteRepository.js";
-import type { DB } from "@db/types.js";
-import type { ReactionEmotes } from "@db/types.js";
+import type { DB, ReactionEmotes } from "@db/types.js";
 import type { Guild } from "discord.js";
 import type { Kysely, Selectable, Updateable } from "kysely";
+
+export const KarmaEmoteNames = ["upvote", "downvote", "silver", "gold", "platinum"];
+
+export type ReactionEmoteRepository = {
+    findById(id: number): Promise<ReactionEmote | null>;
+    findByNameAndDiscordId(name: string, discordId: string): Promise<ReactionEmote | null>;
+    create(name: string, discordId: string, karmaValue?: number): Promise<ReactionEmote>;
+    update(id: number, data: UpdateReactionEmoteData): Promise<ReactionEmote | null>;
+
+    batchFindOrCreate(emotes: Array<{ name: string; discordId: string }>): Promise<Map<string, ReactionEmote>>;
+
+    createKarmaEmotes(guild: Guild): Promise<void>;
+
+    getKarmaEmotes(): Promise<ReactionEmote[]>;
+};
 
 //Transform database reaction emote to domain reaction emote
 const transformReactionEmote = (dbEmote: Selectable<ReactionEmotes>): ReactionEmote => {
@@ -79,11 +92,11 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         return emote ? transformReactionEmote(emote) : null;
     };
 
-    //Adds the emotes from karmaEmoteNames if they don't already exist.
+    //Adds the emotes from KarmaEmoteNames if they don't already exist.
     const createKarmaEmotes = async (guild: Guild): Promise<void> => {
         const cache = new Map((await guild.emojis.fetch()).map(e => [e.name, e]));
 
-        for (const name of karmaEmoteNames) {
+        for (const name of KarmaEmoteNames) {
             const found = cache.get(name);
             if (!found) throw new Error(`Server emoji ${name} not found`);
 
@@ -93,7 +106,7 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
     };
 
     const getKarmaEmotes = async (): Promise<ReactionEmote[]> => {
-        const emotes = await db.selectFrom("reaction_emotes").distinctOn("name").where("reaction_emotes.name", "in", karmaEmoteNames).selectAll().execute();
+        const emotes = await db.selectFrom("reaction_emotes").distinctOn("name").where("reaction_emotes.name", "in", KarmaEmoteNames).selectAll().execute();
         return emotes.map(transformReactionEmote);
     };
 

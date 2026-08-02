@@ -1,8 +1,21 @@
 import { transformReaction } from "@adapters/repositories/ReactionRepository.js";
 import type { CreateMessageData, DeleteMessageData, EditMessageData, Message } from "@core/entities/Message.js";
-import type { MessageRepository } from "@core/repositories/MessageRepository.js";
 import type { DB, Messages, Reactions } from "@db/types.js";
 import { type Kysely, type Selectable, sql } from "kysely";
+
+export type MessageRepository = {
+    findById(id: string): Promise<Message | null>;
+    create(data: CreateMessageData): Promise<Message>;
+    delete(data: DeleteMessageData): Promise<Message>;
+    edit(data: EditMessageData): Promise<Message>;
+    getAllMessages(year?: number): Promise<Message[]>;
+    getMessagesForChannel(channelId: string, year?: number): Promise<Message[]>;
+    getNewestMessages(limit: number, channelId?: string, withinMinutes?: number): Promise<Message[]>;
+    getUniqueAuthorIds(): Promise<string[]>;
+
+    batchCreate(messages: CreateMessageData[]): Promise<void>;
+    batchUpdate(messages: Array<{ id: string; content: string; editedAt: Date | null }>): Promise<void>;
+};
 
 const transformMessage = (dbMessage: Selectable<Messages>, reactions?: Reactions[]): Message => {
     return {

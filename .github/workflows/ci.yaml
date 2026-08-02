@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
     push:
-        branches: [main, develop]
+        branches: [main]
     pull_request:
-        branches: [main, develop]
+        branches: [main]
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
@@ -128,60 +128,14 @@ jobs:
             - name: Run ESLint
               run: pnpm lint
 
-            - name: Check TypeScript types
-              run: pnpm build:types
-
-    # Build types package first (required by backend and frontend)
-    build-types:
-        needs: setup
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ env.NODE_VERSION }}
-
-            - name: Setup pnpm
-              uses: pnpm/action-setup@v4
-              with:
-                  version: ${{ env.PNPM_VERSION }}
-
-            - name: Get pnpm store directory
-              shell: bash
-              run: |
-                  echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-            - name: Setup pnpm cache
-              uses: actions/cache@v4
-              with:
-                  path: ${{ env.STORE_PATH }}
-                  key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-                  restore-keys: |
-                      ${{ runner.os }}-pnpm-store-
-
-            - name: Install dependencies
-              run: pnpm install --frozen-lockfile
-
-            - name: Build types
-              run: pnpm build:types
-
-            - name: Upload types build artifacts
-              uses: actions/upload-artifact@v4
-              with:
-                  name: types-build
-                  path: packages/types/dist
-
-    # Test all packages (backend needs types built first)
+    # Test all packages
     test:
-        needs: [setup, build-types]
+        needs: [setup]
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                package: [backend, frontend, types]
+                package: [backend]
         services:
             postgres:
                 image: postgres:16-alpine
@@ -279,12 +233,6 @@ jobs:
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
 
-            - name: Download types build artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  name: types-build
-                  path: packages/types/dist
-
             - name: Run tests for ${{ matrix.package }}
               run: pnpm --filter ${{ matrix.package }} test${{ matrix.package == 'backend' && ':ci' || '' }}
               env:
@@ -314,14 +262,14 @@ jobs:
                   flags: backend
                   name: backend-coverage
 
-    # Build backend and frontend packages (needs types built first)
+    # Build backend packages
     build:
-        needs: [setup, build-types]
+        needs: [setup]
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                package: [backend, frontend]
+                package: [backend]
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -352,14 +300,8 @@ jobs:
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
 
-            - name: Download types build artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  name: types-build
-                  path: packages/types/dist
-
             - name: Build ${{ matrix.package }}
-              run: pnpm build:${{ matrix.package }}
+              run: pnpm --filter ${{ matrix.package }} build
 
             - name: Upload build artifacts
               uses: actions/upload-artifact@v4
@@ -422,7 +364,7 @@ jobs:
               run: pnpm --filter backend db:generate
 
             - name: Check database migrations
-              run: pnpm db:migrate
+              run: pnpm --filter backend db:migrate
 
     # Docker build test for backend
     docker-build:

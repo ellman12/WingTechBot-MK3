@@ -1,6 +1,6 @@
 import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
+import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { Config } from "@core/config/Config.js";
-import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { VoiceService } from "@core/services/VoiceService.js";
 import { ChannelType, type Guild, type Message, MessageFlags, type TextChannel, ThreadAutoArchiveDuration, type ThreadChannel } from "discord.js";
 

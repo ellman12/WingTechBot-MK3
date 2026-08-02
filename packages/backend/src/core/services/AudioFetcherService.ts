@@ -1,7 +1,7 @@
+import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { AudioFormatInfo } from "@core/entities/AudioFormatInfo.js";
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream.js";
 import { createAudioStreamWithFormat } from "@core/entities/AudioStream.js";
-import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import { readStreamToBytes } from "@core/utils/streamUtils.js";
 import { Readable } from "stream";
 
@@ -123,13 +123,13 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
 
             if (error instanceof Error) {
                 if (error.name === "AbortError") {
-                    throw new Error(`Request timeout or cancelled while fetching: ${link}`);
+                    throw new Error(`Request timeout or cancelled while fetching: ${link}`, { cause: error });
                 }
                 if (error.message.includes("ETIMEDOUT")) {
-                    throw new Error(`Connection timeout while fetching: ${link}`);
+                    throw new Error(`Connection timeout while fetching: ${link}`, { cause: error });
                 }
                 if (error.message.includes("ENOTFOUND")) {
-                    throw new Error(`Host not found: ${link}`);
+                    throw new Error(`Host not found: ${link}`, { cause: error });
                 }
             }
 

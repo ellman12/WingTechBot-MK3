@@ -1,8 +1,16 @@
 import type { SoundTag } from "@core/entities/SoundTag.js";
-import type { SoundTagRepository } from "@core/repositories/SoundTagRepository.js";
 import { getItemsWithinDistance } from "@core/utils/searchUtils.js";
 import type { DB, Soundtags } from "@db/types.js";
 import type { Kysely, Selectable } from "kysely";
+
+export type SoundTagRepository = {
+    readonly create: (name: string) => Promise<SoundTag>;
+    readonly getTagByName: (name: string) => Promise<SoundTag | null>;
+    readonly addTagToSound: (soundId: number, tagId: number) => Promise<void>;
+    readonly removeTagFromSound: (soundId: number, tagId: number) => Promise<void>;
+    readonly getAllTags: () => Promise<SoundTag[]>;
+    readonly tryGetTagsWithinDistance: (needle: string) => Promise<(SoundTag & { distance: number })[]>;
+};
 
 export const transformSoundTag = (dbSoundTag: Selectable<Soundtags>): SoundTag => {
     return {

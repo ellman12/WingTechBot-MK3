@@ -1,7 +1,7 @@
+import type { MessageRepository } from "@adapters/repositories/MessageRepository.js";
+import type { ReactionRepository } from "@adapters/repositories/ReactionRepository.js";
+import type { UserRepository } from "@adapters/repositories/UserRepository.js";
 import type { User } from "@core/entities/User.js";
-import type { MessageRepository } from "@core/repositories/MessageRepository.js";
-import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
-import type { UserRepository } from "@core/repositories/UserRepository.js";
 import type { Client, Guild, GuildMember, PartialGuildMember } from "discord.js";
 
 export type DiscordUserSyncService = {

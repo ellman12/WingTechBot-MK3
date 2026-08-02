@@ -1,5 +1,5 @@
-import type { SoundRepository } from "@core/repositories/SoundRepository.js";
-import type { SoundTagRepository } from "@core/repositories/SoundTagRepository.js";
+import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
+import type { SoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
 import type { ApplicationCommandOptionChoiceData, AutocompleteFocusedOption } from "discord.js";
 
 export type CommandChoicesService = {

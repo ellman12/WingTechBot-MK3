@@ -1,12 +1,12 @@
 import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
+import type { PlayedSoundsRepository } from "@adapters/repositories/PlayedSoundsRepository.js";
+import type { ReactionRepository } from "@adapters/repositories/ReactionRepository.js";
+import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import { createBannedFeaturesCommands } from "@application/commands/BannedFeaturesCommands.js";
 import { createPlayedSoundsCommands } from "@application/commands/PlayedSoundsCommands.js";
 import { createReactionCommands } from "@application/commands/ReactionCommands.js";
 import { createVoiceEventSoundsCommands } from "@application/commands/VoiceEventSoundsCommands.js";
-import type { PlayedSoundsRepository } from "@core/repositories/PlayedSoundsRepository.js";
-import type { ReactionRepository } from "@core/repositories/ReactionRepository.js";
-import type { SoundRepository } from "@core/repositories/SoundRepository.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { SoundService } from "@core/services/SoundService.js";
