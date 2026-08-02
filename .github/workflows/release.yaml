@@ -77,7 +77,7 @@ jobs:
                   context: ${{ matrix.image.context }}
                   file: ${{ matrix.image.dockerfile }}
                   push: true
-                  platforms: linux/amd64,linux/arm64
+                  platforms: linux/amd64
                   tags: |
                       ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.image.name }}:${{ needs.setup.outputs.version }}
                       ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.image.name }}:latest
