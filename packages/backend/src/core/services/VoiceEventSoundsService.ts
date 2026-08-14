@@ -38,13 +38,17 @@ export const createVoiceEventSoundsService = ({ config, voiceEventSoundsReposito
         const guild = newState.guild;
         const userId = newState.member!.id;
 
-        const availableSounds = await voiceEventSoundsRepository.getVoiceEventSounds({ userId, type });
-        const sound = randomArrayItem(availableSounds);
-        if (!sound) return;
-
         if (!voiceService.isConnected(guild.id)) {
             await voiceService.connect(guild, config.discord.defaultVoiceChannelId);
         }
+
+        const userChannelId = type === "UserJoin" ? newState.channelId : oldState.channelId;
+        const botChannelId = voiceService.getVoiceChannelId(guild.id) ?? config.discord.defaultVoiceChannelId;
+        if (userChannelId !== botChannelId) return;
+
+        const availableSounds = await voiceEventSoundsRepository.getVoiceEventSounds({ userId, type });
+        const sound = randomArrayItem(availableSounds);
+        if (!sound) return;
 
         const delay = soundDelays[type];
         if (delay) {
