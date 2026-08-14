@@ -169,6 +169,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
         connect: async () => {},
         disconnect: async () => {},
         isConnected: () => false,
+        getVoiceChannelId: () => null,
         playAudio: async () => "",
         stopAudio: async () => {},
         stopAudioById: async () => false,

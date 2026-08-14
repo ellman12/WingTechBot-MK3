@@ -11,6 +11,7 @@ export type VoiceService = {
     readonly connect: (guild: Guild, channelId: string) => Promise<void>;
     readonly disconnect: (serverId: string) => Promise<void>;
     readonly isConnected: (serverId: string) => boolean;
+    readonly getVoiceChannelId: (serverId: string) => string | null;
     readonly playAudio: (serverId: string, nameOrSource: string, userId: string, playedSoundSource: PlayedSoundSource, volume?: number) => Promise<string | null>;
     readonly stopAudio: (serverId: string) => Promise<void>;
     readonly stopAudioById: (serverId: string, audioId: string) => Promise<boolean>;
@@ -157,6 +158,11 @@ export const createDiscordVoiceService = ({ soundRepository, playedSoundsReposit
         const connected = voiceStates.has(serverId);
         console.log(`[DiscordVoiceService] Connection status check for server ${serverId}: ${connected}`);
         return connected;
+    };
+
+    const getVoiceChannelId = (serverId: string): string | null => {
+        const state = voiceStates.get(serverId);
+        return state?.connection.joinConfig.channelId ?? null;
     };
 
     const playAudio = async (serverId: string, nameOrSource: string, userId: string, playedSoundSource: PlayedSoundSource, volume?: number): Promise<string | null> => {
@@ -311,6 +317,7 @@ export const createDiscordVoiceService = ({ soundRepository, playedSoundsReposit
         connect,
         disconnect,
         isConnected,
+        getVoiceChannelId,
         playAudio,
         stopAudio,
         stopAudioById,
