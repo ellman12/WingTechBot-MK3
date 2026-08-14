@@ -1,6 +1,6 @@
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
+import type { VoiceService } from "@adapters/services/DiscordVoiceService.js";
 import type { Config } from "@core/config/Config.js";
-import type { VoiceService } from "@core/services/VoiceService.js";
 import { randomArrayItem } from "@core/utils/probabilityUtils.js";
 import { sleep } from "@core/utils/timeUtils.js";
 import type { VoiceEventSoundType } from "@db/types.js";
@@ -37,13 +37,18 @@ export const createVoiceEventSoundsService = ({ config, voiceEventSoundsReposito
 
         const guild = newState.guild;
         const userId = newState.member!.id;
-        const availableSounds = await voiceEventSoundsRepository.getVoiceEventSounds({ userId, type });
-        const sound = randomArrayItem(availableSounds);
-        if (!sound) return;
 
         if (!voiceService.isConnected(guild.id)) {
             await voiceService.connect(guild, config.discord.defaultVoiceChannelId);
         }
+
+        const userChannelId = type === "UserJoin" ? newState.channelId : oldState.channelId;
+        const botChannelId = voiceService.getVoiceChannelId(guild.id) ?? config.discord.defaultVoiceChannelId;
+        if (userChannelId !== botChannelId) return;
+
+        const availableSounds = await voiceEventSoundsRepository.getVoiceEventSounds({ userId, type });
+        const sound = randomArrayItem(availableSounds);
+        if (!sound) return;
 
         const delay = soundDelays[type];
         if (delay) {

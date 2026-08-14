@@ -1,5 +1,5 @@
+import type { VoiceService } from "@adapters/services/DiscordVoiceService.js";
 import type { Config } from "@core/config/Config.js";
-import type { VoiceService } from "@core/services/VoiceService.js";
 import type { DiscordBot } from "@infrastructure/discord/DiscordBot.js";
 import { Events, VoiceChannel, VoiceState } from "discord.js";
 

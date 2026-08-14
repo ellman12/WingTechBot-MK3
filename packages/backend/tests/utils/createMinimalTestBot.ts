@@ -8,6 +8,7 @@ import { createReactionRepository } from "@adapters/repositories/ReactionReposit
 import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import { createUserRepository } from "@adapters/repositories/UserRepository.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
+import type { VoiceService } from "@adapters/services/DiscordVoiceService.js";
 import type { Config } from "@core/config/Config.js";
 import type { AutoReactionService } from "@core/services/AutoReactionService.js";
 import { createAutoReactionService } from "@core/services/AutoReactionService.js";
@@ -24,7 +25,6 @@ import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
 import type { SoundboardThreadService } from "@core/services/SoundboardThreadService.js";
 import type { VoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
-import type { VoiceService } from "@core/services/VoiceService.js";
 import { runMigrations } from "@db/migrations.js";
 import type { DB } from "@db/types.js";
 import { createDatabaseConnection } from "@infrastructure/database/DatabaseConnection.js";
@@ -169,6 +169,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
         connect: async () => {},
         disconnect: async () => {},
         isConnected: () => false,
+        getVoiceChannelId: () => null,
         playAudio: async () => "",
         stopAudio: async () => {},
         stopAudioById: async () => false,
