@@ -3,6 +3,7 @@ import type { PlayedSoundsRepository } from "@adapters/repositories/PlayedSounds
 import type { ReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
+import type { VoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { createBannedFeaturesCommands } from "@application/commands/BannedFeaturesCommands.js";
 import { createPlayedSoundsCommands } from "@application/commands/PlayedSoundsCommands.js";
 import { createReactionCommands } from "@application/commands/ReactionCommands.js";
@@ -11,7 +12,6 @@ import type { CommandChoicesService } from "@core/services/CommandChoicesService
 import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
-import type { VoiceService } from "@core/services/VoiceService.js";
 import { type ApplicationCommandOptionChoiceData, type AutocompleteFocusedOption, ChatInputCommandInteraction, Events, MessageFlags, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
 
 import type { DiscordBot } from "@/infrastructure/discord/DiscordBot.js";

@@ -3,10 +3,26 @@ import type { PlayedSoundsRepository } from "@adapters/repositories/PlayedSounds
 import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import { createPlayingSound } from "@core/entities/PlayingSound.js";
 import type { SoundService } from "@core/services/SoundService.js";
-import type { VoiceService } from "@core/services/VoiceService.js";
 import type { PlayedSoundSource } from "@db/types.js";
 import { AudioPlayerStatus, type VoiceConnection, VoiceConnectionStatus, joinVoiceChannel } from "@discordjs/voice";
 import type { Guild, VoiceChannel } from "discord.js";
+
+export type VoiceService = {
+    readonly connect: (guild: Guild, channelId: string) => Promise<void>;
+    readonly disconnect: (serverId: string) => Promise<void>;
+    readonly isConnected: (serverId: string) => boolean;
+    readonly playAudio: (serverId: string, nameOrSource: string, userId: string, playedSoundSource: PlayedSoundSource, volume?: number) => Promise<string | null>;
+    readonly stopAudio: (serverId: string) => Promise<void>;
+    readonly stopAudioById: (serverId: string, audioId: string) => Promise<boolean>;
+    readonly stopAllAudio: (serverId: string) => Promise<void>;
+    readonly isPlaying: (serverId: string) => boolean;
+    readonly getActiveAudioCount: (serverId: string) => number;
+    readonly getActiveAudioIds: (serverId: string) => string[];
+    readonly getVolume: (serverId: string) => number;
+    readonly setVolume: (serverId: string, volume: number) => Promise<void>;
+    readonly pause: (serverId: string) => Promise<void>;
+    readonly resume: (serverId: string) => Promise<void>;
+};
 
 export type DiscordVoiceServiceDeps = {
     readonly soundRepository: SoundRepository;

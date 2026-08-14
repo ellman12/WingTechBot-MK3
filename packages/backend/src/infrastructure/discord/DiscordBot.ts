@@ -5,6 +5,7 @@ import type { ReactionEmoteRepository } from "@adapters/repositories/ReactionEmo
 import type { ReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
+import type { VoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { deployCommands, registerCommands } from "@application/commands/Commands.js";
 import { registerAutoReactionEvents } from "@application/eventHandlers/AutoReaction.js";
 import { registerDiscordUserSyncEvents } from "@application/eventHandlers/DiscordUserSyncService.js";
@@ -26,7 +27,6 @@ import type { SoundService } from "@core/services/SoundService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
 import type { SoundboardThreadService } from "@core/services/SoundboardThreadService.js";
 import type { VoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
-import type { VoiceService } from "@core/services/VoiceService.js";
 import { sleep } from "@core/utils/timeUtils.js";
 import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
 import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, PresenceUpdateStatus, RESTEvents, type TextChannel } from "discord.js";

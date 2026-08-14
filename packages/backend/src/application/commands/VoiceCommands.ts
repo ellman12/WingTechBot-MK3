@@ -1,8 +1,8 @@
 import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
+import type { VoiceService } from "@adapters/services/DiscordVoiceService.js";
 import { parseAudioSource } from "@core/services/AudioFetcherService.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { SoundService } from "@core/services/SoundService.js";
-import type { VoiceService } from "@core/services/VoiceService.js";
 import { randomArrayItem, randomInt } from "@core/utils/probabilityUtils.js";
 import { parseTimeSpan } from "@core/utils/timeUtils.js";
 import { ChannelType, ChatInputCommandInteraction, GuildMember, MessageFlags, SlashCommandBuilder } from "discord.js";
