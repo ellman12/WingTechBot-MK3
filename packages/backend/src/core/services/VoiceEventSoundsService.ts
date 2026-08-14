@@ -4,7 +4,7 @@ import type { Config } from "@core/config/Config.js";
 import { randomArrayItem } from "@core/utils/probabilityUtils.js";
 import { sleep } from "@core/utils/timeUtils.js";
 import type { VoiceEventSoundType } from "@db/types.js";
-import { VoiceState } from "discord.js";
+import { type VoiceChannel, VoiceState } from "discord.js";
 
 export type VoiceEventSoundsService = {
     voiceStateUpdate: (oldState: VoiceState, newState: VoiceState) => Promise<void>;
@@ -38,13 +38,12 @@ export const createVoiceEventSoundsService = ({ config, voiceEventSoundsReposito
         const guild = newState.guild;
         const userId = newState.member!.id;
 
-        if (!voiceService.isConnected(guild.id)) {
-            await voiceService.connect(guild, config.discord.defaultVoiceChannelId);
-        }
-
         const userChannelId = type === "UserJoin" ? newState.channelId : oldState.channelId;
         const botChannelId = voiceService.getVoiceChannelId(guild.id) ?? config.discord.defaultVoiceChannelId;
         if (userChannelId !== botChannelId) return;
+
+        const members = ((await guild.channels.fetch(botChannelId)) as VoiceChannel).members;
+        if (type === "UserLeave" && members.size === 1 && members.first()?.id === botId) return; //If only bot left, just leave. Prevents errors.
 
         const availableSounds = await voiceEventSoundsRepository.getVoiceEventSounds({ userId, type });
         const sound = randomArrayItem(availableSounds);
