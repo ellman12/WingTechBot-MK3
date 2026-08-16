@@ -12,8 +12,8 @@ export type SoundPlayCount = {
 export type SoundPlayedDates = {
     readonly id: number;
     readonly name: string;
-    readonly latestDate: Date | null;
-    readonly oldestDate: Date | null;
+    readonly latestDate: Date;
+    readonly oldestDate: Date;
 };
 
 export type PlayedSoundsRepository = {
@@ -79,10 +79,10 @@ export const createPlayedSoundsRepository = (db: Kysely<DB>): PlayedSoundsReposi
     const getSoundPlayedDates = async (): Promise<SoundPlayedDates[]> => {
         const rows = await db
             .selectFrom("played_sounds as ps")
-            .rightJoin("sounds as s", "s.id", "ps.sound_id")
+            .innerJoin("sounds as s", "s.id", "ps.sound_id")
             .select(["s.id", "s.name", db.fn.max("played_at").as("latest_date"), db.fn.min("played_at").as("oldest_date")])
             .groupBy(["s.id", "s.name"])
-            .orderBy(sql`latest_date desc nulls last`)
+            .orderBy("latest_date", "desc")
             .orderBy("name", "asc")
             .execute();
 

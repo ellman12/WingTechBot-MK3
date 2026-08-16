@@ -77,7 +77,7 @@ export const createPlayedSoundsCommands = ({ soundRepository, playedSoundsReposi
         },
     };
 
-    const fmt = (date: Date | null) => (date === null ? "Never Played" : format(date, "MMM d, yyyy h:mm:ss a")).padEnd(32);
+    const fmt = (date: Date) => format(date, "MMM d, yyyy h:mm:ss a").padEnd(32);
 
     const soundPlayedDates: Command = {
         data: new SlashCommandBuilder().setName("sound-played-dates").setDescription("Returns the first and latest dates each sound was played"),
