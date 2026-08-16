@@ -28,8 +28,11 @@
         "husky": "^9.1.7",
         "lint-staged": "^17.3.0",
         "prettier": "^3.9.6",
-        "typescript-eslint": "^8.65.0",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.65.0"
+    },
+    "dependencies": {
+        "date-fns": "^4.4.0"
     },
     "pnpm": {
         "overrides": {
