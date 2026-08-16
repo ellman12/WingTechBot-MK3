@@ -19,6 +19,8 @@ const setUpTest = async () => {
     return { db, users, sounds, soundPlays };
 };
 
+const source = "Command";
+
 describe.concurrent("getSoundPlayCounts", () => {
     test("returns an empty array when there are no plays", async () => {
         const { soundPlays } = await setUpTest();
@@ -27,7 +29,6 @@ describe.concurrent("getSoundPlayCounts", () => {
     });
 
     test("orders sounds by play count descending", async () => {
-        const source = "Command";
         const { soundPlays } = await setUpTest();
 
         await soundPlays.addPlayedSound({ userId: "111", soundId: 1, source });
@@ -41,7 +42,6 @@ describe.concurrent("getSoundPlayCounts", () => {
     });
 
     test("respects the limit parameter", async () => {
-        const source = "VoiceEvent";
         const { soundPlays } = await setUpTest();
 
         await soundPlays.addPlayedSound({ userId: "111", soundId: 1, source });
@@ -53,7 +53,6 @@ describe.concurrent("getSoundPlayCounts", () => {
     });
 
     test("only counts plays from the given year", async () => {
-        const source = "Command";
         const { db, soundPlays } = await setUpTest();
 
         await db
@@ -79,7 +78,6 @@ describe.concurrent("getSoundPlayCount", () => {
     });
 
     test("returns the correct count after multiple plays", async () => {
-        const source = "Command";
         const { soundPlays } = await setUpTest();
 
         for (const userId of ["111", "222", "333"]) {
@@ -91,7 +89,6 @@ describe.concurrent("getSoundPlayCount", () => {
     });
 
     test("only counts plays from the given year", async () => {
-        const source = "Command";
         const { db, soundPlays } = await setUpTest();
 
         await db
@@ -108,7 +105,6 @@ describe.concurrent("getSoundPlayCount", () => {
     });
 
     test("only counts plays from the given user", async () => {
-        const source = "Command";
         const { soundPlays } = await setUpTest();
 
         await soundPlays.addPlayedSound({ userId: "111", soundId: 1, source });
@@ -120,7 +116,6 @@ describe.concurrent("getSoundPlayCount", () => {
     });
 
     test("combines the year and user filters", async () => {
-        const source = "Command";
         const { db, soundPlays } = await setUpTest();
 
         await db
@@ -146,7 +141,6 @@ describe.concurrent("getSoundPlayedDates", () => {
     });
 
     test("returns the oldest and newest played_at for a sound with multiple plays", async () => {
-        const source = "Command";
         const { db, soundPlays } = await setUpTest();
 
         await db
@@ -160,15 +154,10 @@ describe.concurrent("getSoundPlayedDates", () => {
 
         const dates = await soundPlays.getSoundPlayedDates();
         expect(dates).toHaveLength(1);
-        expect(dates[0]).toMatchObject({
-            id: 1,
-            oldestDate: new Date("2025-01-01T00:00:00Z"),
-            latestDate: new Date("2025-06-15T00:00:00Z"),
-        });
+        expect(dates[0]).toMatchObject({ id: 1, oldestDate: new Date("2025-01-01T00:00:00Z"), latestDate: new Date("2025-06-15T00:00:00Z") });
     });
 
     test("excludes sounds that have never been played", async () => {
-        const source = "Command";
         const { db, soundPlays } = await setUpTest();
 
         await db
@@ -182,7 +171,6 @@ describe.concurrent("getSoundPlayedDates", () => {
     });
 
     test("orders sounds by newest played_at descending", async () => {
-        const source = "Command";
         const { db, soundPlays } = await setUpTest();
 
         await db
@@ -198,10 +186,9 @@ describe.concurrent("getSoundPlayedDates", () => {
     });
 
     test("breaks ties in latest_date by ordering names ascending", async () => {
-        const source = "Command";
         const { db, soundPlays } = await setUpTest();
-
         const tiedDate = new Date("2025-01-01T00:00:00Z");
+
         await db
             .insertInto("played_sounds")
             .values([
@@ -212,5 +199,122 @@ describe.concurrent("getSoundPlayedDates", () => {
 
         const dates = await soundPlays.getSoundPlayedDates();
         expect(dates.map(d => d.name)).toEqual(["airhorn", "bones"]);
+    });
+
+    test("filters to only the given userId when provided", async () => {
+        const { db, soundPlays } = await setUpTest();
+
+        await db
+            .insertInto("played_sounds")
+            .values([
+                { user_id: "111", sound_id: 1, source, played_at: new Date("2025-01-01T00:00:00Z") },
+                { user_id: "222", sound_id: 2, source, played_at: new Date("2025-02-01T00:00:00Z") },
+            ])
+            .execute();
+
+        const dates = await soundPlays.getSoundPlayedDates("111");
+        expect(dates).toHaveLength(1);
+        expect(dates[0]!.id).toBe(1);
+    });
+
+    test("aggregates oldest/newest only from the given userId's plays", async () => {
+        const { db, soundPlays } = await setUpTest();
+
+        await db
+            .insertInto("played_sounds")
+            .values([
+                // user 111's plays of sound 1 span Feb - Mar
+                { user_id: "111", sound_id: 1, source, played_at: new Date("2025-02-01T00:00:00Z") },
+                { user_id: "111", sound_id: 1, source, played_at: new Date("2025-03-01T00:00:00Z") },
+                // user 222 also played sound 1, outside that range - should be excluded when filtering to 111
+                { user_id: "222", sound_id: 1, source, played_at: new Date("2025-01-01T00:00:00Z") },
+                { user_id: "222", sound_id: 1, source, played_at: new Date("2025-12-01T00:00:00Z") },
+            ])
+            .execute();
+
+        const dates = await soundPlays.getSoundPlayedDates("111");
+        expect(dates).toHaveLength(1);
+        expect(dates[0]).toMatchObject({ id: 1, oldestDate: new Date("2025-02-01T00:00:00Z"), latestDate: new Date("2025-03-01T00:00:00Z") });
+    });
+
+    test("returns an empty array when the given userId has no plays", async () => {
+        const { db, soundPlays } = await setUpTest();
+
+        await db
+            .insertInto("played_sounds")
+            .values({ user_id: "111", sound_id: 1, source, played_at: new Date("2025-01-01T00:00:00Z") })
+            .execute();
+
+        const dates = await soundPlays.getSoundPlayedDates("999");
+        expect(dates).toEqual([]);
+    });
+
+    test("filters to only the given year when provided", async () => {
+        const { db, soundPlays } = await setUpTest();
+        await db
+            .insertInto("played_sounds")
+            .values([
+                { user_id: "111", sound_id: 1, source, played_at: new Date("2024-06-01T00:00:00Z") },
+                { user_id: "111", sound_id: 2, source, played_at: new Date("2025-06-01T00:00:00Z") },
+            ])
+            .execute();
+
+        const dates = await soundPlays.getSoundPlayedDates(undefined, 2025);
+        expect(dates).toHaveLength(1);
+        expect(dates[0]!.id).toBe(2);
+    });
+
+    test("aggregates oldest/newest only from plays within the given year", async () => {
+        const { db, soundPlays } = await setUpTest();
+
+        await db
+            .insertInto("played_sounds")
+            .values([
+                { user_id: "111", sound_id: 1, source, played_at: new Date("2024-12-31T23:59:59Z") },
+                { user_id: "111", sound_id: 1, source, played_at: new Date("2025-01-15T00:00:00Z") },
+                { user_id: "111", sound_id: 1, source, played_at: new Date("2025-11-20T00:00:00Z") },
+                { user_id: "111", sound_id: 1, source, played_at: new Date("2026-01-01T00:00:00Z") },
+            ])
+            .execute();
+
+        const dates = await soundPlays.getSoundPlayedDates(undefined, 2025);
+        expect(dates).toHaveLength(1);
+        expect(dates[0]).toMatchObject({
+            id: 1,
+            oldestDate: new Date("2025-01-15T00:00:00Z"),
+            latestDate: new Date("2025-11-20T00:00:00Z"),
+        });
+    });
+
+    test("returns an empty array when no plays fall in the given year", async () => {
+        const { db, soundPlays } = await setUpTest();
+
+        await db
+            .insertInto("played_sounds")
+            .values({ user_id: "111", sound_id: 1, source, played_at: new Date("2025-01-01T00:00:00Z") })
+            .execute();
+
+        const dates = await soundPlays.getSoundPlayedDates(undefined, 1999);
+        expect(dates).toEqual([]);
+    });
+
+    test("combines userId and year filters together", async () => {
+        const { db, soundPlays } = await setUpTest();
+
+        await db
+            .insertInto("played_sounds")
+            .values([
+                // matches both filters
+                { user_id: "111", sound_id: 1, source, played_at: new Date("2025-05-01T00:00:00Z") },
+                // wrong user, right year
+                { user_id: "222", sound_id: 2, source, played_at: new Date("2025-05-01T00:00:00Z") },
+                // right user, wrong year
+                { user_id: "111", sound_id: 3, source, played_at: new Date("2024-05-01T00:00:00Z") },
+            ])
+            .execute();
+
+        const dates = await soundPlays.getSoundPlayedDates("111", 2025);
+        expect(dates).toHaveLength(1);
+        expect(dates[0]!.id).toBe(1);
     });
 });

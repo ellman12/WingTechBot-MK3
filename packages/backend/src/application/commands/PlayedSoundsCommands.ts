@@ -80,9 +80,22 @@ export const createPlayedSoundsCommands = ({ soundRepository, playedSoundsReposi
     const fmt = (date: Date) => format(date, "MMM d, yyyy h:mm:ss a").padEnd(32);
 
     const soundPlayedDates: Command = {
-        data: new SlashCommandBuilder().setName("sound-played-dates").setDescription("Returns the first and latest dates each sound was played"),
+        data: new SlashCommandBuilder()
+            .setName("sound-played-dates")
+            .setDescription("Returns the first and latest dates each sound was played")
+            .addUserOption(option => option.setName("user").setDescription("Optional user to filter by").setRequired(false))
+            .addNumberOption(option => option.setName("year").setDescription("Optional year to filter by").setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
-            const dates = await playedSoundsRepository.getSoundPlayedDates();
+            const options = interaction.options;
+            const user = options.getUser("user") ?? undefined;
+            const year = options.getNumber("year") ?? undefined;
+
+            const dates = await playedSoundsRepository.getSoundPlayedDates(user?.id, year);
+            if (dates.length === 0) {
+                await interaction.reply(`No played sounds ${year ? `for ${year}` : ""}`);
+                return;
+            }
+
             const result = dates.map(d => `${d.name.padEnd(14)}${fmt(d.latestDate)}${fmt(d.oldestDate)}`);
 
             const response = `Name          Newest Played Date              Oldest Played Date\n${"-".repeat(64)}\n${result.join(`\n`)}`;
