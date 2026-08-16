@@ -1,6 +1,6 @@
 import { KarmaEmoteNames } from "@adapters/repositories/ReactionEmoteRepository.js";
 import type { ReactionRepository } from "@adapters/repositories/ReactionRepository.js";
-import { type DiscordChatService, MESSAGE_LENGTH_LIMIT } from "@core/services/DiscordChatService.js";
+import { type DiscordChatService } from "@core/services/DiscordChatService.js";
 import { formatEmoji } from "@core/utils/emojiUtils.js";
 import { getJumpUrl } from "@core/utils/messageUtils.js";
 import { type ChatInputCommandInteraction, GuildMember, MessageFlags, Role, SlashCommandBuilder, userMention } from "discord.js";
@@ -138,8 +138,7 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
             );
 
             const response = `${year ? `${year} ` : ""}Emote Leaderboard (Top ${limit})\n-------------------------------\nRank    Count   Emote\n${result.join(`\n`)}`;
-            const enclosingChars = response.length > MESSAGE_LENGTH_LIMIT ? "" : "```";
-            await discordChatService.replyToInteraction(interaction, `${enclosingChars}${response}${enclosingChars}`);
+            await discordChatService.replyToInteraction(interaction, response, { backticks: true });
         },
     };
 
@@ -176,8 +175,7 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
             );
 
             const response = `${year ? `${year} ` : ""}Karma Leaderboard\n------------------------\nRank    Karma   User\n${result.join(`\n`)}`;
-            const enclosingChars = response.length > MESSAGE_LENGTH_LIMIT ? "" : "```";
-            await discordChatService.replyToInteraction(interaction, `${enclosingChars}${response}${enclosingChars}`);
+            await discordChatService.replyToInteraction(interaction, response, { backticks: true });
         },
     };
 
