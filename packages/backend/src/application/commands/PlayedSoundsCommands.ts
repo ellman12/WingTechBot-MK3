@@ -1,7 +1,8 @@
 import type { PlayedSoundsRepository } from "@adapters/repositories/PlayedSoundsRepository.js";
 import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
-import { type DiscordChatService, MESSAGE_LENGTH_LIMIT } from "@core/services/DiscordChatService.js";
+import { type DiscordChatService } from "@core/services/DiscordChatService.js";
+import { format } from "date-fns";
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
 import type { Command } from "./Commands.js";
@@ -72,13 +73,26 @@ export const createPlayedSoundsCommands = ({ soundRepository, playedSoundsReposi
             );
 
             const response = `${year ? `${year} ` : ""}Played Sound Counts\n-------------------\nRank    Count   Name\n${result.join(`\n`)}`;
-            const enclosingChars = response.length > MESSAGE_LENGTH_LIMIT ? "" : "```";
-            await discordChatService.replyToInteraction(interaction, `${enclosingChars}${response}${enclosingChars}`);
+            await discordChatService.replyToInteraction(interaction, response, { backticks: true });
+        },
+    };
+
+    const fmt = (date: Date | null) => (date === null ? "Never Played" : format(date, "MMM d, yyyy h:mm:ss a")).padEnd(32);
+
+    const soundPlayedDates: Command = {
+        data: new SlashCommandBuilder().setName("sound-played-dates").setDescription("Returns the first and latest dates each sound was played"),
+        execute: async (interaction: ChatInputCommandInteraction) => {
+            const dates = await playedSoundsRepository.getSoundPlayedDates();
+            const result = dates.map(d => `${d.name.padEnd(14)}${fmt(d.latestDate)}${fmt(d.oldestDate)}`);
+
+            const response = `Name          Newest Played Date              Oldest Played Date\n${"-".repeat(64)}\n${result.join(`\n`)}`;
+            await discordChatService.replyToInteraction(interaction, response, { backticks: true });
         },
     };
 
     return {
         "sound-play-count": soundPlayCount,
         "sound-play-counts": soundPlayCounts,
+        "sound-played-dates": soundPlayedDates,
     };
 };
