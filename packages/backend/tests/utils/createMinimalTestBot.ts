@@ -143,6 +143,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
         addPlayedSound: vi.fn().mockResolvedValue({}),
         getSoundPlayCount: vi.fn().mockResolvedValue({}),
         getSoundPlayCounts: vi.fn().mockResolvedValue({}),
+        getSoundPlayedDates: vi.fn().mockResolvedValue({}),
     });
 
     const createStubVoiceEventSoundsRepository = (): VoiceEventSoundsRepository => ({

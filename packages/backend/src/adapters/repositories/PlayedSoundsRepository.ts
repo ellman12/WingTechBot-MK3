@@ -9,11 +9,19 @@ export type SoundPlayCount = {
     readonly playCount: number;
 };
 
+export type SoundPlayedDates = {
+    readonly id: number;
+    readonly name: string;
+    readonly latestDate: Date | null;
+    readonly oldestDate: Date | null;
+};
+
 export type PlayedSoundsRepository = {
     addPlayedSound(data: CreatePlayedSoundData): Promise<PlayedSound>;
 
     getSoundPlayCount(soundId: number, userId?: string, year?: number): Promise<number>;
     getSoundPlayCounts(limit?: number, userId?: string, year?: number): Promise<SoundPlayCount[]>;
+    getSoundPlayedDates(): Promise<SoundPlayedDates[]>;
 };
 
 const transformPlayedSound = (dbSoundPlay: Selectable<PlayedSounds>): PlayedSound => {
@@ -68,9 +76,23 @@ export const createPlayedSoundsRepository = (db: Kysely<DB>): PlayedSoundsReposi
         return rows.map(r => ({ id: r.sound_id, name: r.name, playCount: Number(r.play_count) }));
     };
 
+    const getSoundPlayedDates = async (): Promise<SoundPlayedDates[]> => {
+        const rows = await db
+            .selectFrom("played_sounds as ps")
+            .rightJoin("sounds as s", "s.id", "ps.sound_id")
+            .select(["s.id", "s.name", db.fn.max("played_at").as("latest_date"), db.fn.min("played_at").as("oldest_date")])
+            .groupBy(["s.id", "s.name"])
+            .orderBy(sql`latest_date desc nulls last`)
+            .orderBy("name", "asc")
+            .execute();
+
+        return rows.map(r => ({ id: r.id, name: r.name, oldestDate: r.oldest_date, latestDate: r.latest_date }));
+    };
+
     return {
         addPlayedSound,
         getSoundPlayCount,
         getSoundPlayCounts,
+        getSoundPlayedDates,
     };
 };
