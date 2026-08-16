@@ -9,11 +9,19 @@ export type SoundPlayCount = {
     readonly playCount: number;
 };
 
+export type SoundPlayedDates = {
+    readonly id: number;
+    readonly name: string;
+    readonly latestDate: Date;
+    readonly oldestDate: Date;
+};
+
 export type PlayedSoundsRepository = {
     addPlayedSound(data: CreatePlayedSoundData): Promise<PlayedSound>;
 
     getSoundPlayCount(soundId: number, userId?: string, year?: number): Promise<number>;
     getSoundPlayCounts(limit?: number, userId?: string, year?: number): Promise<SoundPlayCount[]>;
+    getSoundPlayedDates(userId?: string, year?: number): Promise<SoundPlayedDates[]>;
 };
 
 const transformPlayedSound = (dbSoundPlay: Selectable<PlayedSounds>): PlayedSound => {
@@ -68,9 +76,25 @@ export const createPlayedSoundsRepository = (db: Kysely<DB>): PlayedSoundsReposi
         return rows.map(r => ({ id: r.sound_id, name: r.name, playCount: Number(r.play_count) }));
     };
 
+    const getSoundPlayedDates = async (userId?: string, year?: number): Promise<SoundPlayedDates[]> => {
+        const rows = await db
+            .selectFrom("played_sounds as ps")
+            .innerJoin("sounds as s", "s.id", "ps.sound_id")
+            .select(["s.id", "s.name", db.fn.max("played_at").as("latest_date"), db.fn.min("played_at").as("oldest_date")])
+            .$if(userId !== undefined, qb => qb.where("ps.user_id", "=", userId!))
+            .$if(year !== undefined, qb => qb.where(sql`extract(year from ps.played_at)`, "=", year!))
+            .groupBy(["s.id", "s.name"])
+            .orderBy("latest_date", "desc")
+            .orderBy("name", "asc")
+            .execute();
+
+        return rows.map(r => ({ id: r.id, name: r.name, oldestDate: r.oldest_date, latestDate: r.latest_date }));
+    };
+
     return {
         addPlayedSound,
         getSoundPlayCount,
         getSoundPlayCounts,
+        getSoundPlayedDates,
     };
 };

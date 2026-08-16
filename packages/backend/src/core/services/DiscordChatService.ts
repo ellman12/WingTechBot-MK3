@@ -5,14 +5,25 @@ export const MESSAGE_LENGTH_LIMIT = 2000;
 
 export type SendMode = "split" | "file";
 
+//Extra optional params passed to replyToInteraction and followUpToInteraction.
+export type ResponseOptions = {
+    //If the response is only visible to the invoker of the interaction.
+    ephemeral?: boolean;
+
+    //If backticks for Markdown code blocks should automatically be added around the content (unless we're in file mode).
+    backticks?: boolean;
+};
+
+const DefaultResponseOptions: ResponseOptions = { ephemeral: false, backticks: false };
+
 export type DiscordChatService = {
     readonly hasBeenPinged: (latestMessage: Message) => boolean;
     readonly replaceUserRoleAndChannelMentions: (message: Message) => Promise<string>;
     readonly sendTypingIndicator: (abortSignal: AbortSignal, channel: TextChannel) => Promise<void>;
     readonly formatMessageContent: (content: string, sendMode?: SendMode) => MessageCreateOptions[];
     readonly sendMessage: (content: string, channel: TextChannel, sendMode?: SendMode) => Promise<void>;
-    readonly replyToInteraction: (interaction: ChatInputCommandInteraction, content: string, ephemeral?: boolean) => Promise<void>;
-    readonly followUpToInteraction: (interaction: ChatInputCommandInteraction, content: string, ephemeral?: boolean) => Promise<void>;
+    readonly replyToInteraction: (interaction: ChatInputCommandInteraction, content: string, options?: ResponseOptions) => Promise<void>;
+    readonly followUpToInteraction: (interaction: ChatInputCommandInteraction, content: string, options?: ResponseOptions) => Promise<void>;
 };
 
 export type DiscordChatServiceDeps = {
@@ -78,21 +89,26 @@ export const createDiscordChatService = ({ config }: DiscordChatServiceDeps): Di
         }
     }
 
-    //Calls reply on the interaction, sending the result back as a file if content is too long.
-    async function replyToInteraction(interaction: ChatInputCommandInteraction, content: string, ephemeral = false) {
+    //Formats the response back for Discord interactions.
+    function formatResponseContent(content: string, options = DefaultResponseOptions) {
+        const { ephemeral, backticks } = options;
         const mode = content.length > MESSAGE_LENGTH_LIMIT ? "file" : "split";
-        const result = formatMessageContent(content, mode)[0]!;
-        const formatted: InteractionReplyOptions = { ...result, flags: ephemeral ? MessageFlags.Ephemeral : undefined };
+        const enclosingChars = mode === "split" && backticks ? "```" : "";
 
+        //There will never be more than 1 since interactions don't support more than 1 message.
+        const result = formatMessageContent(`${enclosingChars}${content}${enclosingChars}`, mode)[0]!;
+        return { ...result, flags: ephemeral ? MessageFlags.Ephemeral : undefined } satisfies InteractionReplyOptions;
+    }
+
+    //Calls reply on the interaction, sending the result back as a file if content is too long.
+    async function replyToInteraction(interaction: ChatInputCommandInteraction, content: string, options = DefaultResponseOptions) {
+        const formatted = formatResponseContent(content, options);
         await interaction.reply(formatted);
     }
 
     //Calls followUp on the interaction, sending the result back as a file if content is too long.
-    async function followUpToInteraction(interaction: ChatInputCommandInteraction, content: string, ephemeral = false) {
-        const mode = content.length > MESSAGE_LENGTH_LIMIT ? "file" : "split";
-        const result = formatMessageContent(content, mode)[0]!;
-        const formatted: InteractionReplyOptions = { ...result, flags: ephemeral ? MessageFlags.Ephemeral : undefined };
-
+    async function followUpToInteraction(interaction: ChatInputCommandInteraction, content: string, options = DefaultResponseOptions) {
+        const formatted = formatResponseContent(content, options);
         await interaction.followUp(formatted);
     }
 

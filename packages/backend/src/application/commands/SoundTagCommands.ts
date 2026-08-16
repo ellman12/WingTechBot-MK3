@@ -61,7 +61,7 @@ export const createSoundTagCommands = ({ soundTagService, discordChatService, co
             }
 
             const response = `Available tags:\n${tags.map(tag => `- ${tag.name}`).join("\n")}`;
-            await discordChatService.replyToInteraction(interaction, response, true);
+            await discordChatService.replyToInteraction(interaction, response, { ephemeral: true });
         },
     };
 

@@ -8,6 +8,8 @@
         "dev": "pnpm --filter backend dev",
         "build": "pnpm --recursive build",
         "test": "pnpm --recursive test",
+        "test:unit": "pnpm --recursive test:unit",
+        "test:integration": "vitest run tests/integration",
         "lint": "pnpm --recursive lint",
         "lint:fix": "pnpm --recursive lint:fix",
         "format": "pnpm --recursive format",
@@ -26,8 +28,11 @@
         "husky": "^9.1.7",
         "lint-staged": "^17.3.0",
         "prettier": "^3.9.6",
-        "typescript-eslint": "^8.65.0",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.65.0"
+    },
+    "dependencies": {
+        "date-fns": "^4.4.0"
     },
     "pnpm": {
         "overrides": {

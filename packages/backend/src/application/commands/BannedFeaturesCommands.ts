@@ -85,7 +85,7 @@ export const createBannedFeaturesCommands = ({ bannedFeaturesRepository, discord
             ]);
 
             const response = `\`\`\`\nBanned Features and Users\n${"-".repeat(30)}\n${lines.join("\n")}\n\`\`\``;
-            await discordChatService.replyToInteraction(interaction, response, true);
+            await discordChatService.replyToInteraction(interaction, response, { ephemeral: true });
         },
     };
 

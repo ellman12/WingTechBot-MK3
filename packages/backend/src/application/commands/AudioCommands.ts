@@ -108,7 +108,7 @@ export const createAudioCommands = ({ soundService, discordChatService, commandC
             }
 
             const response = `Available sounds:\n${sounds.map(sound => `- ${sound}`).join("\n")}`;
-            await discordChatService.replyToInteraction(interaction, response, true);
+            await discordChatService.replyToInteraction(interaction, response, { ephemeral: true });
         },
         getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
     };
