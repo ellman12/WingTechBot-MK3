@@ -1,4 +1,5 @@
 import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
+import { createUserRepository } from "@adapters/repositories/UserRepository.js";
 import { createVoiceEventsSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 
 import { createTestDb } from "../../utils/testUtils.js";
@@ -9,9 +10,11 @@ describe.concurrent("Add and Delete VoiceEventSounds", async () => {
 
     test("valid data", async () => {
         const db = await createTestDb();
+        const usersRepo = createUserRepository(db);
         const soundsRepo = createSoundRepository(db);
         const voiceEventSoundsRepo = createVoiceEventsSoundsRepository(db);
 
+        await usersRepo.create({ id: userId, username: userId, isBot: false, createdAt: new Date(), joinedAt: new Date() });
         const sound = await soundsRepo.addSound({ name: "test_sound", path: "./" });
         const voiceEventSound = await voiceEventSoundsRepo.addVoiceEventSound(userId, sound.id!, type);
         let voiceEventSounds = await voiceEventSoundsRepo.getVoiceEventSounds({ userId, type });
@@ -28,12 +31,14 @@ describe.concurrent("Add and Delete VoiceEventSounds", async () => {
 
     test("throws for invalid data", async () => {
         const db = await createTestDb();
+        const usersRepo = createUserRepository(db);
         const soundsRepo = createSoundRepository(db);
         const voiceEventSoundsRepo = createVoiceEventsSoundsRepository(db);
 
+        await usersRepo.create({ id: userId, username: userId, isBot: false, createdAt: new Date(), joinedAt: new Date() });
         const sound = await soundsRepo.addSound({ name: "test_sound", path: "./" });
 
-        await expect(voiceEventSoundsRepo.addVoiceEventSound("", sound.id!, type)).rejects.toThrow();
-        await expect(voiceEventSoundsRepo.addVoiceEventSound(userId, -69, "UserLeave")).rejects.toThrow();
+        expect(voiceEventSoundsRepo.addVoiceEventSound("", sound.id!, type)).rejects.toThrow();
+        expect(voiceEventSoundsRepo.addVoiceEventSound(userId, -69, "UserLeave")).rejects.toThrow();
     });
 });
