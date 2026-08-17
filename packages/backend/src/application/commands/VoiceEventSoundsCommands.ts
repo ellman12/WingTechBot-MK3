@@ -90,7 +90,7 @@ export const createVoiceEventSoundsCommands = ({ voiceEventSoundsRepository, sou
                 return;
             }
 
-            const result = sounds.map(s => `${s.username.padEnd(16)}${s.soundName!.padEnd(16)}${s.type}`);
+            const result = sounds.map(s => `${s.username.padEnd(16)}${s.soundName.padEnd(16)}${s.type}`);
             await interaction.reply(`\`\`\`User\t\t\tSound\t\t\tType\n-----------------------------------------\n${result.join("\n")}\`\`\``);
         },
         getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,

@@ -20,6 +20,7 @@ export const createVoiceEventsSoundsRepository = (db: Kysely<DB>): VoiceEventSou
         return {
             userId: sound.user_id,
             soundId: sound.sound_id,
+            soundName: "",
             type: sound.type,
         };
     };

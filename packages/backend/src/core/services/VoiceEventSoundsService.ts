@@ -54,7 +54,7 @@ export const createVoiceEventSoundsService = ({ config, voiceEventSoundsReposito
             await sleep(delay);
         }
 
-        await voiceService.playAudio(guild.id, sound.soundName!, botId, "VoiceEvent");
+        await voiceService.playAudio(guild.id, sound.soundName, botId, "VoiceEvent");
     }
 
     return {
