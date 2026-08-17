@@ -2,10 +2,13 @@ import type { SoundRepository } from "@adapters/repositories/SoundRepository.js"
 import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import type { Command } from "@application/commands/Commands.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
+import type { DiscordChatService } from "@core/services/DiscordChatService.js";
+import { formatTable } from "@core/utils/formatTable.js";
 import type { VoiceEventSoundType } from "@db/types.js";
 import { type APIApplicationCommandOptionChoice, type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
 export type VoiceEventSoundsCommandsDeps = {
+    readonly discordChatService: DiscordChatService;
     readonly voiceEventSoundsRepository: VoiceEventSoundsRepository;
     readonly soundRepository: SoundRepository;
     readonly commandChoicesService: CommandChoicesService;
@@ -14,7 +17,7 @@ export type VoiceEventSoundsCommandsDeps = {
 const eventTypes: VoiceEventSoundType[] = ["UserJoin", "UserLeave"];
 const eventTypeChoices: APIApplicationCommandOptionChoice<string>[] = eventTypes.map(t => ({ name: t, value: t }));
 
-export const createVoiceEventSoundsCommands = ({ voiceEventSoundsRepository, soundRepository, commandChoicesService }: VoiceEventSoundsCommandsDeps): Record<string, Command> => {
+export const createVoiceEventSoundsCommands = ({ discordChatService, voiceEventSoundsRepository, soundRepository, commandChoicesService }: VoiceEventSoundsCommandsDeps): Record<string, Command> => {
     const assignVoiceEventSound: Command = {
         data: new SlashCommandBuilder()
             .setName("assign-voice-event-sound")
@@ -83,19 +86,20 @@ export const createVoiceEventSoundsCommands = ({ voiceEventSoundsRepository, sou
 
             const soundId = (await soundRepository.getSoundByName(soundName ?? ""))?.id ?? undefined;
 
-            const sounds = await voiceEventSoundsRepository.getVoiceEventSounds({
-                userId: user?.id,
-                soundId,
-                type: eventType as VoiceEventSoundType,
-            });
+            const sounds = await voiceEventSoundsRepository.getVoiceEventSounds({ userId: user?.id, soundId, type: eventType as VoiceEventSoundType });
 
             if (sounds.length === 0) {
                 await interaction.reply("No VoiceEventSounds");
                 return;
             }
 
-            const result = sounds.map(s => `${(interaction.guild!.members.cache.get(s.userId)?.user.username ?? "Unknown User").padEnd(16)}${s.soundName!.padEnd(16)}${s.type}`);
-            await interaction.reply(`\`\`\`User\t\t\tSound\t\t\tType\n-----------------------------------------\n${result.join("\n")}\`\`\``);
+            const table = formatTable(sounds, [
+                { header: "User", value: s => s.username },
+                { header: "Sound", value: s => s.soundName },
+                { header: "Type", value: s => s.type },
+            ]);
+
+            await discordChatService.replyToInteraction(interaction, table, { ephemeral: true, backticks: true });
         },
         getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
     };

@@ -1,11 +1,11 @@
 import type { PlayedSoundsRepository } from "@adapters/repositories/PlayedSoundsRepository.js";
 import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
+import type { Command } from "@application/commands/Commands.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import { type DiscordChatService } from "@core/services/DiscordChatService.js";
+import { formatTable } from "@core/utils/formatTable.js";
 import { format } from "date-fns";
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
-
-import type { Command } from "./Commands.js";
 
 export type PlayedSoundsCommandsDeps = {
     readonly soundRepository: SoundRepository;
@@ -61,23 +61,29 @@ export const createPlayedSoundsCommands = ({ soundRepository, playedSoundsReposi
                 return;
             }
 
-            const { result } = leaderboard.reduce(
+            const { result: rankedRows } = leaderboard.reduce(
                 (acc, current) => {
                     const { lastCount, rank, index, result } = acc;
                     const newRank = current.playCount === lastCount ? rank : index + 1;
 
-                    result.push(`${String(newRank + ".").padEnd(8)}${String(current.playCount).padEnd(8)}${current.name}`);
+                    result.push({ rank: `${newRank}.`, playCount: current.playCount, name: current.name });
                     return { lastCount: current.playCount, rank: newRank, index: index + 1, result };
                 },
-                { lastCount: 0, rank: 1, index: 0, result: [] as string[] }
+                { lastCount: 0, rank: 1, index: 0, result: [] as { rank: string; playCount: number; name: string }[] }
             );
 
-            const response = `${year ? `${year} ` : ""}Played Sound Counts\n-------------------\nRank    Count   Name\n${result.join(`\n`)}`;
+            const table = formatTable(rankedRows, [
+                { header: "Rank", value: r => r.rank },
+                { header: "Count", value: r => String(r.playCount) },
+                { header: "Name", value: r => r.name },
+            ]);
+
+            const response = `${year ? `${year} ` : ""}Played Sound Counts\n\n${table}`;
             await discordChatService.replyToInteraction(interaction, response, { backticks: true });
         },
     };
 
-    const fmt = (date: Date) => format(date, "MMM d, yyyy h:mm:ss a").padEnd(32);
+    const fmt = (date: Date) => format(date, "MMM d yyyy hh:mm a");
 
     const soundPlayedDates: Command = {
         data: new SlashCommandBuilder()
@@ -96,10 +102,13 @@ export const createPlayedSoundsCommands = ({ soundRepository, playedSoundsReposi
                 return;
             }
 
-            const result = dates.map(d => `${d.name.padEnd(14)}${fmt(d.latestDate)}${fmt(d.oldestDate)}`);
+            const table = formatTable(dates, [
+                { header: "Name", value: d => d.name },
+                { header: "Newest Played Date", value: d => fmt(d.latestDate) },
+                { header: "Oldest Played Date", value: d => fmt(d.oldestDate) },
+            ]);
 
-            const response = `Name          Newest Played Date              Oldest Played Date\n${"-".repeat(64)}\n${result.join(`\n`)}`;
-            await discordChatService.replyToInteraction(interaction, response, { backticks: true });
+            await discordChatService.replyToInteraction(interaction, table, { backticks: true });
         },
     };
 

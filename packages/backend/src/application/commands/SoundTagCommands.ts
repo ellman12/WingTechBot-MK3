@@ -26,7 +26,7 @@ export const createSoundTagCommands = ({ soundTagService, discordChatService, co
             if (!tagName) throw new Error("Missing tag name");
 
             await soundTagService.addTagToSound(soundName, tagName);
-            await interaction.reply(`Added tag "${tagName}" to "${soundName}"`);
+            await discordChatService.replyToInteraction(interaction, `Added tag "${tagName}" to "${soundName}"`, { ephemeral: true });
         },
         getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
     };
@@ -45,7 +45,7 @@ export const createSoundTagCommands = ({ soundTagService, discordChatService, co
             if (!tagName) throw new Error("Missing tag name");
 
             await soundTagService.removeTagFromSound(soundName, tagName);
-            await interaction.reply(`Removed tag "${tagName}" from "${soundName}"`);
+            await discordChatService.replyToInteraction(interaction, `Removed tag "${tagName}" from "${soundName}"`, { ephemeral: true });
         },
         getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
     };

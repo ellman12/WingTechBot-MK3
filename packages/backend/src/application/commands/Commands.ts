@@ -39,7 +39,7 @@ export const createCommands = (
     bannedFeaturesRepository: BannedFeaturesRepository
 ): Record<string, Command> => {
     const commandRecords = [
-        createVoiceEventSoundsCommands({ voiceEventSoundsRepository, soundRepository, commandChoicesService }),
+        createVoiceEventSoundsCommands({ discordChatService, voiceEventSoundsRepository, soundRepository, commandChoicesService }),
         createAudioCommands({ soundService, discordChatService, commandChoicesService }),
         createReactionCommands({ reactionRepository, discordChatService }),
         createPlayedSoundsCommands({ soundRepository, playedSoundsRepository, discordChatService, commandChoicesService }),

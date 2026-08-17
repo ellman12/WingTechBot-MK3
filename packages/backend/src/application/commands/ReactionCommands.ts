@@ -2,6 +2,7 @@ import { KarmaEmoteNames } from "@adapters/repositories/ReactionEmoteRepository.
 import type { ReactionRepository } from "@adapters/repositories/ReactionRepository.js";
 import { type DiscordChatService } from "@core/services/DiscordChatService.js";
 import { formatEmoji } from "@core/utils/emojiUtils.js";
+import { formatTable } from "@core/utils/formatTable.js";
 import { getJumpUrl } from "@core/utils/messageUtils.js";
 import { type ChatInputCommandInteraction, GuildMember, MessageFlags, Role, SlashCommandBuilder, userMention } from "discord.js";
 
@@ -126,18 +127,23 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
                 return;
             }
 
-            const { result } = leaderboard.reduce(
+            const { result: rankedRows } = leaderboard.reduce(
                 (acc, current) => {
                     const { lastCount, rank, index, result } = acc;
                     const newRank = current.count === lastCount ? rank : index + 1;
-
-                    result.push(`${String(newRank + ".").padEnd(8)}${String(current.count).padEnd(8)}${current.name}`);
+                    result.push({ rank: `${newRank}.`, count: current.count, name: current.name });
                     return { lastCount: current.count, rank: newRank, index: index + 1, result };
                 },
-                { lastCount: 0, rank: 0, index: 0, result: [] as string[] }
+                { lastCount: 0, rank: 0, index: 0, result: [] as { rank: string; count: number; name: string }[] }
             );
 
-            const response = `${year ? `${year} ` : ""}Emote Leaderboard (Top ${limit})\n-------------------------------\nRank    Count   Emote\n${result.join(`\n`)}`;
+            const table = formatTable(rankedRows, [
+                { header: "Rank", value: r => r.rank },
+                { header: "Count", value: r => String(r.count) },
+                { header: "Emote", value: r => r.name },
+            ]);
+
+            const response = `${year ? `${year} ` : ""}Emote Leaderboard (Top ${limit})\n${table}`;
             await discordChatService.replyToInteraction(interaction, response, { backticks: true });
         },
     };
@@ -163,18 +169,23 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
                 return;
             }
 
-            const { result } = leaderboard.reduce(
+            const { result: rankedRows } = leaderboard.reduce(
                 (acc, current) => {
                     const { lastCount, rank, index, result } = acc;
                     const newRank = current.totalKarma === lastCount ? rank : index + 1;
-
-                    result.push(`${String(newRank + ".").padEnd(8)}${String(current.totalKarma).padEnd(8)}${current.username ?? "Unknown"}`);
+                    result.push({ rank: `${newRank}.`, karma: current.totalKarma, user: current.username ?? "Unknown" });
                     return { lastCount: current.totalKarma, rank: newRank, index: index + 1, result };
                 },
-                { lastCount: 0, rank: 1, index: 0, result: [] as string[] }
+                { lastCount: 0, rank: 1, index: 0, result: [] as { rank: string; karma: number; user: string }[] }
             );
 
-            const response = `${year ? `${year} ` : ""}Karma Leaderboard\n------------------------\nRank    Karma   User\n${result.join(`\n`)}`;
+            const table = formatTable(rankedRows, [
+                { header: "Rank", value: r => r.rank },
+                { header: "Karma", value: r => r.karma },
+                { header: "User", value: r => r.user },
+            ]);
+
+            const response = `${year ? `${year} ` : ""}Karma Leaderboard\n${table}`;
             await discordChatService.replyToInteraction(interaction, response, { backticks: true });
         },
     };
@@ -200,7 +211,7 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
                 return;
             }
 
-            const entries = topMessages.map(entry => `${entry.count} ${getJumpUrl(interaction.guildId!, entry.channelId, entry.messageId)}`);
+            const entries = topMessages.map(entry => `${entry.count.toString().padEnd(4)}\t${getJumpUrl(interaction.guildId!, entry.channelId, entry.messageId)}`);
 
             const messageHeader = `Top ${limit} messages for ${emoteName} for ${receiver.displayName} ${year ? `for ${year}` : ""}\n`;
             const response = `${messageHeader}${entries.join("\n")}`;

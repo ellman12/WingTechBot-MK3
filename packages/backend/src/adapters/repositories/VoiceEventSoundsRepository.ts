@@ -1,11 +1,11 @@
 import type { VoiceEventSound } from "@core/entities/VoiceEventSound.js";
 import type { DB, VoiceEventSoundType, VoiceEventSounds } from "@db/types.js";
-import type { Kysely, Selectable } from "kysely";
+import { type Kysely, type Selectable, sql } from "kysely";
 
 export type VoiceEventSoundsRepository = {
     readonly addVoiceEventSound: (userId: string, soundId: number, type: VoiceEventSoundType) => Promise<VoiceEventSound>;
     readonly deleteVoiceEventSound: (userId: string, soundId: number, type: VoiceEventSoundType) => Promise<VoiceEventSound | null>;
-    readonly getVoiceEventSounds: (filters: GetVoiceEventSoundsFilters) => Promise<VoiceEventSound[]>;
+    readonly getVoiceEventSounds: (filters: GetVoiceEventSoundsFilters) => Promise<(VoiceEventSound & { username: string })[]>;
 };
 
 export type GetVoiceEventSoundsFilters = {
@@ -20,6 +20,7 @@ export const createVoiceEventsSoundsRepository = (db: Kysely<DB>): VoiceEventSou
         return {
             userId: sound.user_id,
             soundId: sound.sound_id,
+            soundName: "",
             type: sound.type,
         };
     };
@@ -55,24 +56,22 @@ export const createVoiceEventsSoundsRepository = (db: Kysely<DB>): VoiceEventSou
         return transformVoiceEventSound(sound);
     }
 
-    async function getVoiceEventSounds(filters: GetVoiceEventSoundsFilters): Promise<VoiceEventSound[]> {
+    async function getVoiceEventSounds(filters: GetVoiceEventSoundsFilters): Promise<(VoiceEventSound & { username: string })[]> {
         const { userId, soundId, type } = filters;
-
         const result = await db
             .selectFrom("voice_event_sounds as ves")
-            .innerJoin("sounds", "ves.sound_id", "sounds.id")
+            .innerJoin("sounds as s", "ves.sound_id", "s.id")
+            .innerJoin("users as u", "ves.user_id", "u.id")
             .$if(userId !== undefined, qb => qb.where("user_id", "=", userId!))
             .$if(soundId !== undefined, qb => qb.where("sound_id", "=", soundId!))
             .$if(type !== undefined, qb => qb.where("type", "=", type!))
-            .select(["sound_id", "name", "user_id", "type"])
+            .select(["ves.sound_id", "s.name", "ves.user_id", "u.username", "ves.type"])
+            .orderBy(sql`lower(u.username)`, "asc")
+            .orderBy("ves.type", "asc")
+            .orderBy("s.name")
             .execute();
 
-        return result.map(r => ({
-            userId: r.user_id,
-            soundId: r.sound_id,
-            soundName: r.name,
-            type: r.type,
-        }));
+        return result.map(r => ({ userId: r.user_id, username: r.username, soundId: r.sound_id, soundName: r.name, type: r.type }));
     }
 
     return {
