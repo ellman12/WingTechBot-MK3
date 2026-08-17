@@ -83,18 +83,14 @@ export const createVoiceEventSoundsCommands = ({ voiceEventSoundsRepository, sou
 
             const soundId = (await soundRepository.getSoundByName(soundName ?? ""))?.id ?? undefined;
 
-            const sounds = await voiceEventSoundsRepository.getVoiceEventSounds({
-                userId: user?.id,
-                soundId,
-                type: eventType as VoiceEventSoundType,
-            });
+            const sounds = await voiceEventSoundsRepository.getVoiceEventSounds({ userId: user?.id, soundId, type: eventType as VoiceEventSoundType });
 
             if (sounds.length === 0) {
                 await interaction.reply("No VoiceEventSounds");
                 return;
             }
 
-            const result = sounds.map(s => `${(interaction.guild!.members.cache.get(s.userId)?.user.username ?? "Unknown User").padEnd(16)}${s.soundName!.padEnd(16)}${s.type}`);
+            const result = sounds.map(s => `${s.username.padEnd(16)}${s.soundName!.padEnd(16)}${s.type}`);
             await interaction.reply(`\`\`\`User\t\t\tSound\t\t\tType\n-----------------------------------------\n${result.join("\n")}\`\`\``);
         },
         getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
