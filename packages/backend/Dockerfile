@@ -18,7 +18,7 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Install pnpm globally
-RUN npm install -g pnpm
+RUN npm install -g pnpm@11.22.0
 
 # Set environment variables for native module compilation
 ENV NODE_ENV=production
@@ -89,7 +89,7 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Install pnpm globally
-RUN npm install -g pnpm
+RUN npm install -g pnpm@11.22.0
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs

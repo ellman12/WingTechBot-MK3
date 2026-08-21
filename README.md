@@ -43,7 +43,7 @@ WingTechBot-MK3/
 ### Prerequisites
 
 - Node.js >= 18.0.0
-- pnpm (install with `npm install -g pnpm`)
+- pnpm v11 or greater (install with `npm install -g pnpm`)
 
 ### Installation
 
