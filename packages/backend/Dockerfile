@@ -26,8 +26,7 @@ ENV PYTHON=/usr/bin/python3
 ENV npm_config_python=/usr/bin/python3
 ENV OPUS_LIBRARY_PATH=/usr/lib/libopus.so.0
 
-# Copy package files from monorepo root
-COPY package*.json pnpm-lock.yaml* ./
+COPY package*.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 COPY packages/backend/package.json ./packages/backend/
 
 # Copy migrations early to invalidate cache when they change
