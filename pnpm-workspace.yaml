@@ -1,10 +1,19 @@
 packages:
     - packages/*
 
+allowBuilds:
+    "@discordjs/opus": true
+    "@google/genai": true
+    esbuild: false
+    protobufjs: true
+
 ignoredBuiltDependencies:
     - esbuild
     - pg
 
-onlyBuiltDependencies:
-    - "@discordjs/opus"
-    - "@scarf/scarf"
+overrides:
+    jws: ">=4.0.1"
+    body-parser: ">=2.2.1"
+    qs: ">=6.14.1"
+    "diff@<8.0.3": ">=8.0.3"
+    "tar@<=7.5.2": ">=7.5.3"

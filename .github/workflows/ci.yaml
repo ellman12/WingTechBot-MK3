@@ -12,7 +12,7 @@ concurrency:
 
 env:
     NODE_VERSION: "20"
-    PNPM_VERSION: "10"
+    PNPM_VERSION: "11"
 
 jobs:
     # Cache dependencies for faster builds
