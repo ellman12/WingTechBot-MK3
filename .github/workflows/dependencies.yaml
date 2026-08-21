@@ -7,7 +7,7 @@ on:
     workflow_dispatch: # Allow manual trigger
 
 env:
-    NODE_VERSION: "18"
+    NODE_VERSION: "24"
     PNPM_VERSION: "11"
 
 jobs:

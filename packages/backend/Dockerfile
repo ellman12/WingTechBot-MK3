@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 
 # Install system dependencies for native modules including opus
 RUN apk add --no-cache \
@@ -70,7 +70,7 @@ RUN tsc-alias -p /app/packages/backend/tsconfig.json
 RUN ls -la /app/packages/backend/dist/
 
 # Production stage
-FROM node:20-alpine AS production
+FROM node:24-alpine AS production
 
 # Install system dependencies for production including opus runtime
 RUN apk add --no-cache \
