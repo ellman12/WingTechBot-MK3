@@ -1,12 +1,12 @@
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { Config } from "@core/config/Config.js";
+import type { SoundRepository } from "@core/ports/repositories/SoundRepository.js";
+import type { AudioProcessingService } from "@core/ports/services/AudioProcessingService.js";
+import type { FileManager } from "@core/ports/services/FileManager.js";
 import { createRepeatedPcmStream } from "@core/utils/audio/pcmRepeater.js";
 import { createPreBufferedStream, readStreamToBytes } from "@core/utils/streamUtils.js";
 import { Readable } from "stream";
 
 import { type AudioFetcherService, parseAudioSource } from "./AudioFetcherService.js";
-import type { AudioProcessingService } from "./AudioProcessingService.js";
-import type { FileManager } from "./FileManager.js";
 
 export type SoundService = {
     readonly addSound: (name: string, source: string) => Promise<void>;

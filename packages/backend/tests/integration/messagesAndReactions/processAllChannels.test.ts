@@ -37,8 +37,8 @@ describe("processAllChannels", async () => {
 
         const bot = minimalBot.bot;
         const db = minimalBot.db;
-        const messageArchiveService = minimalBot.messageArchiveService;
-        if (!messageArchiveService) throw new Error("messageArchiveService not available");
+        const messageSync = minimalBot.messageSync;
+        if (!messageSync) throw new Error("messageSync not available");
 
         testChannel = await createTemporaryTestChannel(bot);
         minimalBot.addChannel(testChannel.id);
@@ -52,8 +52,8 @@ describe("processAllChannels", async () => {
         async function startBot() {
             await bot.start();
             const guild = await bot.client.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-            if (!testChannel || !messageArchiveService) throw new Error("Test channel or messageArchiveService not initialized");
-            await messageArchiveService.processAllChannels(guild, undefined, [testChannel.id]);
+            if (!testChannel || !messageSync) throw new Error("Test channel or messageSync not initialized");
+            await messageSync.processAllChannels(guild, undefined, [testChannel.id]);
             // Note: Deletion detection is now integrated into processAllChannels
             await sleep(2000);
         }

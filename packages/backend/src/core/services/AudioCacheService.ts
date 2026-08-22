@@ -2,10 +2,9 @@ import type { Config } from "@core/config/Config.js";
 import type { AudioFormatInfo } from "@core/entities/AudioFormatInfo.js";
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream.js";
 import { createAudioStreamWithFormat } from "@core/entities/AudioStream.js";
+import type { FileManager } from "@core/ports/services/FileManager.js";
 import crypto from "crypto";
 import { Readable } from "stream";
-
-import type { FileManager } from "./FileManager.js";
 
 export type AudioCacheMetadata = {
     readonly formatInfo?: AudioFormatInfo;

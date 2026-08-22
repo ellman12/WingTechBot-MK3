@@ -28,10 +28,6 @@ should_clean() {
 if deps_changed; then
   echo "📦 Package files changed, installing dependencies..."
   pnpm install
-  
-  # Also rebuild types package since other packages might depend on it
-  echo "🔨 Rebuilding types package..."
-  pnpm build:types
 fi
 
 # Handle database changes if any

@@ -1,5 +1,6 @@
+import type { DiscordChatService } from "@application/discord/DiscordChat.js";
+import { validateSoundName } from "@core/entities/Sound.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
-import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { SoundService } from "@core/services/SoundService.js";
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
@@ -9,28 +10,6 @@ export type AudioCommandDeps = {
     readonly soundService: SoundService;
     readonly discordChatService: DiscordChatService;
     readonly commandChoicesService: CommandChoicesService;
-};
-
-// Validates a sound name against reserved names and special characters
-// Returns error message if invalid, undefined if valid
-const validateSoundName = (name: string): string | undefined => {
-    if (name === "random") {
-        return `Cannot use reserved name "random" for a sound.`;
-    }
-
-    if (name.startsWith("#")) {
-        return `Cannot use names starting with "#" (reserved for tags).`;
-    }
-
-    if (name.includes(",")) {
-        return `Cannot use commas in sound names (reserved for multi-sound selection).`;
-    }
-
-    if (name === "currently-playing") {
-        return `Cannot use reserved name "currently-playing" for a sound.`;
-    }
-
-    return undefined;
 };
 
 export const createAudioCommands = ({ soundService, discordChatService, commandChoicesService }: AudioCommandDeps): Record<string, Command> => {
@@ -110,7 +89,7 @@ export const createAudioCommands = ({ soundService, discordChatService, commandC
             const response = `Available sounds:\n${sounds.map(sound => `- ${sound}`).join("\n")}`;
             await discordChatService.replyToInteraction(interaction, response, { ephemeral: true });
         },
-        getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
+        getAutocompleteChoices: option => commandChoicesService.getAutocompleteChoices(option.name, String(option.value)),
     };
 
     const deleteSound: Command = {
@@ -135,7 +114,7 @@ export const createAudioCommands = ({ soundService, discordChatService, commandC
                 await interaction.reply({ content: `Failed to delete sound: ${error instanceof Error ? error.message : "Unknown error"}`, flags: MessageFlags.Ephemeral });
             }
         },
-        getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
+        getAutocompleteChoices: option => commandChoicesService.getAutocompleteChoices(option.name, String(option.value)),
     };
 
     return {

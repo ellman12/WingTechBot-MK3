@@ -1,18 +1,12 @@
-import type { VoiceEventSound } from "@core/entities/VoiceEventSound.js";
-import type { DB, VoiceEventSoundType, VoiceEventSounds } from "@db/types.js";
+import type { VoiceEventSound, VoiceEventSoundType } from "@core/entities/VoiceEventSound.js";
+import type { GetVoiceEventSoundsFilters, VoiceEventSoundsRepository } from "@core/ports/repositories/VoiceEventSoundsRepository.js";
+import type { Equals } from "@core/utils/typeUtils.js";
+import type { DB, VoiceEventSoundType as DbVoiceEventSoundType, VoiceEventSounds } from "@db/types.js";
 import { type Kysely, type Selectable, sql } from "kysely";
 
-export type VoiceEventSoundsRepository = {
-    readonly addVoiceEventSound: (userId: string, soundId: number, type: VoiceEventSoundType) => Promise<VoiceEventSound>;
-    readonly deleteVoiceEventSound: (userId: string, soundId: number, type: VoiceEventSoundType) => Promise<VoiceEventSound | null>;
-    readonly getVoiceEventSounds: (filters: GetVoiceEventSoundsFilters) => Promise<(VoiceEventSound & { username: string })[]>;
-};
-
-export type GetVoiceEventSoundsFilters = {
-    userId?: string;
-    soundId?: number;
-    type?: VoiceEventSoundType;
-};
+//The core enum is canonical; this fails to compile if the DB enum (kysely-codegen) drifts from it.
+const _eventTypeEnumsMatch: Equals<VoiceEventSoundType, DbVoiceEventSoundType> = true;
+void _eventTypeEnumsMatch;
 
 //Stores sounds automatically played when certain events happen.
 export const createVoiceEventsSoundsRepository = (db: Kysely<DB>): VoiceEventSoundsRepository => {
