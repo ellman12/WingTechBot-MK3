@@ -1,4 +1,4 @@
-import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
+import { createFfmpegAudioProcessingService } from "@adapters/audio/FfmpegAudioProcessingService.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
 import { access, readFile, unlink, writeFile } from "fs/promises";
 import { join } from "path";

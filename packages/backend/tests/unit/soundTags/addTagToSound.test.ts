@@ -1,7 +1,7 @@
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import { createSoundRepository } from "@adapters/repositories/SoundRepository.js";
 import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
 import type { Sound } from "@core/entities/Sound.js";
+import type { SoundRepository } from "@core/ports/repositories/SoundRepository.js";
 
 import { createTestDb } from "../../utils/testUtils.js";
 import { createTag } from "./createTag.test";

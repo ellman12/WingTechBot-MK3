@@ -1,10 +1,10 @@
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
-import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
 import type { Command } from "@application/commands/Commands.js";
+import type { DiscordChatService } from "@application/discord/DiscordChat.js";
+import { type VoiceEventSoundType, voiceEventSoundTypes } from "@core/entities/VoiceEventSound.js";
+import type { SoundRepository } from "@core/ports/repositories/SoundRepository.js";
+import type { VoiceEventSoundsRepository } from "@core/ports/repositories/VoiceEventSoundsRepository.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
-import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import { formatTable } from "@core/utils/formatTable.js";
-import type { VoiceEventSoundType } from "@db/types.js";
 import { type APIApplicationCommandOptionChoice, type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
 export type VoiceEventSoundsCommandsDeps = {
@@ -14,8 +14,7 @@ export type VoiceEventSoundsCommandsDeps = {
     readonly commandChoicesService: CommandChoicesService;
 };
 
-const eventTypes: VoiceEventSoundType[] = ["UserJoin", "UserLeave"];
-const eventTypeChoices: APIApplicationCommandOptionChoice<string>[] = eventTypes.map(t => ({ name: t, value: t }));
+const eventTypeChoices: APIApplicationCommandOptionChoice<string>[] = voiceEventSoundTypes.map(t => ({ name: t, value: t }));
 
 export const createVoiceEventSoundsCommands = ({ discordChatService, voiceEventSoundsRepository, soundRepository, commandChoicesService }: VoiceEventSoundsCommandsDeps): Record<string, Command> => {
     const assignVoiceEventSound: Command = {
@@ -40,7 +39,7 @@ export const createVoiceEventSoundsCommands = ({ discordChatService, voiceEventS
             await voiceEventSoundsRepository.addVoiceEventSound(user.id, sound.id!, eventType);
             await interaction.reply(`Assigned sound "${soundName}" to play for ${user.username} when ${eventType} is fired`);
         },
-        getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
+        getAutocompleteChoices: option => commandChoicesService.getAutocompleteChoices(option.name, String(option.value)),
     };
 
     const removeVoiceEventSound: Command = {
@@ -69,7 +68,7 @@ export const createVoiceEventSoundsCommands = ({ discordChatService, voiceEventS
                 await interaction.reply(`VoiceEventSound does not exist for ${soundName}, ${user.username}, ${eventType}`);
             }
         },
-        getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
+        getAutocompleteChoices: option => commandChoicesService.getAutocompleteChoices(option.name, String(option.value)),
     };
 
     const listVoiceEventSounds: Command = {
@@ -101,7 +100,7 @@ export const createVoiceEventSoundsCommands = ({ discordChatService, voiceEventS
 
             await discordChatService.replyToInteraction(interaction, table, { ephemeral: true, backticks: true });
         },
-        getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
+        getAutocompleteChoices: option => commandChoicesService.getAutocompleteChoices(option.name, String(option.value)),
     };
 
     return {

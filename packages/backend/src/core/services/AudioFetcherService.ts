@@ -1,19 +1,16 @@
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { AudioFormatInfo } from "@core/entities/AudioFormatInfo.js";
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream.js";
 import { createAudioStreamWithFormat } from "@core/entities/AudioStream.js";
+import type { SoundRepository } from "@core/ports/repositories/SoundRepository.js";
+import type { FileManager } from "@core/ports/services/FileManager.js";
+import type { YoutubeService } from "@core/ports/services/YoutubeService.js";
 import { readStreamToBytes } from "@core/utils/streamUtils.js";
 import { Readable } from "stream";
 
 import type { AudioCacheService } from "./AudioCacheService.js";
 import type { AudioFormatDetectionService } from "./AudioFormatDetectionService.js";
-import type { FileManager } from "./FileManager.js";
 
 export type audioSource = "soundboard" | "youtube" | "url";
-
-export type YoutubeService = {
-    readonly fetchAudioFromYoutube: (link: string) => Promise<AudioStreamWithMetadata>;
-};
 
 export type AudioFetcherService = {
     readonly fetchUrlAudio: (link: string, abortSignal?: AbortSignal) => Promise<AudioStreamWithMetadata>;

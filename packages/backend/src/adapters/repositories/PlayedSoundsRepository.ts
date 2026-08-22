@@ -1,28 +1,13 @@
-import type { CreatePlayedSoundData, PlayedSound } from "@core/entities/PlayedSounds.js";
-import type { DB, PlayedSounds } from "@db/types.js";
+import type { CreatePlayedSoundData, PlayedSound, PlayedSoundSource } from "@core/entities/PlayedSounds.js";
+import type { PlayedSoundsRepository, SoundPlayCount, SoundPlayedDates } from "@core/ports/repositories/PlayedSoundsRepository.js";
+import type { Equals } from "@core/utils/typeUtils.js";
+import type { DB, PlayedSoundSource as DbPlayedSoundSource, PlayedSounds } from "@db/types.js";
 import type { Kysely, Selectable } from "kysely";
 import { sql } from "kysely";
 
-export type SoundPlayCount = {
-    readonly id: number;
-    readonly name: string;
-    readonly playCount: number;
-};
-
-export type SoundPlayedDates = {
-    readonly id: number;
-    readonly name: string;
-    readonly latestDate: Date;
-    readonly oldestDate: Date;
-};
-
-export type PlayedSoundsRepository = {
-    addPlayedSound(data: CreatePlayedSoundData): Promise<PlayedSound>;
-
-    getSoundPlayCount(soundId: number, userId?: string, year?: number): Promise<number>;
-    getSoundPlayCounts(limit?: number, userId?: string, year?: number): Promise<SoundPlayCount[]>;
-    getSoundPlayedDates(userId?: string, year?: number): Promise<SoundPlayedDates[]>;
-};
+//The core enum is canonical; this fails to compile if the DB enum (kysely-codegen) drifts from it.
+const _sourceEnumsMatch: Equals<PlayedSoundSource, DbPlayedSoundSource> = true;
+void _sourceEnumsMatch;
 
 const transformPlayedSound = (dbSoundPlay: Selectable<PlayedSounds>): PlayedSound => {
     return {

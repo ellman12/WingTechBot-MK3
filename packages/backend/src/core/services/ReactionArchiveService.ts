@@ -1,13 +1,29 @@
-import type { MessageRepository } from "@adapters/repositories/MessageRepository.js";
-import type { ReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
-import type { ReactionRepository } from "@adapters/repositories/ReactionRepository.js";
-import type { Message, MessageReaction, OmitPartialGroupDMChannel, PartialMessage, PartialMessageReaction, PartialUser, User } from "discord.js";
+import type { CreateMessageData } from "@core/entities/Message.js";
+import type { ReactionEmoteRef } from "@core/entities/ReactionEmote.js";
+import type { MessageRepository } from "@core/ports/repositories/MessageRepository.js";
+import type { ReactionEmoteRepository } from "@core/ports/repositories/ReactionEmoteRepository.js";
+import type { ReactionRepository } from "@core/ports/repositories/ReactionRepository.js";
+
+//A reaction is archived together with the message it was given on, because the message may not be stored yet.
+export type RecordReactionData = {
+    readonly message: CreateMessageData;
+    readonly giverId: string;
+    readonly emote: ReactionEmoteRef;
+};
+
+export type RemoveReactionData = {
+    readonly messageId: string;
+    readonly channelId: string;
+    readonly receiverId: string;
+    readonly giverId: string;
+    readonly emote: ReactionEmoteRef;
+};
 
 export type ReactionArchiveService = {
-    readonly addReaction: (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => Promise<void>;
-    readonly removeReaction: (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => Promise<void>;
-    readonly removeReactionsForMessage: (message: OmitPartialGroupDMChannel<Message<boolean> | PartialMessage>) => Promise<void>;
-    readonly removeReactionsForEmote: (reaction: MessageReaction | PartialMessageReaction) => Promise<void>;
+    readonly recordReaction: (data: RecordReactionData) => Promise<void>;
+    readonly removeReaction: (data: RemoveReactionData) => Promise<void>;
+    readonly removeReactionsForMessage: (messageId: string) => Promise<void>;
+    readonly removeReactionsForEmote: (messageId: string, emote: ReactionEmoteRef) => Promise<void>;
 };
 
 export type ReactionArchiveServiceDeps = {
@@ -16,116 +32,42 @@ export type ReactionArchiveServiceDeps = {
     emoteRepository: ReactionEmoteRepository;
 };
 
-// Helper to check if error is due to Discord client being destroyed/token missing
-// This is a safety net for race conditions during bot shutdown
-const isClientDestroyedError = (error: unknown): boolean => {
-    return error instanceof Error && error.message.includes("Expected token to be set for this request");
-};
-
 export const createReactionArchiveService = ({ messageRepository, reactionRepository, emoteRepository }: ReactionArchiveServiceDeps): ReactionArchiveService => {
     console.log("[ReactionArchiveService] Creating reaction archive service");
 
     return {
-        addReaction: async (reaction, user): Promise<void> => {
-            console.log(`[ReactionArchiveService] addReaction called - user: ${user.id}, emoji: ${reaction.emoji.name}`);
-            try {
-                const message = await reaction.message.fetch();
-                const channel = message.channel;
-                const emoteName = reaction.emoji.name;
+        recordReaction: async ({ message, giverId, emote }): Promise<void> => {
+            await messageRepository.create(message);
 
-                if (!emoteName) {
-                    throw new Error("Missing reaction emoji name");
-                }
+            const reactionEmote = await emoteRepository.create(emote.name, emote.discordId);
 
-                const referencedMessageId = message.reference ? message.reference.messageId : undefined;
-                await messageRepository.create({
-                    id: message.id,
-                    authorId: message.author.id,
-                    channelId: channel.id,
-                    content: message.content,
-                    referencedMessageId,
-                    createdAt: message.createdAt,
-                    editedAt: message.editedAt,
-                });
-
-                const reactionEmote = await emoteRepository.create(emoteName, reaction.emoji.id ?? "");
-
-                const data = { giverId: user.id, receiverId: message.author.id, channelId: channel.id, messageId: message.id, emoteId: reactionEmote.id };
-                await reactionRepository.create(data);
-                console.log(`[ReactionArchiveService] ✅ Successfully saved reaction - emoji: ${emoteName}, channel: ${channel.id}`);
-            } catch (e: unknown) {
-                console.error(`[ReactionArchiveService] ❌ Error in addReaction - emoji: ${reaction.emoji.name}, error:`, e);
-                if (e && typeof e === "object" && "code" in e) {
-                    const apiError = e as { code: number };
-                    if (apiError.code === 10003 || apiError.code === 10008) {
-                        return;
-                    }
-                }
-
-                if (!isClientDestroyedError(e)) {
-                    console.error("Error adding reaction to message", e);
-                }
-            }
+            await reactionRepository.create({ giverId, receiverId: message.authorId, channelId: message.channelId, messageId: message.id, emoteId: reactionEmote.id });
+            console.log(`[ReactionArchiveService] ✅ Successfully saved reaction - emoji: ${emote.name}, channel: ${message.channelId}`);
         },
 
-        removeReaction: async (reaction, user): Promise<void> => {
-            try {
-                const message = await reaction.message.fetch();
-                const channel = message.channel;
-                const emoteName = reaction.emoji.name;
+        removeReaction: async ({ messageId, channelId, receiverId, giverId, emote }): Promise<void> => {
+            const reactionEmote = await emoteRepository.findByNameAndDiscordId(emote.name, emote.discordId);
 
-                if (!emoteName) {
-                    throw new Error("Missing reaction emoji name");
-                }
-
-                const reactionEmote = await emoteRepository.findByNameAndDiscordId(emoteName, reaction.emoji.id ?? "");
-
-                if (!reactionEmote) {
-                    console.warn("Skipping removal of reaction because reaction emote not found");
-                    return;
-                }
-
-                const data = { giverId: user.id, receiverId: message.author.id, channelId: channel.id, messageId: message.id, emoteId: reactionEmote.id };
-                await reactionRepository.delete(data);
-            } catch (e: unknown) {
-                if (!isClientDestroyedError(e)) {
-                    console.error("Error removing reaction from message", e);
-                }
+            if (!reactionEmote) {
+                console.warn("Skipping removal of reaction because reaction emote not found");
+                return;
             }
+
+            await reactionRepository.delete({ giverId, receiverId, channelId, messageId, emoteId: reactionEmote.id });
         },
 
-        removeReactionsForMessage: async (message): Promise<void> => {
-            try {
-                await message.fetch();
-                await reactionRepository.deleteReactionsForMessage(message.id);
-            } catch (e: unknown) {
-                if (!isClientDestroyedError(e)) {
-                    console.error("Error removing reaction from message", e);
-                }
-            }
+        removeReactionsForMessage: async (messageId): Promise<void> => {
+            await reactionRepository.deleteReactionsForMessage(messageId);
         },
 
-        removeReactionsForEmote: async (reaction): Promise<void> => {
-            try {
-                await reaction.fetch();
-                const name = reaction.emoji.name;
+        removeReactionsForEmote: async (messageId, emote): Promise<void> => {
+            const found = await emoteRepository.findByNameAndDiscordId(emote.name, emote.discordId);
 
-                if (!name) {
-                    throw new Error("Missing emoji name in removeReactionsForEmote");
-                }
-
-                const emote = await emoteRepository.findByNameAndDiscordId(name, reaction.emoji.id ?? "");
-
-                if (!emote) {
-                    throw new Error("Emote not found in removeReactionsForEmote");
-                }
-
-                await reactionRepository.deleteReactionsForEmote(reaction.message.id, emote.id);
-            } catch (e: unknown) {
-                if (!isClientDestroyedError(e)) {
-                    console.error("Error removing reactions for emote", e);
-                }
+            if (!found) {
+                throw new Error("Emote not found in removeReactionsForEmote");
             }
+
+            await reactionRepository.deleteReactionsForEmote(messageId, found.id);
         },
     };
 };

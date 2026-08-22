@@ -1,6 +1,6 @@
-import { KarmaEmoteNames } from "@adapters/repositories/ReactionEmoteRepository.js";
-import type { ReactionRepository } from "@adapters/repositories/ReactionRepository.js";
-import { type DiscordChatService } from "@core/services/DiscordChatService.js";
+import { type DiscordChatService } from "@application/discord/DiscordChat.js";
+import { KarmaEmoteNames } from "@core/entities/ReactionEmote.js";
+import type { ReactionRepository } from "@core/ports/repositories/ReactionRepository.js";
 import { formatEmoji } from "@core/utils/emojiUtils.js";
 import { formatTable } from "@core/utils/formatTable.js";
 import { getJumpUrl } from "@core/utils/messageUtils.js";

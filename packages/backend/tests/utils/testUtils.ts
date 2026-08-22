@@ -1,9 +1,10 @@
 import { loadConfig } from "@adapters/config/ConfigAdapter.js";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
-import { createReactionEmoteRepository, defaultKarmaValues } from "@adapters/repositories/ReactionEmoteRepository.js";
+import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
-import type { UserRepository } from "@adapters/repositories/UserRepository.js";
 import type { CreateMessageData } from "@core/entities/Message.js";
+import { defaultKarmaValues } from "@core/entities/ReactionEmote.js";
+import type { UserRepository } from "@core/ports/repositories/UserRepository.js";
 import { sleep } from "@core/utils/timeUtils.js";
 import type { DB } from "@db/types.js";
 import type { DiscordBot } from "@infrastructure/discord/DiscordBot.js";

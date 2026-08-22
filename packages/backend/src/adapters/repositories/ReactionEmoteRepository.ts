@@ -1,22 +1,7 @@
-import type { ReactionEmote, UpdateReactionEmoteData } from "@core/entities/ReactionEmote.js";
+import { KarmaEmoteNames, type ReactionEmote, type ReactionEmoteRef, type UpdateReactionEmoteData, defaultKarmaValues } from "@core/entities/ReactionEmote.js";
+import type { ReactionEmoteRepository } from "@core/ports/repositories/ReactionEmoteRepository.js";
 import type { DB, ReactionEmotes } from "@db/types.js";
-import type { Guild } from "discord.js";
 import type { Kysely, Selectable, Updateable } from "kysely";
-
-export const KarmaEmoteNames = ["upvote", "downvote", "silver", "gold", "platinum"];
-
-export type ReactionEmoteRepository = {
-    findById(id: number): Promise<ReactionEmote | null>;
-    findByNameAndDiscordId(name: string, discordId: string): Promise<ReactionEmote | null>;
-    create(name: string, discordId: string, karmaValue?: number): Promise<ReactionEmote>;
-    update(id: number, data: UpdateReactionEmoteData): Promise<ReactionEmote | null>;
-
-    batchFindOrCreate(emotes: Array<{ name: string; discordId: string }>): Promise<Map<string, ReactionEmote>>;
-
-    createKarmaEmotes(guild: Guild): Promise<void>;
-
-    getKarmaEmotes(): Promise<ReactionEmote[]>;
-};
 
 //Transform database reaction emote to domain reaction emote
 const transformReactionEmote = (dbEmote: Selectable<ReactionEmotes>): ReactionEmote => {
@@ -26,11 +11,6 @@ const transformReactionEmote = (dbEmote: Selectable<ReactionEmotes>): ReactionEm
 //Remove : : from an emote name.
 const removeColons = (name: string) => {
     return name.replace(/^:(.*):$/, "$1");
-};
-
-export const defaultKarmaValues: Record<string, number> = {
-    upvote: 1,
-    downvote: -1,
 };
 
 //Factory function to create ReactionEmoteRepository instance
@@ -93,15 +73,14 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
     };
 
     //Adds the emotes from KarmaEmoteNames if they don't already exist.
-    const createKarmaEmotes = async (guild: Guild): Promise<void> => {
-        const cache = new Map((await guild.emojis.fetch()).map(e => [e.name, e]));
-
+    //Creates the karma emotes with their default karma values if they don't already exist.
+    const ensureKarmaEmotes = async (emotes: ReactionEmoteRef[]): Promise<void> => {
         for (const name of KarmaEmoteNames) {
-            const found = cache.get(name);
-            if (!found) throw new Error(`Server emoji ${name} not found`);
+            const found = emotes.find(e => e.name === name);
+            if (!found) throw new Error(`Karma emote ${name} not provided`);
 
             const karmaValue = defaultKarmaValues[name] ?? 0;
-            await createReactionEmote(name, found.id, karmaValue);
+            await createReactionEmote(name, found.discordId, karmaValue);
         }
     };
 
@@ -110,7 +89,7 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         return emotes.map(transformReactionEmote);
     };
 
-    const batchFindOrCreate = async (emotes: Array<{ name: string; discordId: string }>): Promise<Map<string, ReactionEmote>> => {
+    const batchFindOrCreate = async (emotes: ReactionEmoteRef[]): Promise<Map<string, ReactionEmote>> => {
         if (emotes.length === 0) {
             return new Map();
         }
@@ -157,7 +136,7 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
         create: createReactionEmote,
         update: updateReactionEmote,
         batchFindOrCreate,
-        createKarmaEmotes,
+        ensureKarmaEmotes,
         getKarmaEmotes,
     };
 };

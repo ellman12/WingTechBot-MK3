@@ -1,41 +1,31 @@
+import { createFileManager } from "@adapters/filestore/FileManager.js";
+import { createGeminiLlmService } from "@adapters/llm/GeminiLlmService.js";
 import { createBannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import { createUnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
 import { createLlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import { createMessageRepository } from "@adapters/repositories/MessageRepository.js";
-import type { PlayedSoundsRepository } from "@adapters/repositories/PlayedSoundsRepository.js";
 import { createReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
 import { createReactionRepository } from "@adapters/repositories/ReactionRepository.js";
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import { createUserRepository } from "@adapters/repositories/UserRepository.js";
-import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
-import type { VoiceService } from "@adapters/services/DiscordVoiceService.js";
+import { type AutoReaction, createAutoReaction } from "@application/discord/AutoReaction.js";
+import { createDiscordApplication } from "@application/discord/DiscordApplication.js";
+import { type DiscordChatService, createDiscordChatService } from "@application/discord/DiscordChat.js";
+import { type LlmConversation, createLlmConversation } from "@application/discord/LlmConversation.js";
+import { type MessageSync, createMessageSync } from "@application/discord/MessageSync.js";
+import { type ReactionArchive, createReactionArchive } from "@application/discord/ReactionArchive.js";
+import { createUserSync } from "@application/discord/UserSync.js";
 import type { Config } from "@core/config/Config.js";
-import type { AutoReactionService } from "@core/services/AutoReactionService.js";
-import { createAutoReactionService } from "@core/services/AutoReactionService.js";
-import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
-import { createDiscordChatService } from "@core/services/DiscordChatService.js";
-import { createDiscordUserSyncService } from "@core/services/DiscordUserSyncService.js";
-import type { LlmConversationService } from "@core/services/LlmConversationService.js";
-import { createLlmConversationService } from "@core/services/LlmConversationService.js";
-import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
-import { createMessageArchiveService } from "@core/services/MessageArchiveService.js";
-import type { ReactionArchiveService } from "@core/services/ReactionArchiveService.js";
-import { createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
-import type { SoundService } from "@core/services/SoundService.js";
-import type { SoundTagService } from "@core/services/SoundTagService.js";
-import type { SoundboardThreadService } from "@core/services/SoundboardThreadService.js";
-import type { VoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
+import { type AutoReactionService, createAutoReactionService } from "@core/services/AutoReactionService.js";
+import { type LlmConversationService, createLlmConversationService } from "@core/services/LlmConversationService.js";
+import { type MessageArchiveService, createMessageArchiveService } from "@core/services/MessageArchiveService.js";
+import { type ReactionArchiveService, createReactionArchiveService } from "@core/services/ReactionArchiveService.js";
+import { createUserSyncService } from "@core/services/UserSyncService.js";
 import { runMigrations } from "@db/migrations.js";
 import type { DB } from "@db/types.js";
 import { createDatabaseConnection } from "@infrastructure/database/DatabaseConnection.js";
 import { type DiscordBot, createDiscordBot } from "@infrastructure/discord/DiscordBot.js";
-import { createFileManager } from "@infrastructure/filestore/FileManager.js";
-import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
-import { createGeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
-import type { ThreadChannel } from "discord.js";
+import { createDiscordClientHandle } from "@infrastructure/discord/DiscordClientHandle.js";
 import type { Kysely } from "kysely";
-import { Readable } from "stream";
-import { vi } from "vitest";
 
 import { createChannelEventFilter } from "./testEventInterceptor.js";
 
@@ -51,13 +41,19 @@ export type MinimalTestBot = {
     readonly db: Kysely<DB>;
     readonly allowedChannels: Set<string>;
     readonly addChannel: (channelId: string) => void;
-    readonly autoReactionService?: ReturnType<typeof createAutoReactionService>;
-    readonly reactionArchiveService?: ReturnType<typeof createReactionArchiveService>;
-    readonly messageArchiveService?: ReturnType<typeof createMessageArchiveService>;
-    readonly discordChatService?: ReturnType<typeof createDiscordChatService>;
+    readonly discordChatService: DiscordChatService;
+    //Core services (Discord-free) and their application counterparts, present only when the matching option is on.
+    readonly autoReactionService?: AutoReactionService;
+    readonly autoReaction?: AutoReaction;
+    readonly reactionArchiveService?: ReactionArchiveService;
+    readonly reactionArchive?: ReactionArchive;
+    readonly messageArchiveService?: MessageArchiveService;
+    readonly messageSync?: MessageSync;
+    readonly llmConversationService?: LlmConversationService;
+    readonly llmConversation?: LlmConversation;
 };
 
-// Creates a minimal test bot with only the services needed for testing.
+// Creates a minimal test bot with only the features needed for a test.
 // Events are automatically filtered to only process channels in the allowed set.
 export async function createMinimalTestBot(config: Config, schemaName: string, options: MinimalTestBotOptions): Promise<MinimalTestBot> {
     const databaseConnection = createDatabaseConnection(config, schemaName);
@@ -69,6 +65,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
 
     const db = databaseConnection.getKysely();
 
+    const unitOfWork = createUnitOfWork(db);
     const userRepository = createUserRepository(db);
     const messageRepository = createMessageRepository(db);
     const reactionRepository = createReactionRepository(db);
@@ -79,202 +76,48 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
 
     const allowedChannels = new Set<string>();
 
-    let autoReactionService: AutoReactionService | undefined;
-    let reactionArchiveService: ReactionArchiveService | undefined;
-    let messageArchiveService: MessageArchiveService | undefined;
-    let llmConversationService: LlmConversationService | undefined;
-    let geminiLlmService: GeminiLlmService | undefined;
-
     const discordChatService = createDiscordChatService({ config });
-    const discordUserSyncService = createDiscordUserSyncService(userRepository, messageRepository, reactionRepository);
+    const userSync = createUserSync({ userSyncService: createUserSyncService({ userRepository, messageRepository, reactionRepository }) });
 
+    let reactionArchiveService: ReactionArchiveService | undefined;
+    let reactionArchive: ReactionArchive | undefined;
     if (options.reactionArchiveService || options.autoReactionService) {
-        reactionArchiveService = createReactionArchiveService({
-            messageRepository,
-            reactionRepository,
-            emoteRepository,
-        });
+        reactionArchiveService = createReactionArchiveService({ messageRepository, reactionRepository, emoteRepository });
+        reactionArchive = createReactionArchive({ reactionArchiveService });
     }
 
+    let messageArchiveService: MessageArchiveService | undefined;
+    let messageSync: MessageSync | undefined;
     if (options.messageArchiveService || options.llmConversationService) {
-        const unitOfWork = createUnitOfWork(db);
-        messageArchiveService = createMessageArchiveService({
-            unitOfWork,
-            messageRepository,
-            fileManager,
-        });
+        messageArchiveService = createMessageArchiveService({ unitOfWork, messageRepository });
+        messageSync = createMessageSync({ messageArchiveService, fileManager });
     }
 
+    let autoReactionService: AutoReactionService | undefined;
+    let autoReaction: AutoReaction | undefined;
+    let llmConversationService: LlmConversationService | undefined;
+    let llmConversation: LlmConversation | undefined;
     if (options.autoReactionService || options.llmConversationService) {
-        geminiLlmService = createGeminiLlmService({ config, discordChatService });
+        const llmService = createGeminiLlmService({ config });
 
         if (options.autoReactionService) {
-            autoReactionService = createAutoReactionService({
-                config,
-                discordChatService,
-                geminiLlmService,
-                llmInstructionRepo,
-            });
+            autoReactionService = createAutoReactionService({ config, llmService, llmInstructionRepo });
+            autoReaction = createAutoReaction({ discordChatService, autoReactionService });
         }
 
-        if (options.llmConversationService && messageArchiveService) {
-            llmConversationService = createLlmConversationService({
-                config,
-                discordChatService,
-                geminiLlmService,
-                messageArchiveService,
-                llmInstructionRepo,
-                bannedFeaturesRepository,
-            });
+        if (options.llmConversationService) {
+            llmConversationService = createLlmConversationService({ config, messageRepository, llmService, llmInstructionRepo });
+            llmConversation = createLlmConversation({ config, discordChatService, llmConversationService, bannedFeaturesRepository });
         }
     }
 
-    // Stub services are no-ops since they won't be used in minimal test bots
-    const createStubSoundRepository = (): SoundRepository => ({
-        addSound: vi.fn().mockResolvedValue({ name: "", path: "" }),
-        getSoundByName: vi.fn().mockResolvedValue(null),
-        deleteSound: vi.fn().mockResolvedValue(undefined),
-        getAllSounds: vi.fn().mockResolvedValue([]),
-        getAllSoundsWithTagName: vi.fn().mockResolvedValue([]),
-        tryGetSoundsWithinDistance: vi.fn().mockResolvedValue([]),
-    });
-
-    const createStubPlayedSoundsRepository = (): PlayedSoundsRepository => ({
-        addPlayedSound: vi.fn().mockResolvedValue({}),
-        getSoundPlayCount: vi.fn().mockResolvedValue({}),
-        getSoundPlayCounts: vi.fn().mockResolvedValue({}),
-        getSoundPlayedDates: vi.fn().mockResolvedValue({}),
-    });
-
-    const createStubVoiceEventSoundsRepository = (): VoiceEventSoundsRepository => ({
-        addVoiceEventSound: vi.fn().mockResolvedValue({ userId: "", soundId: 0, type: "UserJoin" as const }),
-        deleteVoiceEventSound: vi.fn().mockResolvedValue(null),
-        getVoiceEventSounds: vi.fn().mockResolvedValue([]),
-    });
-
-    const createStubSoundService = (): SoundService => ({
-        addSound: async () => {},
-        getSound: async () => new Readable(),
-        getRepeatedSound: async () => "",
-        listSounds: async () => [],
-        deleteSound: async () => {},
-    });
-
-    const createStubSoundTagService = (): SoundTagService => ({
-        addTagToSound: async () => false,
-        removeTagFromSound: async () => false,
-        listTags: async () => [],
-    });
-
-    const createStubVoiceService = (): VoiceService => ({
-        connect: async () => {},
-        disconnect: async () => {},
-        isConnected: () => false,
-        getVoiceChannelId: () => null,
-        playAudio: async () => "",
-        stopAudio: async () => {},
-        stopAudioById: async () => false,
-        stopAllAudio: async () => {},
-        isPlaying: () => false,
-        getActiveAudioCount: () => 0,
-        getActiveAudioIds: () => [],
-        getVolume: () => 1,
-        setVolume: async () => {},
-        pause: async () => {},
-        resume: async () => {},
-    });
-
-    const createStubCommandChoicesService = (): CommandChoicesService => ({
-        getAutocompleteChoices: async () => [],
-    });
-
-    const createStubSoundboardThreadService = (): SoundboardThreadService => ({
-        findOrCreateSoundboardThread: vi.fn().mockResolvedValue({} as ThreadChannel),
-        handleMessageCreated: vi.fn().mockResolvedValue(undefined),
-    });
-
-    const createStubVoiceEventSoundsService = (): VoiceEventSoundsService => ({
-        voiceStateUpdate: async () => {},
-    });
-
-    // Wrap the client BEFORE setupEventHandlers is called so all events are intercepted
-    const bot = await createDiscordBot({
+    const application = createDiscordApplication({
         config,
-        voiceEventSoundsRepository: createStubVoiceEventSoundsRepository(),
-        soundRepository: createStubSoundRepository(),
-        playedSoundsRepository: createStubPlayedSoundsRepository(),
-        soundService: createStubSoundService(),
-        soundTagService: createStubSoundTagService(),
-        reactionRepository: reactionRepository || {
-            find: vi.fn().mockResolvedValue(null),
-            findForMessage: vi.fn().mockResolvedValue([]),
-            create: vi.fn().mockResolvedValue({ giverId: "", receiverId: "", channelId: "", messageId: "", emoteId: 0 }),
-            delete: vi.fn().mockResolvedValue(undefined),
-            deleteReactionsForMessage: vi.fn().mockResolvedValue(undefined),
-            deleteReactionsForEmote: vi.fn().mockResolvedValue(undefined),
-            batchCreate: vi.fn().mockResolvedValue(undefined),
-            batchDelete: vi.fn().mockResolvedValue(undefined),
-            getKarmaAndAwards: vi.fn().mockResolvedValue([]),
-            getReactionsReceived: vi.fn().mockResolvedValue([]),
-            getReactionsGiven: vi.fn().mockResolvedValue([]),
-            getEmoteLeaderboard: vi.fn().mockResolvedValue([]),
-            getKarmaLeaderboard: vi.fn().mockResolvedValue([]),
-            getTopMessages: vi.fn().mockResolvedValue([]),
-        },
-        emoteRepository: emoteRepository || {
-            findById: vi.fn().mockResolvedValue(null),
-            findByNameAndDiscordId: vi.fn().mockResolvedValue(null),
-            create: vi.fn().mockResolvedValue({ id: 0, name: "", discordId: "", karmaValue: 0 }),
-            update: vi.fn().mockResolvedValue(null),
-            batchFindOrCreate: vi.fn().mockResolvedValue(new Map()),
-            createKarmaEmotes: vi.fn().mockResolvedValue(undefined),
-            getKarmaEmotes: vi.fn().mockResolvedValue([]),
-        },
-        reactionArchiveService: reactionArchiveService || {
-            addReaction: vi.fn().mockResolvedValue(undefined),
-            removeReaction: vi.fn().mockResolvedValue(undefined),
-            removeReactionsForMessage: vi.fn().mockResolvedValue(undefined),
-            removeReactionsForEmote: vi.fn().mockResolvedValue(undefined),
-        },
-        messageArchiveService: messageArchiveService || {
-            fetchAllMessages: vi.fn().mockResolvedValue([]),
-            processAllChannels: vi.fn().mockResolvedValue(undefined),
-            messageCreated: vi.fn().mockResolvedValue(undefined),
-            messageDeleted: vi.fn().mockResolvedValue(undefined),
-            messageEdited: vi.fn().mockResolvedValue(undefined),
-            getAllDBMessages: vi.fn().mockResolvedValue([]),
-            getNewestDBMessages: vi.fn().mockResolvedValue([]),
-            hasAnyMessages: vi.fn().mockResolvedValue(false),
-        },
-        discordChatService: discordChatService || {
-            hasBeenPinged: vi.fn().mockReturnValue(false),
-            replaceUserRoleAndChannelMentions: vi.fn().mockResolvedValue(""),
-            sendTypingIndicator: vi.fn().mockResolvedValue(undefined),
-            formatMessageContent: vi.fn().mockReturnValue([]),
-            sendMessage: vi.fn().mockResolvedValue(undefined),
-            replyToInteraction: vi.fn().mockResolvedValue(undefined),
-            followUpToInteraction: vi.fn().mockResolvedValue(undefined),
-        },
-        geminiLlmService: geminiLlmService || {
-            generateResponse: vi.fn().mockResolvedValue(""),
-            generateStandaloneMessage: vi.fn().mockResolvedValue(""),
-        },
-        llmConversationService: llmConversationService || {
-            handleMessageCreated: vi.fn().mockResolvedValue(undefined),
-        },
-        llmInstructionRepo,
-        bannedFeaturesRepository,
-        soundboardThreadService: createStubSoundboardThreadService(),
-        autoReactionService: autoReactionService || {
-            reactionAdded: vi.fn().mockResolvedValue(undefined),
-            messageCreated: vi.fn().mockResolvedValue(undefined),
-        },
-        discordUserSyncService,
-        voiceEventSoundsService: createStubVoiceEventSoundsService(),
-        voiceService: createStubVoiceService(),
-        commandChoicesService: createStubCommandChoicesService(),
-        eventFilter: createChannelEventFilter(allowedChannels),
+        emoteRepository,
+        features: { userSync, reactionArchive, messageSync, autoReaction, llmConversation },
     });
+
+    const bot = createDiscordBot({ config, clientHandle: createDiscordClientHandle(), application, eventFilter: createChannelEventFilter(allowedChannels) });
 
     return {
         bot,
@@ -283,9 +126,14 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
         addChannel: (channelId: string) => {
             allowedChannels.add(channelId);
         },
-        autoReactionService,
-        reactionArchiveService,
-        messageArchiveService,
         discordChatService,
+        autoReactionService,
+        autoReaction,
+        reactionArchiveService,
+        reactionArchive,
+        messageArchiveService,
+        messageSync,
+        llmConversationService,
+        llmConversation,
     };
 }

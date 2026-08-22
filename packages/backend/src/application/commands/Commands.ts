@@ -1,24 +1,12 @@
-import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
-import type { PlayedSoundsRepository } from "@adapters/repositories/PlayedSoundsRepository.js";
-import type { ReactionRepository } from "@adapters/repositories/ReactionRepository.js";
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
-import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
-import type { VoiceService } from "@adapters/services/DiscordVoiceService.js";
-import { createBannedFeaturesCommands } from "@application/commands/BannedFeaturesCommands.js";
-import { createPlayedSoundsCommands } from "@application/commands/PlayedSoundsCommands.js";
-import { createReactionCommands } from "@application/commands/ReactionCommands.js";
-import { createVoiceEventSoundsCommands } from "@application/commands/VoiceEventSoundsCommands.js";
-import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
-import type { DiscordChatService } from "@core/services/DiscordChatService.js";
-import type { SoundService } from "@core/services/SoundService.js";
-import type { SoundTagService } from "@core/services/SoundTagService.js";
-import { type ApplicationCommandOptionChoiceData, type AutocompleteFocusedOption, ChatInputCommandInteraction, Events, MessageFlags, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
-
-import type { DiscordBot } from "@/infrastructure/discord/DiscordBot.js";
-
-import { createAudioCommands } from "./AudioCommands.js";
-import { createSoundTagCommands } from "./SoundTagCommands.js";
-import { createVoiceCommands } from "./VoiceCommands.js";
+import { type AudioCommandDeps, createAudioCommands } from "@application/commands/AudioCommands.js";
+import { type BannedFeaturesCommandsDeps, createBannedFeaturesCommands } from "@application/commands/BannedFeaturesCommands.js";
+import { type PlayedSoundsCommandsDeps, createPlayedSoundsCommands } from "@application/commands/PlayedSoundsCommands.js";
+import { type ReactionCommandDeps, createReactionCommands } from "@application/commands/ReactionCommands.js";
+import { type SoundTagCommandDeps, createSoundTagCommands } from "@application/commands/SoundTagCommands.js";
+import { type VoiceCommandDeps, createVoiceCommands } from "@application/commands/VoiceCommands.js";
+import { type VoiceEventSoundsCommandsDeps, createVoiceEventSoundsCommands } from "@application/commands/VoiceEventSoundsCommands.js";
+import type { RegisterEventHandler } from "@application/discord/EventRegistrar.js";
+import { type ApplicationCommandOptionChoiceData, type AutocompleteFocusedOption, type ChatInputCommandInteraction, Events, MessageFlags, REST, Routes, type SlashCommandOptionsOnlyBuilder } from "discord.js";
 
 export type Command = {
     readonly data: SlashCommandOptionsOnlyBuilder;
@@ -26,72 +14,49 @@ export type Command = {
     readonly getAutocompleteChoices?: (focusedOption: AutocompleteFocusedOption) => Promise<ApplicationCommandOptionChoiceData[]>;
 };
 
-export const createCommands = (
-    voiceEventSoundsRepository: VoiceEventSoundsRepository,
-    soundRepository: SoundRepository,
-    playedSoundsRepository: PlayedSoundsRepository,
-    soundService: SoundService,
-    soundTagService: SoundTagService,
-    voiceService: VoiceService,
-    reactionRepository: ReactionRepository,
-    discordChatService: DiscordChatService,
-    commandChoicesService: CommandChoicesService,
-    bannedFeaturesRepository: BannedFeaturesRepository
-): Record<string, Command> => {
-    const commandRecords = [
-        createVoiceEventSoundsCommands({ discordChatService, voiceEventSoundsRepository, soundRepository, commandChoicesService }),
-        createAudioCommands({ soundService, discordChatService, commandChoicesService }),
-        createReactionCommands({ reactionRepository, discordChatService }),
-        createPlayedSoundsCommands({ soundRepository, playedSoundsRepository, discordChatService, commandChoicesService }),
-        createSoundTagCommands({ soundTagService, discordChatService, commandChoicesService }),
-        createVoiceCommands({ voiceService, soundService, commandChoicesService, bannedFeaturesRepository }),
-        createBannedFeaturesCommands({ bannedFeaturesRepository, discordChatService }),
-    ];
+export type Commands = Readonly<Record<string, Command>>;
 
-    // Assert that there are no duplicate command name in a way where we can have an arbitrary number of commands
-    const commandNames = new Set<string>();
+//Union of every command group's dependencies. Each group only receives what it declares.
+export type CommandDeps = AudioCommandDeps & BannedFeaturesCommandsDeps & PlayedSoundsCommandsDeps & ReactionCommandDeps & SoundTagCommandDeps & VoiceCommandDeps & VoiceEventSoundsCommandsDeps;
+
+export const createCommands = (deps: CommandDeps): Commands => {
+    const commandRecords = [createVoiceEventSoundsCommands(deps), createAudioCommands(deps), createReactionCommands(deps), createPlayedSoundsCommands(deps), createSoundTagCommands(deps), createVoiceCommands(deps), createBannedFeaturesCommands(deps)];
+
+    //Assert that there are no duplicate command names in a way where we can have an arbitrary number of commands
     const commandMap: Record<string, Command> = {};
-    commandRecords.forEach(record => {
-        Object.keys(record).forEach(name => {
-            if (commandNames.has(name)) {
+    for (const record of commandRecords) {
+        for (const [name, command] of Object.entries(record)) {
+            if (name in commandMap) {
                 throw new Error(`Duplicate command name found: ${name}`);
             }
 
-            if (record[name] == null) {
+            if (command == null) {
                 throw new Error(`Command ${name} is not defined in the record`);
             }
 
-            commandMap[name] = record[name];
-            commandNames.add(name);
-        });
-    });
+            commandMap[name] = command;
+        }
+    }
 
     return commandMap;
 };
 
-export const deployCommands = async (
-    voiceEventSoundsRepository: VoiceEventSoundsRepository,
-    soundRepository: SoundRepository,
-    playedSoundsRepository: PlayedSoundsRepository,
-    soundService: SoundService,
-    soundTagService: SoundTagService,
-    voiceService: VoiceService,
-    reactionRepository: ReactionRepository,
-    discordChatService: DiscordChatService,
-    commandChoicesService: CommandChoicesService,
-    bannedFeaturesRepository: BannedFeaturesRepository,
-    token: string,
-    clientId: string,
-    guildId?: string
-): Promise<void> => {
+export type DeployCommandsDeps = {
+    readonly commands: Commands;
+    readonly token: string;
+    readonly clientId: string;
+    readonly guildId?: string;
+};
+
+//Pushes the slash-command definitions to Discord (guild-scoped when guildId is given, global otherwise).
+export const deployCommands = async ({ commands, token, clientId, guildId }: DeployCommandsDeps): Promise<void> => {
     try {
         console.log("🚀 Deploying Discord commands...");
 
-        const commandMap = createCommands(voiceEventSoundsRepository, soundRepository, playedSoundsRepository, soundService, soundTagService, voiceService, reactionRepository, discordChatService, commandChoicesService, bannedFeaturesRepository);
-        const commands = Object.values(commandMap).map(command => command.data.toJSON());
+        const body = Object.values(commands).map(command => command.data.toJSON());
 
-        console.log(`📋 Deploying ${commands.length} commands:`);
-        commands.forEach(cmd => {
+        console.log(`📋 Deploying ${body.length} commands:`);
+        body.forEach(cmd => {
             console.log(`  - /${cmd.name}: ${cmd.description}`);
         });
 
@@ -99,11 +64,11 @@ export const deployCommands = async (
 
         if (guildId) {
             console.log(`🎯 Deploying to guild: ${guildId}`);
-            await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
+            await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body });
             console.log("✅ Commands deployed to guild successfully!");
         } else {
             console.log("🌍 Deploying commands globally...");
-            await rest.put(Routes.applicationCommands(clientId), { body: commands });
+            await rest.put(Routes.applicationCommands(clientId), { body });
             console.log("✅ Commands deployed globally successfully!");
             console.log("⏰ Note: Global commands may take up to 1 hour to appear in all servers");
         }
@@ -113,23 +78,14 @@ export const deployCommands = async (
     }
 };
 
-export const registerCommands = (
-    voiceEventSoundsRepository: VoiceEventSoundsRepository,
-    soundRepository: SoundRepository,
-    playedSoundsRepository: PlayedSoundsRepository,
-    soundService: SoundService,
-    soundTagService: SoundTagService,
-    voiceService: VoiceService,
-    reactionRepository: ReactionRepository,
-    discordChatService: DiscordChatService,
-    commandChoicesService: CommandChoicesService,
-    bannedFeaturesRepository: BannedFeaturesRepository,
-    registerEventHandler: DiscordBot["registerEventHandler"]
-): void => {
+export type RegisterCommandsDeps = {
+    readonly commands: Commands;
+    readonly registerEventHandler: RegisterEventHandler;
+};
+
+//Routes InteractionCreate events to the matching command (execute + autocomplete).
+export const registerCommands = ({ commands, registerEventHandler }: RegisterCommandsDeps): void => {
     console.log("🔄 Registering commands...");
-
-    const commands = createCommands(voiceEventSoundsRepository, soundRepository, playedSoundsRepository, soundService, soundTagService, voiceService, reactionRepository, discordChatService, commandChoicesService, bannedFeaturesRepository);
-
     console.log(`✅ Registered ${Object.keys(commands).length} Commands:`);
     Object.keys(commands).forEach(command => {
         console.log(`- ${command}`);

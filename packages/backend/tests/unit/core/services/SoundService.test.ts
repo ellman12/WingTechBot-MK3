@@ -1,9 +1,9 @@
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { Config } from "@core/config/Config.js";
+import type { SoundRepository } from "@core/ports/repositories/SoundRepository.js";
+import type { AudioProcessingService } from "@core/ports/services/AudioProcessingService.js";
+import type { FileManager } from "@core/ports/services/FileManager.js";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { parseAudioSource } from "@core/services/AudioFetcherService.js";
-import type { AudioProcessingService } from "@core/services/AudioProcessingService.js";
-import type { FileManager } from "@core/services/FileManager.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { Readable } from "stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";

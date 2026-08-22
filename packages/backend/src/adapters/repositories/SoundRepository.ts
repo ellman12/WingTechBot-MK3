@@ -1,18 +1,9 @@
 import { transformSoundTag } from "@adapters/repositories/SoundTagRepository.js";
+import type { Sound } from "@core/entities/Sound.js";
+import type { SoundRepository } from "@core/ports/repositories/SoundRepository.js";
 import { getItemsWithinDistance } from "@core/utils/searchUtils.js";
 import type { DB, Sounds, Soundtags } from "@db/types.js";
 import { type Kysely, type Selectable, sql } from "kysely";
-
-import type { Sound } from "@/core/entities/Sound.js";
-
-export type SoundRepository = {
-    readonly addSound: (audio: Omit<Sound, "id">) => Promise<Sound>;
-    readonly getSoundByName: (name: string) => Promise<Sound | null>;
-    readonly deleteSound: (name: string) => Promise<void>;
-    readonly getAllSounds: () => Promise<Sound[]>;
-    readonly getAllSoundsWithTagName: (tagName: string) => Promise<Sound[]>;
-    readonly tryGetSoundsWithinDistance: (needle: string) => Promise<(Sound & { distance: number })[]>;
-};
 
 export const createSoundRepository = (db: Kysely<DB>): SoundRepository => {
     const transformSound = (sound: Selectable<Sounds>, soundtags?: Selectable<Soundtags>[]): Sound => {

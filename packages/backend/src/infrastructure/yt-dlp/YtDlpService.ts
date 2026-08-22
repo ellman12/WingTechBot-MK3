@@ -8,22 +8,26 @@ import { tmpdir } from "os";
 import { join } from "path";
 import type { Readable } from "stream";
 
-export interface YtDlpService {
+export type YtDlpService = {
     readonly getAudioStream: (url: string) => Promise<Readable>;
     readonly getAudioStreamWithFormat: (url: string) => Promise<AudioStreamWithMetadata>;
     readonly getVideoInfo: (url: string) => Promise<YtDlpVideoInfo>;
-}
+};
 
-export interface YtDlpVideoInfo {
+export type YtDlpVideoInfo = {
     readonly title: string;
     readonly duration: number;
     readonly uploader: string;
     readonly url: string;
     readonly audioFormat?: string; // e.g., "opus", "aac"
     readonly audioContainer?: string; // e.g., "webm", "m4a"
-}
+};
 
-export const createYtDlpService = (formatDetectionService?: AudioFormatDetectionService): YtDlpService => {
+export type YtDlpServiceDeps = {
+    readonly formatDetectionService?: AudioFormatDetectionService;
+};
+
+export const createYtDlpService = ({ formatDetectionService }: YtDlpServiceDeps): YtDlpService => {
     return {
         async getAudioStreamWithFormat(url: string): Promise<AudioStreamWithMetadata> {
             console.log(`[YtDlpService] Getting audio stream with format info for URL: ${url}`);

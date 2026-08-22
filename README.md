@@ -5,7 +5,7 @@
 [![Docker Build](https://github.com/ellman12/WingTechBot-MK3/workflows/Docker%20Build%20and%20Push/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/docker.yaml)
 [![Dependency Updates](https://github.com/ellman12/WingTechBot-MK3/workflows/Update%20Dependencies/badge.svg)](https://github.com/ellman12/WingTechBot-MK3/actions/workflows/dependencies.yaml)
 
-A modern full-stack Discord bot application built with TypeScript, featuring a robust backend API and a sleek React frontend.
+A Discord bot built with TypeScript: soundboard, karma/reaction tracking, and an LLM-powered chat companion for a single guild.
 
 ## 🏗️ Architecture
 
@@ -14,8 +14,8 @@ This project is organized as a monorepo with the following structure:
 ```
 WingTechBot-MK3/
 ├── packages/
-│   ├── backend/          # Discord Bot
-│   └── frontend/         # React Web Application
+│   ├── backend/          # Discord bot (functional hexagonal architecture — see packages/backend/ARCHITECTURE.md)
+│   └── backup/           # Postgres backup sidecar
 ├── package.json          # Root workspace configuration
 └── README.md            # This file
 ```
@@ -100,16 +100,21 @@ pnpm test:backend
 
 ### Backend Package
 
-The backend serves as a Discord bot.
+The backend is the Discord bot. It follows a functional hexagonal architecture: a Discord-free `core`
+(entities, ports, services) driven by `application/discord` (commands, event handlers, startup
+orchestration), with `adapters` implementing the core ports (Kysely, ffmpeg, yt-dlp, Gemini, Discord
+voice) and `infrastructure` hosting the Discord client and DB connection. Layer boundaries are enforced
+by ESLint — see [packages/backend/ARCHITECTURE.md](packages/backend/ARCHITECTURE.md).
 
 **Structure:**
 
 ```
 packages/backend/src/
-├── adapters/           # External adapters (Discord, DB, etc.)
-├── application/        # Use cases and application logic
-├── core/              # Domain models and business logic
-├── infrastructure/    # Framework and external concerns
+├── core/              # Domain: entities, ports, services, utils (no discord.js / kysely)
+├── application/       # Driving side: commands/, discord/
+├── adapters/          # Driven side: Kysely repos, ffmpeg, yt-dlp, Gemini, Discord voice, filesystem
+├── infrastructure/    # Discord client lifecycle, DB connection, process wrappers
+└── main.ts            # Composition root
 ```
 
 ## 🐳 Docker Support

@@ -1,5 +1,5 @@
+import type { DiscordChatService } from "@application/discord/DiscordChat.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
-import type { DiscordChatService } from "@core/services/DiscordChatService.js";
 import type { SoundTagService } from "@core/services/SoundTagService.js";
 import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 
@@ -28,7 +28,7 @@ export const createSoundTagCommands = ({ soundTagService, discordChatService, co
             await soundTagService.addTagToSound(soundName, tagName);
             await discordChatService.replyToInteraction(interaction, `Added tag "${tagName}" to "${soundName}"`, { ephemeral: true });
         },
-        getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
+        getAutocompleteChoices: option => commandChoicesService.getAutocompleteChoices(option.name, String(option.value)),
     };
 
     const untagSound: Command = {
@@ -47,7 +47,7 @@ export const createSoundTagCommands = ({ soundTagService, discordChatService, co
             await soundTagService.removeTagFromSound(soundName, tagName);
             await discordChatService.replyToInteraction(interaction, `Removed tag "${tagName}" from "${soundName}"`, { ephemeral: true });
         },
-        getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
+        getAutocompleteChoices: option => commandChoicesService.getAutocompleteChoices(option.name, String(option.value)),
     };
 
     const listTags: Command = {

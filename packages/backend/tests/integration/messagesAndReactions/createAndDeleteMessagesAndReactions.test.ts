@@ -3,7 +3,20 @@ import type { TextChannel } from "discord.js";
 
 import { getTestConfig } from "../../setup.js";
 import { type MinimalTestBot, createMinimalTestBot } from "../../utils/createMinimalTestBot.js";
-import { cleanupAllTestChannels, createMessagesAndReactions, createTemporaryTestChannel, createTestSchema, deleteTestChannel, dropTestSchema, getTestingEmotes, verifyTesterReactions, waitForAllReactionsRemoved, waitForMessageDeleted, waitForReactionsRemoved, waitForTesterReactions } from "../../utils/testUtils.js";
+import {
+    cleanupAllTestChannels,
+    createMessagesAndReactions,
+    createTemporaryTestChannel,
+    createTestSchema,
+    deleteTestChannel,
+    dropTestSchema,
+    getTestingEmotes,
+    verifyTesterReactions,
+    waitForAllReactionsRemoved,
+    waitForMessageDeleted,
+    waitForReactionsRemoved,
+    waitForTesterReactions,
+} from "../../utils/testUtils.js";
 import { createTesterDiscordBot } from "../testBot/TesterDiscordBot.js";
 
 const timeout = 360 * 1000;

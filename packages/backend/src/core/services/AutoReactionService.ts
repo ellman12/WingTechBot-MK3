@@ -1,27 +1,7 @@
-import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
 import type { Config } from "@core/config/Config.js";
-import type { DiscordChatService } from "@core/services/DiscordChatService.js";
+import type { LlmInstructionRepository } from "@core/ports/repositories/LlmInstructionRepository.js";
+import type { LlmService } from "@core/ports/services/LlmService.js";
 import { oneIn, randomArrayItem } from "@core/utils/probabilityUtils.js";
-import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
-import type { Message, MessageReaction, PartialMessageReaction, PartialUser, TextChannel, User } from "discord.js";
-
-export type AutoReactionService = {
-    readonly reactionAdded: (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => Promise<void>;
-    readonly messageCreated: (message: Message) => Promise<void>;
-};
-
-export type AutoReactionServiceDeps = {
-    readonly config: Config;
-    readonly discordChatService: DiscordChatService;
-    readonly geminiLlmService: GeminiLlmService;
-    readonly llmInstructionRepo: LlmInstructionRepository;
-};
-
-// Helper to check if error is due to Discord client being destroyed/token missing
-// This is a safety net for race conditions during bot shutdown
-const isClientDestroyedError = (error: unknown): boolean => {
-    return error instanceof Error && error.message.includes("Expected token to be set for this request");
-};
 
 const upvoteScolds = [
     "god imagine upvoting yourself",
@@ -55,10 +35,46 @@ export const reactionScoldMessages: Record<string, string[]> = {
     platinum: awardScolds,
 };
 
-export const createAutoReactionService = ({ config, discordChatService, geminiLlmService, llmInstructionRepo }: AutoReactionServiceDeps): AutoReactionService => {
+export type AutoReactionMessage = {
+    readonly authorId: string;
+    //Display name of the author, used to attribute the message when it is sent to the LLM.
+    readonly authorName: string;
+    readonly content: string;
+    //Returns the content with user/role/channel mentions replaced by names. Only called by the rules that need it, because it costs API calls.
+    readonly getCleanedContent: () => Promise<string>;
+    //Called right before a rule makes an LLM request, so the caller can show a typing indicator while it runs.
+    readonly onLlmStart?: () => void;
+};
+
+export type SelfReactionInput = {
+    readonly authorId: string;
+    readonly reactorId: string;
+    readonly emoteName: string | null | undefined;
+};
+
+export type AutoReactionResult = {
+    readonly kind: "reply";
+    readonly content: string;
+    readonly usesLlm?: boolean;
+};
+
+export type AutoReactionService = {
+    //Runs the auto-reaction rules against a message and returns the reply to send, or null if nothing fired.
+    readonly evaluateMessage: (message: AutoReactionMessage) => Promise<AutoReactionResult | null>;
+    //Returns the scold to send for a self-reaction, or null if this isn't a scoldable self-reaction.
+    readonly getSelfReactionScold: (input: SelfReactionInput) => string | null;
+};
+
+export type AutoReactionServiceDeps = {
+    readonly config: Config;
+    readonly llmService: LlmService;
+    readonly llmInstructionRepo: LlmInstructionRepository;
+};
+
+export const createAutoReactionService = ({ config, llmService, llmInstructionRepo }: AutoReactionServiceDeps): AutoReactionService => {
     console.log("[AutoReactionService] Creating AutoReactionService");
 
-    const autoReactions: Array<{ probabilityDenominator: number; handler: (message: Message) => Promise<boolean> }> = [
+    const autoReactions: Array<{ probabilityDenominator: number; handler: (message: AutoReactionMessage) => Promise<AutoReactionResult | null> }> = [
         { probabilityDenominator: config.autoReaction.funnySubstringsProbability, handler: checkForFunnySubstrings },
         { probabilityDenominator: config.autoReaction.erJokeProbability, handler: tryToSayErJoke },
         { probabilityDenominator: config.autoReaction.nekoizeProbability, handler: tryToNekoizeMessage },
@@ -81,10 +97,10 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         return match.replace(highlightRegex, "**$1**");
     }
 
-    async function checkForFunnySubstrings(message: Message): Promise<boolean> {
-        if (message.author.id === botId) return false;
+    async function checkForFunnySubstrings(message: AutoReactionMessage): Promise<AutoReactionResult | null> {
+        if (message.authorId === botId) return null;
 
-        const initialFilteredContent = await discordChatService.replaceUserRoleAndChannelMentions(message);
+        const initialFilteredContent = await message.getCleanedContent();
 
         const content = initialFilteredContent.replace(/<a?(:[a-zA-Z]+:)(\d+)>/g, (_, name, _id) => name);
 
@@ -94,11 +110,10 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
 
         const highlighted = quoteAndHighlightMatch(content, matchRegex, highlightPattern);
         if (highlighted) {
-            await message.reply(`> ${highlighted}\nNice`);
-            return true;
+            return { kind: "reply", content: `> ${highlighted}\nNice` };
         }
 
-        return false;
+        return null;
     }
 
     function findLastWordEndingWithEr(sentence: string) {
@@ -121,33 +136,26 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         return undefined;
     }
 
-    async function tryToSayErJoke(message: Message): Promise<boolean> {
-        if (message.author.id === botId) return false;
+    async function tryToSayErJoke(message: AutoReactionMessage): Promise<AutoReactionResult | null> {
+        if (message.authorId === botId) return null;
 
         const erWord = findLastWordEndingWithEr(message.content);
         if (erWord) {
-            await message.reply(`"${erWord}"? I hardly even know 'er!`);
-            return true;
+            return { kind: "reply", content: `"${erWord}"? I hardly even know 'er!` };
         }
 
-        return false;
+        return null;
     }
 
-    async function tryToNekoizeMessage(message: Message): Promise<boolean> {
-        if (config.llm.disabled || message.author.id === botId || process.env.CI) return false;
+    async function tryToNekoizeMessage(message: AutoReactionMessage): Promise<AutoReactionResult | null> {
+        if (config.llm.disabled || message.authorId === botId) return null;
 
-        const channel = (await message.channel.fetch()) as TextChannel;
-        const controller = new AbortController();
-        void discordChatService.sendTypingIndicator(controller.signal, channel);
+        message.onLlmStart?.();
 
-        try {
-            const systemInstruction = await llmInstructionRepo.getInstruction("nekoize");
-            const response = await geminiLlmService.generateResponse(message, [], systemInstruction);
-            await message.reply(response);
-            return true;
-        } finally {
-            controller.abort();
-        }
+        const content = await message.getCleanedContent();
+        const systemInstruction = await llmInstructionRepo.getInstruction("nekoize");
+        const response = await llmService.generateReply({ prompt: { role: "user", authorName: message.authorName, content }, systemInstruction });
+        return { kind: "reply", content: response, usesLlm: true };
     }
 
     function applyCaseFromOriginal(original: string, target: string): string {
@@ -178,18 +186,18 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         return result;
     }
 
-    async function tryElliottReminder(message: Message): Promise<boolean> {
-        if (message.author.id === botId) return false;
+    async function tryElliottReminder(message: AutoReactionMessage): Promise<AutoReactionResult | null> {
+        if (message.authorId === botId) return null;
 
         const ELLIOTT_PATTERN = `(elliot(?!t)|eliott?)`;
         const matchRegex = createWordContextRegex(ELLIOTT_PATTERN);
 
         const matches = message.content.match(matchRegex);
-        if (!matches) return false;
+        if (!matches) return null;
 
         const fullMatch = matches[0];
         const nameMatch = fullMatch.match(new RegExp(ELLIOTT_PATTERN, "i"));
-        if (!nameMatch) return false;
+        if (!nameMatch) return null;
 
         const misspelling = nameMatch[0];
         const missingL = /^eliot/i.test(misspelling);
@@ -213,41 +221,33 @@ export const createAutoReactionService = ({ config, discordChatService, geminiLl
         }
 
         const highlighted = quoteAndHighlightMatch(fullMatch, new RegExp(ELLIOTT_PATTERN, "gi"), ELLIOTT_PATTERN);
-        if (!highlighted) return false;
+        if (!highlighted) return null;
 
-        await message.reply(`> ${highlighted}\n${reply}`);
-        return true;
+        return { kind: "reply", content: `> ${highlighted}\n${reply}` };
     }
 
     return {
-        reactionAdded: async (reaction, user): Promise<void> => {
-            try {
-                const message = await reaction.message.fetch();
-                reaction = await reaction.fetch();
-
-                if (message.author.id !== user.id) {
-                    console.log(`[AutoReactionService] Skipping reaction - not a self-reaction (author: ${message.author.id}, user: ${user.id})`);
-                    return;
-                }
-
-                const scoldMessages = reactionScoldMessages[reaction.emoji.name!];
-                if (!scoldMessages) return;
-
-                console.log(`[AutoReactionService] Sending scold message for self-reaction in channel ${message.channelId}`);
-                await message.channel.send(`${randomArrayItem(scoldMessages)} <@${user.id}>`);
-            } catch (e: unknown) {
-                if (!isClientDestroyedError(e)) {
-                    console.error("Error checking if added reaction needs to be scolded", e);
+        evaluateMessage: async (message): Promise<AutoReactionResult | null> => {
+            for (const { probabilityDenominator, handler } of autoReactions) {
+                if (oneIn(probabilityDenominator)) {
+                    const result = await handler(message);
+                    if (result) return result;
                 }
             }
+
+            return null;
         },
 
-        messageCreated: async (message): Promise<void> => {
-            for (const { probabilityDenominator, handler } of autoReactions) {
-                if (oneIn(probabilityDenominator) && (await handler(message))) {
-                    return;
-                }
+        getSelfReactionScold: ({ authorId, reactorId, emoteName }): string | null => {
+            if (authorId !== reactorId) {
+                console.log(`[AutoReactionService] Skipping reaction - not a self-reaction (author: ${authorId}, user: ${reactorId})`);
+                return null;
             }
+
+            const scoldMessages = emoteName ? reactionScoldMessages[emoteName] : undefined;
+            if (!scoldMessages) return null;
+
+            return randomArrayItem(scoldMessages) ?? null;
         },
     };
 };

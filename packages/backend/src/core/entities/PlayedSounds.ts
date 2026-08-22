@@ -1,4 +1,6 @@
-import type { PlayedSoundSource } from "@db/types.js";
+//Where a sound play originated. Canonical list; the DB enum must match (asserted in the adapter).
+export const playedSoundSources = ["Command", "Thread", "VoiceEvent"] as const;
+export type PlayedSoundSource = (typeof playedSoundSources)[number];
 
 export type PlayedSound = {
     readonly id: number;

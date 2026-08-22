@@ -1,12 +1,12 @@
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
-import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
+import { createFfmpegAudioProcessingService } from "@adapters/audio/FfmpegAudioProcessingService.js";
+import { createFileManager } from "@adapters/filestore/FileManager.js";
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream.js";
 import { createAudioStreamWithFormat } from "@core/entities/AudioStream.js";
 import type { Sound } from "@core/entities/Sound.js";
+import type { SoundRepository } from "@core/ports/repositories/SoundRepository.js";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
-import { createFileManager } from "@infrastructure/filestore/FileManager.js";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "fs";
 import assert from "node:assert";
 import { tmpdir } from "os";

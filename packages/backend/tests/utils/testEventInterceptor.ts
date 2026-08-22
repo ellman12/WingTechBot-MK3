@@ -1,4 +1,4 @@
-import type { EventFilter } from "@infrastructure/discord/DiscordBot.js";
+import type { EventFilter } from "@application/discord/EventRegistrar.js";
 import type { ClientEvents } from "discord.js";
 import { Events } from "discord.js";
 
