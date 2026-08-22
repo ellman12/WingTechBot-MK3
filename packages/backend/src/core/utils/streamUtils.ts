@@ -1,3 +1,4 @@
+import { AudioFetchTimeoutError, AudioSizeLimitError } from "@core/errors/AudioErrors.js";
 import { PassThrough, type Readable } from "stream";
 
 export const createPreBufferedStream = async (sourceStream: Readable, sourceName: string, abortSignal?: AbortSignal): Promise<Readable> => {
@@ -98,17 +99,69 @@ export const createPreBufferedStream = async (sourceStream: Readable, sourceName
     });
 };
 
-export const readStreamToBytes = (stream: Readable): Promise<Uint8Array> => {
+export type ReadStreamToBytesOptions = {
+    // Hard ceiling on buffered bytes. Exceeding it destroys the stream and throws AudioSizeLimitError.
+    readonly limitBytes: number;
+    // Label used in error messages (a URL, a sound name, a file path).
+    readonly sourceName: string;
+    // Max time allowed between two chunks. This is deliberately an *inactivity* timeout rather
+    // than a wall-clock one: a slow-but-progressing download is legitimate, a server that stops
+    // sending is not. Omit to disable.
+    readonly idleTimeoutMs?: number;
+};
+
+// Buffers a stream into memory under an explicit size cap and optional inactivity timeout.
+// Every audio source is attacker-influenced, so unbounded buffering is never acceptable here.
+export const readStreamToBytes = (stream: Readable, { limitBytes, sourceName, idleTimeoutMs }: ReadStreamToBytesOptions): Promise<Uint8Array> => {
     return new Promise((resolve, reject) => {
         const chunks: Uint8Array[] = [];
+        let total = 0;
+        let settled = false;
+        let idleTimer: NodeJS.Timeout | undefined;
+
+        const clearIdleTimer = () => {
+            if (idleTimer) clearTimeout(idleTimer);
+            idleTimer = undefined;
+        };
+
+        const fail = (error: Error) => {
+            if (settled) return;
+            settled = true;
+            clearIdleTimer();
+            stream.destroy();
+            reject(error);
+        };
+
+        const armIdleTimer = () => {
+            if (idleTimeoutMs === undefined) return;
+            clearIdleTimer();
+            idleTimer = setTimeout(() => {
+                fail(new AudioFetchTimeoutError(`Stalled for ${idleTimeoutMs}ms while reading: ${sourceName}`, { url: sourceName, timeoutMs: idleTimeoutMs }));
+            }, idleTimeoutMs);
+        };
+
         stream.on("data", (chunk: Buffer) => {
+            if (settled) return;
+            total += chunk.length;
+            if (total > limitBytes) {
+                fail(new AudioSizeLimitError(`Audio exceeds the ${Math.round(limitBytes / 1024 / 1024)}MB size limit: ${sourceName}`, { sizeBytes: total, limitBytes }));
+                return;
+            }
             chunks.push(chunk);
+            armIdleTimer();
         });
+
         stream.on("end", () => {
+            if (settled) return;
+            settled = true;
+            clearIdleTimer();
             resolve(Buffer.concat(chunks));
         });
+
         stream.on("error", err => {
-            reject(err);
+            fail(err instanceof Error ? err : new Error(String(err)));
         });
+
+        armIdleTimer();
     });
 };

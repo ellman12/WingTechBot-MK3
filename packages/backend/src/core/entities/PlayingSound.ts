@@ -19,6 +19,7 @@ export type PlayingSound = {
     readonly id: string;
     // Pre-processed PCM audio stream (48kHz, 2ch, 16-bit)
     readonly stream: Readable;
+    // Volume multiplier: 0.0 (muted) to 2.0 (200%)
     readonly volume: number;
     readonly abortController: AbortController;
     readonly metadata?: PlayingSoundMetadata;
@@ -44,7 +45,7 @@ export const createPlayingSound = (id: string, stream: Readable, volume: number 
     return {
         id,
         stream,
-        volume: Math.max(0, Math.min(1, volume)),
+        volume: Math.max(0, Math.min(2, volume)),
         abortController,
         metadata,
         abort,

@@ -127,8 +127,10 @@ export const createDiscordVoiceService = ({ soundService, soundRepository, playe
         console.log(`[DiscordVoiceService] Attempting to disconnect from server ${serverId}`);
         const state = voiceStates.get(serverId);
         if (state) {
-            console.log(`[DiscordVoiceService] Stopping audio player for server ${serverId}`);
-            state.player.stop();
+            console.log(`[DiscordVoiceService] Tearing down audio player for server ${serverId}`);
+            // Full teardown: aborts every playing source and destroys the mixer so no
+            // buffers or listeners survive the disconnect (connect() reuses this path).
+            state.player.destroy();
             console.log(`[DiscordVoiceService] Destroying voice connection for server ${serverId}`);
             state.connection.destroy();
             console.log(`[DiscordVoiceService] Removing voice state for server ${serverId}`);
@@ -281,6 +283,8 @@ export const createDiscordVoiceService = ({ soundService, soundRepository, playe
         const state = voiceStates.get(serverId);
         if (state) {
             state.volume = Math.max(0, Math.min(200, volume));
+            // Apply to already-playing sounds too, not just the next one
+            state.player.setVolume(state.volume / 100);
         }
     };
 

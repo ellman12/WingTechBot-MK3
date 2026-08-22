@@ -23,9 +23,15 @@ describe("validateSoundName", () => {
         expect(validateSoundName("boom,clap")).toBe(`Cannot use commas in sound names (reserved for multi-sound selection).`);
     });
 
-    it("only rejects the exact reserved names", () => {
+    it("allows names that merely resemble the reserved ones", () => {
         expect(validateSoundName("randomly")).toBeUndefined();
         expect(validateSoundName("not-currently-playing")).toBeUndefined();
-        expect(validateSoundName("boom#")).toBeUndefined();
+    });
+
+    it("rejects characters outside the allowlist wherever they appear", () => {
+        // Sound names become file names on disk, so this is an allowlist rather than a
+        // blocklist of the reserved prefixes: "#" is refused anywhere, not just leading.
+        expect(validateSoundName("boom#")).toBeDefined();
+        expect(validateSoundName("boom!")).toBeDefined();
     });
 });

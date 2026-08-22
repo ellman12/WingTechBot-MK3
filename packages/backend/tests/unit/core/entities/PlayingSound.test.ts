@@ -81,17 +81,24 @@ describe.concurrent("PlayingSound", () => {
             expect(playingSound.metadata?.formatInfo).toBeUndefined();
         });
 
-        it("should clamp volume to valid range (0-1)", () => {
+        it("should clamp volume to valid range (0-2)", () => {
             const stream = Readable.from(["test"]);
 
             const tooLow = createPlayingSound("id-1", stream, -0.5);
             expect(tooLow.volume).toBe(0);
 
-            const tooHigh = createPlayingSound("id-2", stream, 1.5);
-            expect(tooHigh.volume).toBe(1);
+            const tooHigh = createPlayingSound("id-2", stream, 2.5);
+            expect(tooHigh.volume).toBe(2);
 
             const valid = createPlayingSound("id-3", stream, 0.7);
             expect(valid.volume).toBe(0.7);
+        });
+
+        it("should allow volumes above 100% up to the documented 200% maximum", () => {
+            const stream = Readable.from(["test"]);
+
+            expect(createPlayingSound("id-1", stream, 1.5).volume).toBe(1.5);
+            expect(createPlayingSound("id-2", stream, 2.0).volume).toBe(2);
         });
 
         it("should provide abort functionality", () => {

@@ -1,6 +1,6 @@
 import { Readable } from "stream";
 
-import { getSampleByteIndex, readPcmSample, writePcmSample } from "./pcmUtils.js";
+import { getSampleByteIndex, mixSamples, readPcmSample, writePcmSample } from "./pcmUtils.js";
 
 export type PcmStreamOptions = {
     readonly sampleRate?: number; // default 48000
@@ -121,7 +121,9 @@ function mixRepeatedChunk(startSample: number, sampleCount: number, schedule: Re
 
         for (let channel = 0; channel < channels; channel++) {
             const activeSamples = getActiveSamples(absoluteSample, channel, schedule, bytesPerSample);
-            const mixedValue = activeSamples.reduce((sum, sample) => sum + sample, 0);
+            // Overlapping repeats are copies of the same waveform, so they sum coherently and
+            // clip hardest. mixSamples soft-limits instead of hard-clamping, matching PcmMixer.
+            const mixedValue = mixSamples(activeSamples);
 
             const outputByteIndex = getSampleByteIndex(sampleOffset, channel, bytesPerSample);
             writePcmSample(outputBuffer, outputByteIndex, mixedValue);

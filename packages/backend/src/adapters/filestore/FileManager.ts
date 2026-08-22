@@ -97,6 +97,13 @@ export const createFileManager = (): FileManager => {
                         console.error(`[FileManager] Error writing stream to ${filePath}:`, err);
                         reject(err);
                     });
+
+                    // Without this a failing source stream would leave the promise pending forever.
+                    content.on("error", err => {
+                        console.error(`[FileManager] Source stream error while writing ${filePath}:`, err);
+                        writeStream.destroy();
+                        reject(err);
+                    });
                 });
             } catch (error) {
                 console.error(`[FileManager] Error ensuring directory exists for ${filePath}:`, error);
@@ -123,16 +130,16 @@ export const createFileManager = (): FileManager => {
                 });
             });
         },
+        renameFile: async (oldPath: string, newPath: string) => {
+            await ensureDirectoryExists(newPath);
+            await fs.promises.rename(oldPath, newPath);
+        },
+
+        // Returns full paths (directory + entry name), not bare basenames, so callers can
+        // stat/delete/read the results directly regardless of the process working directory.
         listFiles: async (directory: string) => {
-            return new Promise((resolve, reject) => {
-                fs.readdir(directory, (err, files) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve(files);
-                    }
-                });
-            });
+            const files = await fs.promises.readdir(directory);
+            return files.map(file => path.join(directory, file));
         },
         getFileStats: async (path: string) => {
             return new Promise((resolve, reject) => {

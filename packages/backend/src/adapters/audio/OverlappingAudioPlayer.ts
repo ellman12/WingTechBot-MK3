@@ -1,7 +1,6 @@
 import type { PlayingSound } from "@core/entities/PlayingSound.js";
 import { PcmMixer, type PcmStreamInfo } from "@core/utils/audio/PcmMixer.js";
-import { AudioPlayer, type AudioPlayerState, AudioPlayerStatus, type AudioResource, NoSubscriberBehavior, StreamType, createAudioResource } from "@discordjs/voice";
-import { Readable } from "stream";
+import { AudioPlayer, type AudioPlayerState, type AudioResource, NoSubscriberBehavior, StreamType, createAudioResource } from "@discordjs/voice";
 
 export type OverlappingAudioPlayerOptions = {
     readonly sampleRate?: number;
@@ -15,12 +14,20 @@ export type PlayingAudioInfo = {
     readonly startTime: number;
 };
 
+// An AudioPlayer backed by a persistent mix bus.
+//
+// The mixer is a pull-based Readable wrapped directly in a single AudioResource, so the
+// player's own 20ms tick drives mixing. The bus emits silence when nothing is playing,
+// which keeps the player in the Playing state for its whole lifetime instead of cycling
+// through Idle and rebuilding the resource between sounds.
 export class OverlappingAudioPlayer extends AudioPlayer {
     private readonly mixer: PcmMixer;
     private readonly playingAudio = new Map<string, PlayingAudioInfo>();
-    private mixedResource: AudioResource | null = null;
-    private mixerOutput: Readable | null = null;
-    private nextAudioId = 0;
+    private readonly mixedResource: AudioResource;
+    private readonly onMixerError = (error: Error) => {
+        console.error(`[OverlappingAudioPlayer] Mixer error:`, error);
+    };
+    private isDestroyed = false;
 
     constructor(options: OverlappingAudioPlayerOptions = {}) {
         super({
@@ -36,105 +43,21 @@ export class OverlappingAudioPlayer extends AudioPlayer {
             maxConcurrentStreams: options.maxConcurrentStreams ?? 8,
         });
 
+        this.mixer.on("error", this.onMixerError);
         this.on("stateChange", this.handleStateChange.bind(this));
-        this.setupMixerOutput();
+
+        // The mixer is the resource. It never ends, so it is created exactly once.
+        this.mixedResource = createAudioResource(this.mixer, {
+            inputType: StreamType.Raw,
+            inlineVolume: false, // Volume is handled by the mixer
+        });
+        super.play(this.mixedResource);
 
         console.log(`[OverlappingAudioPlayer] Initialized with mixer`);
     }
 
-    private setupMixerOutput(): void {
-        // Clean up previous output stream and resource
-        if (this.mixerOutput && !this.mixerOutput.destroyed) {
-            this.mixerOutput.destroy();
-        }
-
-        // Clean up previous mixer listeners to prevent accumulation
-        this.mixer.removeAllListeners("data");
-        this.mixer.removeAllListeners("error");
-
-        // Create a readable stream from the mixer output
-        const mixerOutput = new Readable({
-            read() {
-                // Readable interface, actual data comes from mixer
-            },
-        });
-
-        // Attach fresh listeners to the mixer
-        this.mixer.on("data", (chunk: Buffer) => {
-            if (!mixerOutput.destroyed) {
-                mixerOutput.push(chunk);
-            }
-        });
-
-        this.mixer.on("error", error => {
-            console.error(`[OverlappingAudioPlayer] Mixer error:`, error);
-        });
-
-        // Track the output stream for cleanup on reconnect
-        this.mixerOutput = mixerOutput;
-
-        // Create audio resource from mixer output
-        this.mixedResource = createAudioResource(mixerOutput, {
-            inputType: StreamType.Raw,
-            inlineVolume: false, // Volume is handled by the mixer
-        });
-
-        // Start playing the mixed output
-        super.play(this.mixedResource);
-    }
-
     private handleStateChange(oldState: AudioPlayerState, newState: AudioPlayerState): void {
         console.log(`[OverlappingAudioPlayer] State change: ${oldState.status} -> ${newState.status} (${this.playingAudio.size} active streams)`);
-
-        if (newState.status === AudioPlayerStatus.Idle && this.playingAudio.size > 0) {
-            // If player goes idle but we still have audio to play
-            console.log(`[OverlappingAudioPlayer] Player idle but ${this.playingAudio.size} streams active, reconnecting mixer output`);
-            this.setupMixerOutput();
-        }
-    }
-
-    public override play(resource: AudioResource, volume: number = 1.0): string {
-        const audioId = `audio_${this.nextAudioId++}`;
-        console.log(`[OverlappingAudioPlayer] Adding audio ${audioId} with volume ${volume}`);
-
-        // Convert AudioResource to a stream that we can add to the mixer
-        const pcmStream = this.extractPcmFromResource(resource);
-
-        const streamInfo: PcmStreamInfo = {
-            id: audioId,
-            stream: pcmStream,
-            volume: Math.max(0, Math.min(1, volume)),
-            onEnd: () => {
-                console.log(`[OverlappingAudioPlayer] Audio ${audioId} finished`);
-                this.playingAudio.delete(audioId);
-            },
-        };
-
-        const success = this.mixer.addStream(streamInfo);
-        if (success) {
-            // Create a basic AudioSource for compatibility
-            const audioSource = {
-                id: audioId,
-                stream: pcmStream,
-                volume: Math.max(0, Math.min(1, volume)),
-                abortController: new AbortController(),
-                abort: () => {
-                    if (!pcmStream.destroyed) {
-                        pcmStream.destroy();
-                    }
-                },
-            };
-
-            this.playingAudio.set(audioId, {
-                audioSource,
-                startTime: Date.now(),
-            });
-            console.log(`[OverlappingAudioPlayer] Successfully added audio ${audioId}, total playing: ${this.playingAudio.size}`);
-        } else {
-            console.warn(`[OverlappingAudioPlayer] Failed to add audio ${audioId} to mixer`);
-        }
-
-        return audioId;
     }
 
     // Add audio source with abort capability
@@ -158,12 +81,6 @@ export class OverlappingAudioPlayer extends AudioPlayer {
                 startTime: Date.now(),
             });
             console.log(`[OverlappingAudioPlayer] Successfully added audio source ${audioSource.id}, total playing: ${this.playingAudio.size}`);
-
-            // If the player is idle when adding new audio, restart the mixer output
-            if (this.state.status === AudioPlayerStatus.Idle) {
-                console.log(`[OverlappingAudioPlayer] Player is idle, restarting mixer output to resume playback`);
-                this.setupMixerOutput();
-            }
         } else {
             console.warn(`[OverlappingAudioPlayer] Failed to add audio source ${audioSource.id} to mixer`);
         }
@@ -202,6 +119,16 @@ export class OverlappingAudioPlayer extends AudioPlayer {
         }
     }
 
+    // Sets the volume of every currently-playing source (1.0 = 100%, 2.0 = 200%)
+    public setVolume(volume: number): void {
+        this.mixer.setAllStreamVolumes(volume);
+    }
+
+    // Sets the volume of a single playing source
+    public setAudioVolume(audioId: string, volume: number): boolean {
+        return this.mixer.setStreamVolume(audioId, volume);
+    }
+
     public getActiveAudioCount(): number {
         return this.playingAudio.size;
     }
@@ -214,20 +141,28 @@ export class OverlappingAudioPlayer extends AudioPlayer {
         return Array.from(this.playingAudio.values());
     }
 
-    private extractPcmFromResource(resource: AudioResource): Readable {
-        // Since we're now using PCM pipeline, the resource should already contain PCM data
-        // We can directly use the playStream from the AudioResource
-        if (!resource.playStream) {
-            throw new Error("AudioResource does not have a playStream");
-        }
+    // Tears the player down for good: aborts every source, stops the discord.js player and
+    // destroys the mix bus so nothing survives a disconnect. Safe to call more than once.
+    public destroy(): void {
+        if (this.isDestroyed) return;
+        this.isDestroyed = true;
 
-        return resource.playStream;
+        console.log(`[OverlappingAudioPlayer] Destroying player (${this.playingAudio.size} active streams)`);
+
+        this.stopAll();
+        super.stop(true);
+
+        this.mixer.removeListener("error", this.onMixerError);
+        if (!this.mixer.destroyed) {
+            this.mixer.destroy();
+        }
+        this.mixer.removeAllListeners();
+
+        this.removeAllListeners();
     }
 
     public override stop(force?: boolean): boolean {
-        const stack = new Error().stack;
         console.log(`[OverlappingAudioPlayer] Player stop called (force: ${force}) - but keeping individual streams active`);
-        console.log(`[OverlappingAudioPlayer] Stop called from stack trace:`, stack?.split("\n").slice(1, 5).join("\n"));
         // Don't stop individual audio streams when Discord player stops
         // Only stop the underlying Discord player
         return super.stop(force);

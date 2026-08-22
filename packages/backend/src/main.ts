@@ -86,7 +86,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
     //--- Infrastructure: process/tech wrappers
     const clientHandle = createDiscordClientHandle();
     const fileManager = createFileManager();
-    const ffmpeg = createFfmpegService();
+    const ffmpeg = createFfmpegService({ ffmpegPath: config.ffmpeg.ffmpegPath });
     const ffprobe = createFfprobeService({ config });
 
     //--- Adapters: repositories (driven ports over Postgres / filesystem)
@@ -180,6 +180,9 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
             await discordBot.stop();
 
             errorReportingService.shutdown();
+
+            // Stops the periodic audio cache sweeper so its interval cannot keep the process alive
+            audioCacheService.stopCleanup();
 
             await databaseConnection.disconnect();
 
