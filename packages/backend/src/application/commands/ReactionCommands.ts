@@ -193,27 +193,28 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
     const topMessages: Command = {
         data: new SlashCommandBuilder()
             .setName("top-messages")
-            .setDescription("Returns a selection of messages that got the most reactions with this emote")
-            .addStringOption(option => option.setName("emote-name").setDescription("The name of the emote").setRequired(true))
+            .setDescription("Returns a selection of messages that got the most reactions, optionally with a specific emote")
+            .addStringOption(option => option.setName("emote-name").setDescription("The name of the emote").setRequired(false))
             .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by").setRequired(false))
             .addUserOption(option => option.setName("receiver").setDescription("The user that received the reactions").setRequired(false))
             .addNumberOption(option => option.setName("limit").setDescription("How many messages").setMinValue(1).setMaxValue(20).setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
+            const emoteName = interaction.options.getString("emote-name") ?? undefined;
             const year = interaction.options.getNumber("year") ?? undefined;
-            const emoteName = interaction.options.getString("emote-name")!;
             const receiver = interaction.options.getUser("receiver") ?? interaction.user;
             const limit = interaction.options.getNumber("limit") ?? 10;
-
             const topMessages = await reactionRepository.getTopMessages(receiver.id, emoteName, year, limit);
 
+            const emoteDescriptor = emoteName ? `with ${emoteName}` : "overall";
+            const yearDescriptor = year ? `for ${year}` : "";
+
             if (topMessages.length === 0) {
-                await interaction.reply(`No messages with ${emoteName} ${year ? `for ${year}` : ""}`);
+                await interaction.reply(`No messages ${emoteDescriptor} ${yearDescriptor}`);
                 return;
             }
 
             const entries = topMessages.map(entry => `${entry.count.toString().padEnd(4)}\t${getJumpUrl(interaction.guildId!, entry.channelId, entry.messageId)}`);
-
-            const messageHeader = `Top ${limit} messages for ${emoteName} for ${receiver.displayName} ${year ? `for ${year}` : ""}\n`;
+            const messageHeader = `Top ${limit} messages ${emoteDescriptor} for ${receiver.displayName} ${yearDescriptor}\n`;
             const response = `${messageHeader}${entries.join("\n")}`;
             await discordChatService.replyToInteraction(interaction, response);
         },

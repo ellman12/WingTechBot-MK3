@@ -24,7 +24,7 @@ export type ReactionRepository = {
 
     getKarmaLeaderboard(year?: number, includeSelfReactions?: boolean, filterFormerMembers?: boolean, filterUnknown?: boolean): Promise<KarmaLeaderboardEntry[]>;
 
-    getTopMessages(authorId: string, emoteName: string, year?: number, limit?: number): Promise<TopMessage[]>;
+    getTopMessages(authorId: string, emoteName?: string, year?: number, limit?: number): Promise<TopMessage[]>;
 
     getUniqueUserIds(): Promise<string[]>;
 };
@@ -51,8 +51,8 @@ export type KarmaLeaderboardEntry = {
 export type TopMessage = {
     readonly messageId: string;
     readonly channelId: string;
-    readonly emoteId: number;
-    readonly emoteName: string;
+    readonly emoteId?: number;
+    readonly emoteName?: string;
     readonly count: number;
 };
 
@@ -209,17 +209,22 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         return (await query.execute()).map(k => ({ ...k, count: Number(k.count), totalKarma: Number(k.totalKarma) }));
     };
 
-    //Returns a selection of messages that got the most reactions with this emote, excluding self-reactions.
-    const getTopMessages = async (authorId: string, emoteName: string, year?: number, limit?: number): Promise<TopMessage[]> => {
-        const query = getBaseQuery(year)
-            .select(["m.id as messageId", "m.channel_id as channelId", "re.name as emoteName", "re.id as emoteId"])
+    //Returns a selection of messages that got the most reactions, optionally filtered to a specific emote, excluding self-reactions.
+    const getTopMessages = async (authorId: string, emoteName?: string, year?: number, limit?: number): Promise<TopMessage[]> => {
+        const baseQuery = getBaseQuery(year)
+            .select(["m.id as messageId", "m.channel_id as channelId"])
             .where("m.author_id", "=", authorId)
             .whereRef("r.giver_id", "!=", "r.receiver_id")
-            .where("re.name", "=", emoteName)
-            .groupBy(["messageId", "re.name", "re.id"])
             .orderBy("count", "desc")
             .$if(limit !== undefined, qb => qb.limit(limit!));
 
+        if (emoteName !== undefined) {
+            const query = baseQuery.select(["re.name as emoteName", "re.id as emoteId"]).where("re.name", "=", emoteName).groupBy(["messageId", "re.name", "re.id"]);
+
+            return (await query.execute()).map(m => ({ ...m, count: Number(m.count) }));
+        }
+
+        const query = baseQuery.groupBy(["messageId"]);
         return (await query.execute()).map(m => ({ ...m, count: Number(m.count) }));
     };
 
