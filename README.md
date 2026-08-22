@@ -29,21 +29,12 @@ WingTechBot-MK3/
 - **Kysely** - Type-safe SQL query builder
 - **Vitest** - Testing framework
 
-### Frontend (`packages/frontend/`)
-
-- **React 19** - UI library
-- **Vite** - Build tool and dev server
-- **TypeScript** - Type safety
-- **Tailwind CSS** - Utility-first styling
-- **Zustand** - State management
-- **TanStack Query** - Data fetching and caching
-
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js >= 18.0.0
-- pnpm (install with `npm install -g pnpm`)
+- Node.js v24 or greater
+- pnpm v11 or greater (install with `npm install -g pnpm`)
 
 ### Installation
 

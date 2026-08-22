@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 
 # Install system dependencies for native modules including opus
 RUN apk add --no-cache \
@@ -18,7 +18,7 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Install pnpm globally
-RUN npm install -g pnpm
+RUN npm install -g pnpm@11.22.0
 
 # Set environment variables for native module compilation
 ENV NODE_ENV=production
@@ -26,8 +26,7 @@ ENV PYTHON=/usr/bin/python3
 ENV npm_config_python=/usr/bin/python3
 ENV OPUS_LIBRARY_PATH=/usr/lib/libopus.so.0
 
-# Copy package files from monorepo root
-COPY package*.json pnpm-lock.yaml* ./
+COPY package*.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 COPY packages/backend/package.json ./packages/backend/
 
 # Copy migrations early to invalidate cache when they change
@@ -70,7 +69,7 @@ RUN tsc-alias -p /app/packages/backend/tsconfig.json
 RUN ls -la /app/packages/backend/dist/
 
 # Production stage
-FROM node:20-alpine AS production
+FROM node:24-alpine AS production
 
 # Install system dependencies for production including opus runtime
 RUN apk add --no-cache \
@@ -89,7 +88,7 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Install pnpm globally
-RUN npm install -g pnpm
+RUN npm install -g pnpm@11.22.0
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
