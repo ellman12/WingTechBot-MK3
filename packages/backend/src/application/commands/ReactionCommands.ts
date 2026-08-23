@@ -15,6 +15,23 @@ export type ReactionCommandDeps = {
 
 type ReactionDirection = "given" | "received";
 
+type Mentionable = ReturnType<ChatInputCommandInteraction["options"]["getMentionable"]>;
+
+const resolveMentionable = async (interaction: ChatInputCommandInteraction, mentionable: Mentionable) => {
+    if (mentionable === null) return;
+
+    if (mentionable instanceof GuildMember) {
+        return { ids: [mentionable.id], name: mentionable.user.username };
+    }
+
+    if (mentionable instanceof Role) {
+        return { ids: mentionable.name === "@everyone" ? [] : mentionable.members.map(m => m.id), name: mentionable.name.replace("@", "") };
+    }
+
+    await interaction.reply({ content: "Invalid mentionable", flags: MessageFlags.Ephemeral });
+    return "invalid";
+};
+
 export const createReactionCommands = ({ reactionRepository, discordChatService }: ReactionCommandDeps): Record<string, Command> => {
     const record: Command = {
         data: new SlashCommandBuilder()
@@ -45,27 +62,13 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
         const options = interaction.options;
         const primaryUser = options.getUser(primary) ?? interaction.user;
         const year = options.getNumber("year") ?? undefined;
-        const secondaryMentionable = options.getMentionable(secondary);
         const limit = options.getNumber("limit") ?? 10;
 
-        const userFilter = secondaryMentionable instanceof GuildMember ? secondaryMentionable : undefined;
-        const roleFilter = secondaryMentionable instanceof Role ? secondaryMentionable : undefined;
+        const resolved = await resolveMentionable(interaction, options.getMentionable(secondary));
+        if (resolved === "invalid") return;
 
-        let filterIds: string[] | undefined;
-        let name: string | undefined;
-
-        if (userFilter) {
-            filterIds = [userFilter.id];
-            name = userFilter.user.username;
-        } else if (roleFilter) {
-            filterIds = roleFilter.name === "@everyone" ? undefined : roleFilter.members.map(m => m.id);
-            name = roleFilter.name.replace("@", "");
-        }
-
-        if (secondaryMentionable !== null && !userFilter && !roleFilter) {
-            await interaction.reply({ content: "Invalid mentionable", flags: MessageFlags.Ephemeral });
-            return;
-        }
+        const filterIds = resolved?.ids;
+        const name = resolved?.name;
 
         const repoFn = direction === "received" ? reactionRepository.getReactionsReceived : reactionRepository.getReactionsGiven;
         const result = await repoFn(primaryUser.id, year, filterIds, limit);
@@ -196,25 +199,30 @@ export const createReactionCommands = ({ reactionRepository, discordChatService 
             .setDescription("Returns a selection of messages that got the most reactions, optionally with a specific emote")
             .addStringOption(option => option.setName("emote-name").setDescription("The name of the emote").setRequired(false))
             .addNumberOption(option => option.setName("year").setDescription("The optional year to filter by").setRequired(false))
-            .addUserOption(option => option.setName("receiver").setDescription("The user that received the reactions").setRequired(false))
+            .addMentionableOption(option => option.setName("receiver").setDescription("The user or role that received the reactions").setRequired(false))
             .addNumberOption(option => option.setName("limit").setDescription("How many messages").setMinValue(1).setMaxValue(20).setRequired(false)),
         execute: async (interaction: ChatInputCommandInteraction) => {
             const emoteName = interaction.options.getString("emote-name") ?? undefined;
             const year = interaction.options.getNumber("year") ?? undefined;
-            const receiver = interaction.options.getUser("receiver") ?? interaction.user;
             const limit = interaction.options.getNumber("limit") ?? 10;
-            const topMessages = await reactionRepository.getTopMessages(receiver.id, emoteName, year, limit);
+
+            const resolved = await resolveMentionable(interaction, interaction.options.getMentionable("receiver"));
+            if (resolved === "invalid") return;
+
+            const authorIds = resolved ? resolved.ids : [interaction.user.id];
+            const receiverName = resolved ? resolved.name : interaction.user.username;
+            const topMessages = await reactionRepository.getTopMessages(authorIds, emoteName, year, limit);
 
             const emoteDescriptor = emoteName ? `with ${emoteName}` : "overall";
             const yearDescriptor = year ? `for ${year}` : "";
 
             if (topMessages.length === 0) {
-                await interaction.reply(`No messages ${emoteDescriptor} ${yearDescriptor}`);
+                await interaction.reply(`No messages ${emoteDescriptor} for ${receiverName} ${yearDescriptor}`);
                 return;
             }
 
             const entries = topMessages.map(entry => `${entry.count.toString().padEnd(4)}\t${getJumpUrl(interaction.guildId!, entry.channelId, entry.messageId)}`);
-            const messageHeader = `Top ${limit} messages ${emoteDescriptor} for ${receiver.displayName} ${yearDescriptor}\n`;
+            const messageHeader = `Top ${limit} messages ${emoteDescriptor} for ${receiverName} ${yearDescriptor}\n`;
             const response = `${messageHeader}${entries.join("\n")}`;
             await discordChatService.replyToInteraction(interaction, response);
         },

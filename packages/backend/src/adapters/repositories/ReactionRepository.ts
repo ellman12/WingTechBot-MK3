@@ -24,7 +24,7 @@ export type ReactionRepository = {
 
     getKarmaLeaderboard(year?: number, includeSelfReactions?: boolean, filterFormerMembers?: boolean, filterUnknown?: boolean): Promise<KarmaLeaderboardEntry[]>;
 
-    getTopMessages(authorId: string, emoteName?: string, year?: number, limit?: number): Promise<TopMessage[]>;
+    getTopMessages(authorIds?: string[], emoteName?: string, year?: number, limit?: number): Promise<TopMessage[]>;
 
     getUniqueUserIds(): Promise<string[]>;
 };
@@ -209,11 +209,11 @@ export const createReactionRepository = (db: Kysely<DB>): ReactionRepository => 
         return (await query.execute()).map(k => ({ ...k, count: Number(k.count), totalKarma: Number(k.totalKarma) }));
     };
 
-    //Returns a selection of messages that got the most reactions, optionally filtered to a specific emote, excluding self-reactions.
-    const getTopMessages = async (authorId: string, emoteName?: string, year?: number, limit?: number): Promise<TopMessage[]> => {
+    //Returns a selection of messages that got the most reactions, optionally filtered to a specific emote and/or author(s), excluding self-reactions.
+    const getTopMessages = async (authorIds?: string[], emoteName?: string, year?: number, limit?: number): Promise<TopMessage[]> => {
         const baseQuery = getBaseQuery(year)
             .select(["m.id as messageId", "m.channel_id as channelId"])
-            .where("m.author_id", "=", authorId)
+            .$if(authorIds !== undefined && authorIds.length > 0, qb => qb.where("m.author_id", "in", authorIds!))
             .whereRef("r.giver_id", "!=", "r.receiver_id")
             .orderBy("count", "desc")
             .$if(limit !== undefined, qb => qb.limit(limit!));

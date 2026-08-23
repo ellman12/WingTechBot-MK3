@@ -23,7 +23,7 @@ describe.concurrent("getTopMessages", () => {
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
         await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
 
-        const topMessages = await reactions.getTopMessages("101", "upvote", year);
+        const topMessages = await reactions.getTopMessages(["101"], "upvote", year);
         expect(topMessages).toHaveLength(1);
         topMessages.forEach(e => {
             expect(e.count).toEqual(1);
@@ -39,7 +39,7 @@ describe.concurrent("getTopMessages", () => {
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
         await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
 
-        const topMessages = await reactions.getTopMessages("101", "upvote", 1969);
+        const topMessages = await reactions.getTopMessages(["101"], "upvote", 1969);
         expect(topMessages).toHaveLength(0);
     });
 
@@ -50,8 +50,8 @@ describe.concurrent("getTopMessages", () => {
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
         await reactions.create({ giverId: "bannedUser", receiverId: "101", channelId: "1", messageId: "1", emoteId: 1 });
 
-        const perEmoteMessages = await reactions.getTopMessages("101", "upvote", year);
-        const allEmoteMessages = await reactions.getTopMessages("101", undefined, year);
+        const perEmoteMessages = await reactions.getTopMessages(["101"], "upvote", year);
+        const allEmoteMessages = await reactions.getTopMessages(["101"], undefined, year);
 
         expect(allEmoteMessages.length).toBeGreaterThan(0);
         allEmoteMessages.forEach(e => {
@@ -70,7 +70,7 @@ describe.concurrent("getTopMessages", () => {
 
         await createFakeMessagesAndReactions(db, messages, reactionsPerMessage, validEmotes);
 
-        const topMessages = await reactions.getTopMessages("101", undefined, year, 2);
+        const topMessages = await reactions.getTopMessages(["101"], undefined, year, 2);
         expect(topMessages.length).toBeLessThanOrEqual(2);
     });
 });
