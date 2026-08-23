@@ -1,10 +1,10 @@
 import { loadConfig } from "@adapters/config/ConfigAdapter.js";
 import type { Config } from "@core/config/Config.js";
-import { config } from "@dotenvx/dotenvx";
 import path from "path";
 
-// Load test environment variables from .env.test file (skip in CI where vars are provided by CI/CD)
+// Load .env.test locally. Skip in CI (vars come from the workflow) so dotenvx v2's HTTP bundle is never imported.
 if (!process.env.CI) {
+    const { config } = await import("@dotenvx/dotenvx");
     const testEnvPath = path.resolve(__dirname, "./integration/testBot/.env.test");
     config({ path: testEnvPath, strict: true });
 }

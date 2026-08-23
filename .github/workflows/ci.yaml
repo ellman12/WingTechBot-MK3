@@ -239,6 +239,7 @@ jobs:
                   DATABASE_URL: postgresql://wingtechbot:wingtechbot_password@localhost:5432/wingtechbot_test
                   NODE_ENV: CICD
                   CI: true
+                  DOTENVX_NO_ARMOR: true
                   SKIP_CHANNEL_PROCESSING_ON_STARTUP: true
                   SKIP_USER_PROCESSING_ON_STARTUP: true
 
