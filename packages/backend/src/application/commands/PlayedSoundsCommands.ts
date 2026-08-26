@@ -83,7 +83,7 @@ export const createPlayedSoundsCommands = ({ soundRepository, playedSoundsReposi
         },
     };
 
-    const fmt = (date: Date) => format(date, "MMM d yyyy hh:mm a");
+    const fmt = (date: Date) => format(date, "MMM dd yyyy hh:mm a");
 
     const soundPlayedDates: Command = {
         data: new SlashCommandBuilder()
