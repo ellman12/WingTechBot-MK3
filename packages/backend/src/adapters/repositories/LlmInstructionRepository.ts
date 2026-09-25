@@ -1,33 +1,28 @@
 import type { Config } from "@core/config/Config.js";
-import type { FileManager } from "@core/services/FileManager.js";
+import { type InstructionType, type LlmInstructionRepository, instructionTypes } from "@core/ports/repositories/LlmInstructionRepository.js";
+import fs from "fs";
 import { join } from "path";
-
-export const instructionTypes = ["generalChat", "nekoize", "discordStatus"] as const;
-export type InstructionType = (typeof instructionTypes)[number];
-
-export type LlmInstructionRepository = {
-    readonly getInstructionPath: (instructionType: InstructionType) => string;
-    readonly getInstruction: (instructionType: InstructionType) => Promise<string>;
-    readonly instructionExists: (instructionType: InstructionType) => Promise<boolean>;
-    readonly validateInstructions: () => Promise<void>;
-};
 
 export type LlmInstructionRepositoryDeps = {
     readonly config: Config;
-    readonly fileManager: FileManager;
 };
 
-export const createLlmInstructionRepository = ({ config, fileManager }: LlmInstructionRepositoryDeps): LlmInstructionRepository => {
+export const createLlmInstructionRepository = ({ config }: LlmInstructionRepositoryDeps): LlmInstructionRepository => {
     const getInstructionPath = (instructionType: InstructionType): string => {
         return join(config.llm.instructionsPath, `${instructionType}.txt`);
     };
 
     const getInstruction = async (instructionType: InstructionType): Promise<string> => {
-        return await fileManager.readFile(getInstructionPath(instructionType));
+        return await fs.promises.readFile(getInstructionPath(instructionType), "utf8");
     };
 
     const instructionExists = async (instructionType: InstructionType): Promise<boolean> => {
-        return await fileManager.fileExists(getInstructionPath(instructionType));
+        try {
+            await fs.promises.access(getInstructionPath(instructionType));
+            return true;
+        } catch {
+            return false;
+        }
     };
 
     const validateInstructions = async () => {

@@ -1,13 +1,12 @@
-import type { BannedFeature } from "@core/entities/BannedFeature.js";
-import type { AvailableFeatures, BannedFeatures, DB } from "@db/types.js";
+import type { AvailableFeature, BannedFeature } from "@core/entities/BannedFeature.js";
+import type { BannedFeaturesRepository } from "@core/ports/repositories/BannedFeaturesRepository.js";
+import type { Equals } from "@core/utils/typeUtils.js";
+import type { BannedFeatures, DB, AvailableFeatures as DbAvailableFeatures } from "@db/types.js";
 import type { Kysely, Selectable } from "kysely";
 
-export type BannedFeaturesRepository = {
-    readonly banFeature: (userId: string, bannedById: string, feature: AvailableFeatures) => Promise<BannedFeature>;
-    readonly unbanFeature: (userId: string, feature: AvailableFeatures) => Promise<void>;
-    readonly isUserBanned: (userId: string, feature: AvailableFeatures) => Promise<boolean>;
-    readonly getBannedUsers: (feature?: AvailableFeatures) => Promise<BannedFeature[]>;
-};
+//The core enum is canonical; this fails to compile if the DB enum (kysely-codegen) drifts from it.
+const _featureEnumsMatch: Equals<AvailableFeature, DbAvailableFeatures> = true;
+void _featureEnumsMatch;
 
 export const transformBannedFeature = (dbBannedFeature: Selectable<BannedFeatures>): BannedFeature => {
     return {
@@ -21,7 +20,7 @@ export const transformBannedFeature = (dbBannedFeature: Selectable<BannedFeature
 export const createBannedFeaturesRepository = (db: Kysely<DB>): BannedFeaturesRepository => {
     console.log("[BannedFeaturesRepository] Initializing");
 
-    const banFeature = async (userId: string, bannedById: string, feature: AvailableFeatures): Promise<BannedFeature> => {
+    const banFeature = async (userId: string, bannedById: string, feature: AvailableFeature): Promise<BannedFeature> => {
         if (userId.trim() === "" || bannedById.trim() === "") throw new Error("Invalid ID");
 
         const data = { user_id: userId, banned_by_id: bannedById, feature };
@@ -36,13 +35,13 @@ export const createBannedFeaturesRepository = (db: Kysely<DB>): BannedFeaturesRe
         return transformBannedFeature(result);
     };
 
-    const unbanFeature = async (userId: string, feature: AvailableFeatures): Promise<void> => {
+    const unbanFeature = async (userId: string, feature: AvailableFeature): Promise<void> => {
         if (userId.trim() === "") throw new Error("Invalid ID");
 
         await db.deleteFrom("banned_features").where("user_id", "=", userId).where("feature", "=", feature).executeTakeFirst();
     };
 
-    const isUserBanned = async (userId: string, feature: AvailableFeatures): Promise<boolean> => {
+    const isUserBanned = async (userId: string, feature: AvailableFeature): Promise<boolean> => {
         if (userId.trim() === "") throw new Error("Invalid user ID");
 
         const result = await db.selectFrom("banned_features").where("user_id", "=", userId).where("feature", "=", feature).selectAll().executeTakeFirst();
@@ -50,7 +49,7 @@ export const createBannedFeaturesRepository = (db: Kysely<DB>): BannedFeaturesRe
         return result !== undefined;
     };
 
-    const getBannedUsers = async (feature?: AvailableFeatures): Promise<BannedFeature[]> => {
+    const getBannedUsers = async (feature?: AvailableFeature): Promise<BannedFeature[]> => {
         const result = await db
             .selectFrom("banned_features")
             .selectAll()

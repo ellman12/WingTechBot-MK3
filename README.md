@@ -16,8 +16,9 @@ This project is organized as a monorepo with the following structure:
 ```
 WingTechBot-MK3/
 ├── packages/
-│   ├── backend/          # Discord Bot
-├── package.json          # Root workspace configuration
+│   ├── backend/         # Discord bot
+│   └── backup/          # Postgres backup
+├── package.json         # Root workspace configuration
 └── README.md            # This file
 ```
 
@@ -105,10 +106,11 @@ The backend serves as a Discord bot.
 
 ```
 packages/backend/src/
-├── adapters/           # External adapters (Discord, DB, etc.)
-├── application/        # Use cases and application logic
-├── core/              # Domain models and business logic
-├── infrastructure/    # Framework and external concerns
+├── core/              # Domain: entities, ports, services, utils
+├── application/       # Driving side: commands/, discord/
+├── adapters/          # Driven side: Kysely repos, ffmpeg, yt-dlp, Gemini, Discord voice
+├── infrastructure/    # Discord client lifecycle, DB connection, process wrappers
+└── main.ts
 ```
 
 ## 🐳 Docker Support

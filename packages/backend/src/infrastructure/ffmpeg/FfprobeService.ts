@@ -5,7 +5,7 @@ import { promisify } from "util";
 const execFileAsync = promisify(execFile);
 
 // Raw ffprobe output structure for format information
-type FfprobeFormat = {
+export type FfprobeFormat = {
     format_name: string;
     format_long_name: string;
     duration?: string;
@@ -16,7 +16,7 @@ type FfprobeFormat = {
 };
 
 // Raw ffprobe output structure for stream information
-type FfprobeStream = {
+export type FfprobeStream = {
     index: number;
     codec_name: string;
     codec_long_name: string;
@@ -32,7 +32,7 @@ type FfprobeStream = {
 };
 
 // Complete ffprobe output structure
-type FfprobeOutput = {
+export type FfprobeOutput = {
     streams?: FfprobeStream[];
     format?: FfprobeFormat;
     error?: {
@@ -41,34 +41,39 @@ type FfprobeOutput = {
     };
 };
 
+export type FfprobeOptions = {
+    // Select specific streams (e.g., 'a:0' for first audio stream)
+    readonly selectStreams?: string;
+
+    // Maximum time in microseconds to analyze for probing (default: 5000000 = 5s)
+    readonly analyzeDuration?: number;
+
+    // Maximum size in bytes to probe (default: unlimited)
+    readonly probeSize?: number;
+
+    // Timeout for probe operation in milliseconds (default: 30000 = 30s)
+    readonly timeout?: number;
+};
+
 // Low-level FFprobe service for probing media files and streams.
 // This service wraps the ffprobe command-line tool to extract format
 // and stream metadata from audio/video files. It provides structured
 // JSON output for programmatic parsing.
-export class FfprobeService {
-    private readonly ffprobePath: string;
+export type FfprobeService = {
+    readonly probe: (input: string, options?: FfprobeOptions) => Promise<FfprobeOutput>;
+    readonly probeAudio: (input: string, timeout?: number) => Promise<FfprobeOutput>;
+    readonly probeFast: (input: string, maxBytes?: number) => Promise<FfprobeOutput>;
+};
 
-    constructor(config: Config) {
-        this.ffprobePath = config.ffmpeg.ffprobePath || "ffprobe";
-    }
+export type FfprobeServiceDeps = {
+    readonly config: Config;
+};
+
+export const createFfprobeService = ({ config }: FfprobeServiceDeps): FfprobeService => {
+    const ffprobePath = config.ffmpeg.ffprobePath || "ffprobe";
 
     // Probe a media file or URL and return raw ffprobe output.
-    async probe(
-        input: string,
-        options: {
-            // Select specific streams (e.g., 'a:0' for first audio stream)
-            selectStreams?: string;
-
-            // Maximum time in microseconds to analyze for probing (default: 5000000 = 5s)
-            analyzeDuration?: number;
-
-            // Maximum size in bytes to probe (default: unlimited)
-            probeSize?: number;
-
-            // Timeout for probe operation in milliseconds (default: 30000 = 30s)
-            timeout?: number;
-        } = {}
-    ): Promise<FfprobeOutput> {
+    const probe = async (input: string, options: FfprobeOptions = {}): Promise<FfprobeOutput> => {
         const args = [
             "-v",
             "quiet", // Suppress logs
@@ -102,7 +107,7 @@ export class FfprobeService {
         try {
             console.log(`[FfprobeService] Probing: ${input}`, { args });
 
-            const { stdout, stderr } = await execFileAsync(this.ffprobePath, args, {
+            const { stdout, stderr } = await execFileAsync(ffprobePath, args, {
                 timeout,
                 maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large metadata
             });
@@ -141,24 +146,24 @@ export class FfprobeService {
 
             throw new Error(`ffprobe failed for input ${input}: ${error}`, { cause: error });
         }
-    }
+    };
 
-    // Quick probe focusing only on audio streams.
-    // More efficient than full probe when only audio metadata is needed.
-    async probeAudio(input: string, timeout?: number): Promise<FfprobeOutput> {
-        return this.probe(input, {
-            selectStreams: "a", // Only audio streams
-            timeout,
-        });
-    }
-
-    // Probe a stream or file with limited data reading.
-    // Useful for large files or streams where you only need format info.
-    async probeFast(input: string, maxBytes: number = 1024 * 1024): Promise<FfprobeOutput> {
-        return this.probe(input, {
-            probeSize: maxBytes,
-            analyzeDuration: 1000000, // 1 second
-            timeout: 10000, // 10 second timeout for fast probe
-        });
-    }
-}
+    return {
+        probe,
+        // Quick probe focusing only on audio streams.
+        // More efficient than full probe when only audio metadata is needed.
+        probeAudio: (input: string, timeout?: number) =>
+            probe(input, {
+                selectStreams: "a", // Only audio streams
+                timeout,
+            }),
+        // Probe a stream or file with limited data reading.
+        // Useful for large files or streams where you only need format info.
+        probeFast: (input: string, maxBytes: number = 1024 * 1024) =>
+            probe(input, {
+                probeSize: maxBytes,
+                analyzeDuration: 1000000, // 1 second
+                timeout: 10000, // 10 second timeout for fast probe
+            }),
+    };
+};

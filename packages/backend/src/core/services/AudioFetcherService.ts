@@ -1,31 +1,21 @@
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { AudioFormatInfo } from "@core/entities/AudioFormatInfo.js";
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream.js";
 import { createAudioStreamWithFormat } from "@core/entities/AudioStream.js";
+import type { YoutubeService } from "@core/ports/services/YoutubeService.js";
 import { readStreamToBytes } from "@core/utils/streamUtils.js";
 import { Readable } from "stream";
 
 import type { AudioCacheService } from "./AudioCacheService.js";
-import type { AudioFormatDetectionService } from "./AudioFormatDetectionService.js";
-import type { FileManager } from "./FileManager.js";
 
 export type audioSource = "soundboard" | "youtube" | "url";
 
-export type YoutubeService = {
-    readonly fetchAudioFromYoutube: (link: string) => Promise<AudioStreamWithMetadata>;
-};
-
 export type AudioFetcherService = {
     readonly fetchUrlAudio: (link: string, abortSignal?: AbortSignal) => Promise<AudioStreamWithMetadata>;
-    readonly fetchSoundboardAudio: (name: string) => Promise<AudioStreamWithMetadata>;
 };
 
 export type AudioFetcherDeps = {
     readonly youtubeService: YoutubeService;
-    readonly soundRepository: SoundRepository;
-    readonly fileManager: FileManager;
     readonly cacheService: AudioCacheService;
-    readonly formatDetectionService?: AudioFormatDetectionService;
 };
 
 const FORMAT_BY_EXTENSION: Record<string, AudioFormatInfo> = {
@@ -36,7 +26,7 @@ const FORMAT_BY_EXTENSION: Record<string, AudioFormatInfo> = {
     wav: { format: "wav", container: "wav", codec: "pcm_s16le", sampleRate: 44100, channels: 2, bitrate: 0 },
 };
 
-export const createAudioFetcherService = ({ fileManager, soundRepository, youtubeService, cacheService, formatDetectionService }: AudioFetcherDeps) => {
+export const createAudioFetcherService = ({ youtubeService, cacheService }: AudioFetcherDeps): AudioFetcherService => {
     const fetchYoutubeAudio = async (link: string): Promise<AudioStreamWithMetadata> => {
         try {
             const cached = await cacheService.getCached(link);
@@ -137,56 +127,8 @@ export const createAudioFetcherService = ({ fileManager, soundRepository, youtub
         }
     };
 
-    const fetchSoundboardAudio = async (name: string): Promise<AudioStreamWithMetadata> => {
-        try {
-            const sound = await soundRepository.getSoundByName(name);
-
-            if (!sound) {
-                const error = new Error(`Sound not found: ${name}`);
-                console.error(`[AudioFetcherService] ${error.message}`);
-                throw error;
-            }
-
-            const filePath = sound.path;
-
-            const fileExists = await fileManager.fileExists(filePath);
-            if (!fileExists) {
-                const error = new Error(`Sound file does not exist: ${filePath}`);
-                console.error(`[AudioFetcherService] ${error.message}`);
-                throw error;
-            }
-
-            if (formatDetectionService) {
-                try {
-                    const formatInfo = await formatDetectionService.detectFromFile(filePath);
-                    const stream = fileManager.readStream(filePath);
-                    return createAudioStreamWithFormat(stream, formatInfo);
-                } catch (error) {
-                    console.error(`[AudioFetcherService] Format detection failed for ${filePath}, falling back to assumed PCM:`, error);
-                }
-            }
-
-            const stream = fileManager.readStream(filePath);
-
-            const formatInfo: AudioFormatInfo = {
-                format: "s16le",
-                container: "s16le",
-                codec: "pcm_s16le",
-                sampleRate: 48000,
-                channels: 2,
-                bitrate: 0,
-            };
-
-            return createAudioStreamWithFormat(stream, formatInfo);
-        } catch (error) {
-            console.error(`[AudioFetcherService] Error fetching soundboard audio:`, error);
-            throw error;
-        }
-    };
-
     return {
         fetchUrlAudio,
-        fetchSoundboardAudio,
     };
 };
 

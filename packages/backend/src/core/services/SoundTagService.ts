@@ -1,7 +1,7 @@
-import type { UnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
-import type { SoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
 import type { SoundTag } from "@core/entities/SoundTag.js";
+import type { SoundRepository } from "@core/ports/repositories/SoundRepository.js";
+import type { SoundTagRepository } from "@core/ports/repositories/SoundTagRepository.js";
+import type { UnitOfWork } from "@core/ports/repositories/UnitOfWork.js";
 
 export type SoundTagService = {
     readonly addTagToSound: (soundName: string, tagName: string) => Promise<boolean>;

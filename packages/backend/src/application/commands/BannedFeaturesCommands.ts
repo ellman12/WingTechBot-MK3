@@ -1,7 +1,7 @@
-import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import type { Command } from "@application/commands/Commands.js";
-import type { DiscordChatService } from "@core/services/DiscordChatService.js";
-import type { AvailableFeatures } from "@db/types.js";
+import type { DiscordChatService } from "@application/discord/DiscordChat.js";
+import { type AvailableFeature, availableFeatures } from "@core/entities/BannedFeature.js";
+import type { BannedFeaturesRepository } from "@core/ports/repositories/BannedFeaturesRepository.js";
 import { type ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 
 export type BannedFeaturesCommandsDeps = {
@@ -10,8 +10,6 @@ export type BannedFeaturesCommandsDeps = {
 };
 
 export const createBannedFeaturesCommands = ({ bannedFeaturesRepository, discordChatService }: BannedFeaturesCommandsDeps): Record<string, Command> => {
-    //Matches with the values of the AvailableFeatures type from the DB.
-    const availableFeatures = ["LlmConversations", "Reactions", "Soundboard"];
     const featureChoices = availableFeatures.map(f => ({ name: f, value: f }));
 
     const banFeature: Command = {
@@ -23,7 +21,7 @@ export const createBannedFeaturesCommands = ({ bannedFeaturesRepository, discord
             .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
         execute: async (interaction: ChatInputCommandInteraction) => {
             const user = interaction.options.getUser("user");
-            const feature = interaction.options.getString("feature") as AvailableFeatures | null;
+            const feature = interaction.options.getString("feature") as AvailableFeature | null;
             if (!user || !feature) throw new Error("Missing data");
 
             if (await bannedFeaturesRepository.isUserBanned(user.id, feature)) {
@@ -48,7 +46,7 @@ export const createBannedFeaturesCommands = ({ bannedFeaturesRepository, discord
             const feature = interaction.options.getString("feature");
             if (!user || !feature) throw new Error("Missing data");
 
-            await bannedFeaturesRepository.unbanFeature(user.id, feature as AvailableFeatures);
+            await bannedFeaturesRepository.unbanFeature(user.id, feature as AvailableFeature);
             await interaction.reply({ content: `Unbanned ${feature} for ${user.displayName}`, flags: MessageFlags.Ephemeral });
         },
     };
@@ -60,7 +58,7 @@ export const createBannedFeaturesCommands = ({ bannedFeaturesRepository, discord
             .addStringOption(option => option.setName("feature").setDescription("The optional feature to filter by").setRequired(false).addChoices(featureChoices))
             .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
         execute: async (interaction: ChatInputCommandInteraction) => {
-            const feature = (interaction.options.getString("feature") as AvailableFeatures | undefined) ?? undefined;
+            const feature = (interaction.options.getString("feature") as AvailableFeature | undefined) ?? undefined;
 
             const users = await bannedFeaturesRepository.getBannedUsers(feature);
             if (users.length === 0) {

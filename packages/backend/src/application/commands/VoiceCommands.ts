@@ -1,5 +1,5 @@
-import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
-import type { VoiceService } from "@adapters/services/DiscordVoiceService.js";
+import type { BannedFeaturesRepository } from "@core/ports/repositories/BannedFeaturesRepository.js";
+import type { VoiceService } from "@core/ports/services/VoiceService.js";
 import { parseAudioSource } from "@core/services/AudioFetcherService.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
 import type { SoundService } from "@core/services/SoundService.js";
@@ -64,7 +64,7 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                 }
 
                 console.log(`[VoiceCommands] Attempting to connect to channel ${targetChannelId} in guild ${interaction.guildId}`);
-                await voiceService.connect(interaction.guild!, targetChannelId);
+                await voiceService.connect(interaction.guildId, targetChannelId);
                 console.log(`[VoiceCommands] Successfully connected to voice channel`);
 
                 const channelName = channel?.name || (interaction.member as GuildMember).voice.channel?.name;
@@ -185,7 +185,7 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                         return;
                     }
 
-                    await voiceService.connect(interaction.guild!, voiceChannel.id);
+                    await voiceService.connect(interaction.guildId, voiceChannel.id);
                 }
 
                 console.log(`[VoiceCommands] Deferring reply to avoid timeout`);
@@ -243,7 +243,7 @@ export const createVoiceCommands = ({ voiceService, soundService, commandChoices
                 }
             }
         },
-        getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
+        getAutocompleteChoices: option => commandChoicesService.getAutocompleteChoices(option.name, String(option.value)),
     };
 
     // Converts input like "1 second" or "2 min - 10 min" into millisecond values.

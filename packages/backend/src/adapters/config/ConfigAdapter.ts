@@ -37,11 +37,14 @@ export const loadConfig = (envPrefix: "" | "TESTER_" = ""): Config => {
         llm: {
             apiKey: process.env.LLM_API_KEY,
             instructionsPath: process.env.LLM_INSTRUCTIONS_PATH,
+            //LLM features are always off in CI so test runs never hit the real API.
+            disabled: process.env.LLM_DISABLED === "true" || Boolean(process.env.CI),
         },
         autoReaction: {
             funnySubstringsProbability: process.env.AUTO_REACTION_FUNNY_SUBSTRINGS_PROBABILITY,
             erJokeProbability: process.env.AUTO_REACTION_ER_JOKE_PROBABILITY,
             nekoizeProbability: process.env.AUTO_REACTION_NEKOIZE_PROBABILITY,
+            elliottReminderProbability: process.env.AUTO_REACTION_ELLIOTT_REMINDER_PROBABILITY,
         },
     };
 

@@ -1,5 +1,5 @@
-import type { SoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
 import { createSoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
+import type { SoundTagRepository } from "@core/ports/repositories/SoundTagRepository.js";
 
 import { createTestDb } from "../../utils/testUtils.js";
 

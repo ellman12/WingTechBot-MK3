@@ -1,14 +1,11 @@
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
-import type { Config } from "@core/config/Config.js";
+import type { SoundFileStore } from "@core/ports/repositories/SoundFileStore.js";
+import type { SoundRepository } from "@core/ports/repositories/SoundRepository.js";
+import type { AudioProcessingService } from "@core/ports/services/AudioProcessingService.js";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { parseAudioSource } from "@core/services/AudioFetcherService.js";
-import type { AudioProcessingService } from "@core/services/AudioProcessingService.js";
-import type { FileManager } from "@core/services/FileManager.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { Readable } from "stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { getTestConfig } from "../../../setup.js";
 
 // Mock parseAudioSource from AudioFetcherService
 
@@ -26,7 +23,6 @@ vi.mock("@core/services/AudioFetcherService", async () => {
 // Mock dependencies
 const mockAudioFetcher: AudioFetcherService = {
     fetchUrlAudio: vi.fn(),
-    fetchSoundboardAudio: vi.fn(),
 };
 
 const mockAudioProcessor: AudioProcessingService = {
@@ -34,20 +30,10 @@ const mockAudioProcessor: AudioProcessingService = {
     processAudioStream: vi.fn(),
 };
 
-const mockFileManager: FileManager = {
-    readStream: vi.fn(),
-    writeStream: vi.fn(),
-    deleteFile: vi.fn(),
-    fileExists: vi.fn(),
-    readFile: vi.fn(),
-    writeFile: vi.fn(),
-    listFiles: vi.fn(),
-    getFileStats: vi.fn(),
-    getCachePath: vi.fn(),
-    readCache: vi.fn(),
-    writeCache: vi.fn(),
-    deleteCache: vi.fn(),
-    clearAllCache: vi.fn(),
+const mockSoundFileStore: SoundFileStore = {
+    read: vi.fn(),
+    write: vi.fn(),
+    delete: vi.fn(),
 };
 
 const mockSoundRepository: SoundRepository = {
@@ -59,8 +45,6 @@ const mockSoundRepository: SoundRepository = {
     tryGetSoundsWithinDistance: vi.fn(),
 };
 
-const mockConfig: Config = getTestConfig();
-
 // Remove describe.concurrent - not worth the complexity for tests with module mocks
 describe("SoundService", () => {
     let soundService: ReturnType<typeof createSoundService>;
@@ -70,9 +54,8 @@ describe("SoundService", () => {
         const deps = {
             audioFetcher: mockAudioFetcher,
             audioProcessor: mockAudioProcessor,
-            fileManager: mockFileManager,
+            soundFileStore: mockSoundFileStore,
             soundRepository: mockSoundRepository,
-            config: mockConfig,
         };
         soundService = createSoundService(deps);
     });
@@ -95,13 +78,13 @@ describe("SoundService", () => {
                 },
             });
             vi.mocked(mockAudioProcessor.deepProcessAudio).mockResolvedValue(processedAudio);
-            vi.mocked(mockFileManager.writeStream).mockResolvedValue(undefined);
+            vi.mocked(mockSoundFileStore.write).mockResolvedValue(undefined);
 
             await soundService.addSound("test-sound", "https://example.com/audio.mp3");
 
             expect(mockAudioFetcher.fetchUrlAudio).toHaveBeenCalledWith("https://example.com/audio.mp3", expect.any(AbortSignal));
             expect(mockAudioProcessor.deepProcessAudio).toHaveBeenCalledWith(expect.any(Buffer), expect.any(String), expect.any(String));
-            expect(mockFileManager.writeStream).toHaveBeenCalledWith("./sounds/test-sound.pcm", expect.any(Readable));
+            expect(mockSoundFileStore.write).toHaveBeenCalledWith("/test-sound.pcm", processedAudio);
             expect(mockSoundRepository.addSound).toHaveBeenCalledWith({
                 name: "test-sound",
                 path: "/test-sound.pcm",
@@ -124,14 +107,14 @@ describe("SoundService", () => {
                 name: "test-sound",
                 path: "/test-sound.pcm",
             });
-            vi.mocked(mockFileManager.readStream).mockReturnValue(mockFileStream);
+            vi.mocked(mockSoundFileStore.read).mockReturnValue(mockFileStream);
 
             const result = await soundService.getSound("test-sound");
 
             // The result should be a stream
             expect(result).toBeInstanceOf(Readable);
             expect(mockSoundRepository.getSoundByName).toHaveBeenCalledWith("test-sound");
-            expect(mockFileManager.readStream).toHaveBeenCalledWith("./sounds/test-sound.pcm");
+            expect(mockSoundFileStore.read).toHaveBeenCalledWith("/test-sound.pcm");
         });
 
         it("should process and pre-buffer URL/YouTube audio", async () => {
@@ -190,13 +173,13 @@ describe("SoundService", () => {
             const mockSound = { name: "test-sound", path: "/test-sound.pcm" };
 
             vi.mocked(mockSoundRepository.getSoundByName).mockResolvedValue(mockSound);
-            vi.mocked(mockFileManager.deleteFile).mockResolvedValue(undefined);
+            vi.mocked(mockSoundFileStore.delete).mockResolvedValue(undefined);
             vi.mocked(mockSoundRepository.deleteSound).mockResolvedValue(undefined);
 
             await soundService.deleteSound("test-sound");
 
             expect(mockSoundRepository.getSoundByName).toHaveBeenCalledWith("test-sound");
-            expect(mockFileManager.deleteFile).toHaveBeenCalledWith("./sounds/test-sound.pcm");
+            expect(mockSoundFileStore.delete).toHaveBeenCalledWith("/test-sound.pcm");
             expect(mockSoundRepository.deleteSound).toHaveBeenCalledWith("test-sound");
         });
 

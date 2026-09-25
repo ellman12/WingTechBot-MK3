@@ -1,60 +1,22 @@
-import type { BannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
-import type { LlmInstructionRepository } from "@adapters/repositories/LlmInstructionRepository.js";
-import type { PlayedSoundsRepository } from "@adapters/repositories/PlayedSoundsRepository.js";
-import type { ReactionEmoteRepository } from "@adapters/repositories/ReactionEmoteRepository.js";
-import type { ReactionRepository } from "@adapters/repositories/ReactionRepository.js";
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
-import type { VoiceEventSoundsRepository } from "@adapters/repositories/VoiceEventSoundsRepository.js";
-import type { VoiceService } from "@adapters/services/DiscordVoiceService.js";
-import { deployCommands, registerCommands } from "@application/commands/Commands.js";
-import { registerAutoReactionEvents } from "@application/eventHandlers/AutoReaction.js";
-import { registerDiscordUserSyncEvents } from "@application/eventHandlers/DiscordUserSyncService.js";
-import { registerVoiceServiceEventHandlers } from "@application/eventHandlers/DiscordVoiceService.js";
-import { registerLlmConversationServiceEventHandlers } from "@application/eventHandlers/LlmConversation.js";
-import { registerMessageArchiveEvents } from "@application/eventHandlers/MessageArchive.js";
-import { registerReactionArchiveEvents } from "@application/eventHandlers/ReactionArchive.js";
-import { registerSoundboardThreadEventHandlers } from "@application/eventHandlers/SoundboardThreadService.js";
-import { registerVoiceEventSoundsEventHandlers } from "@application/eventHandlers/VoiceEventSounds.js";
+import type { EventFilter, RegisterEventHandler } from "@application/discord/EventRegistrar.js";
 import type { Config } from "@core/config/Config.js";
-import type { AutoReactionService } from "@core/services/AutoReactionService.js";
-import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
-import type { DiscordChatService } from "@core/services/DiscordChatService.js";
-import type { DiscordUserSyncService } from "@core/services/DiscordUserSyncService.js";
-import type { LlmConversationService } from "@core/services/LlmConversationService.js";
-import type { MessageArchiveService } from "@core/services/MessageArchiveService.js";
-import type { ReactionArchiveService } from "@core/services/ReactionArchiveService.js";
-import type { SoundService } from "@core/services/SoundService.js";
-import type { SoundTagService } from "@core/services/SoundTagService.js";
-import type { SoundboardThreadService } from "@core/services/SoundboardThreadService.js";
-import type { VoiceEventSoundsService } from "@core/services/VoiceEventSoundsService.js";
 import { sleep } from "@core/utils/timeUtils.js";
-import type { GeminiLlmService } from "@infrastructure/services/GeminiLlmService.js";
-import { Client, type ClientEvents, Events, GatewayIntentBits, Partials, PresenceUpdateStatus, RESTEvents, type TextChannel } from "discord.js";
+import { type Client, type ClientEvents, Events, type Guild, PresenceUpdateStatus, RESTEvents } from "discord.js";
 
-export type EventFilter = <K extends keyof ClientEvents>(event: K, args: ClientEvents[K]) => boolean;
+import type { DiscordClientHandle } from "./DiscordClientHandle.js";
+
+//What the application layer plugs into the bot lifecycle. See application/discord/DiscordApplication.ts.
+export type DiscordApplicationBindings = {
+    //Called once per client creation, before login. Register every event handler here.
+    readonly registerEvents: (register: RegisterEventHandler) => void;
+    //Called after login once the guild is fetched. Startup orchestration (deploy commands, sync, presence…) lives here.
+    readonly onReady: (ctx: { readonly client: Client<true>; readonly guild: Guild }) => Promise<void>;
+};
 
 export type DiscordBotDeps = {
     readonly config: Config;
-    readonly voiceEventSoundsRepository: VoiceEventSoundsRepository;
-    readonly soundRepository: SoundRepository;
-    readonly playedSoundsRepository: PlayedSoundsRepository;
-    readonly soundService: SoundService;
-    readonly soundTagService: SoundTagService;
-    readonly reactionRepository: ReactionRepository;
-    readonly emoteRepository: ReactionEmoteRepository;
-    readonly reactionArchiveService: ReactionArchiveService;
-    readonly messageArchiveService: MessageArchiveService;
-    readonly discordChatService: DiscordChatService;
-    readonly geminiLlmService: GeminiLlmService;
-    readonly llmConversationService: LlmConversationService;
-    readonly llmInstructionRepo: LlmInstructionRepository;
-    readonly soundboardThreadService: SoundboardThreadService;
-    readonly autoReactionService: AutoReactionService;
-    readonly voiceEventSoundsService: VoiceEventSoundsService;
-    readonly voiceService: VoiceService;
-    readonly commandChoicesService: CommandChoicesService;
-    readonly bannedFeaturesRepository: BannedFeaturesRepository;
-    readonly discordUserSyncService: DiscordUserSyncService;
+    readonly clientHandle: DiscordClientHandle;
+    readonly application: DiscordApplicationBindings;
     readonly eventFilter?: EventFilter;
 };
 
@@ -63,58 +25,19 @@ export type DiscordBot = {
     readonly isReady: () => boolean;
     readonly start: () => Promise<void>;
     readonly stop: () => Promise<void>;
-    readonly registerEventHandler: <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>) => void;
+    readonly registerEventHandler: RegisterEventHandler;
 };
 
-export const createDiscordBot = async ({
-    config,
-    voiceEventSoundsRepository,
-    soundRepository,
-    playedSoundsRepository,
-    soundService,
-    soundTagService,
-    reactionRepository,
-    emoteRepository,
-    reactionArchiveService,
-    messageArchiveService,
-    discordChatService,
-    geminiLlmService,
-    llmConversationService,
-    llmInstructionRepo,
-    soundboardThreadService,
-    autoReactionService,
-    voiceEventSoundsService,
-    voiceService,
-    commandChoicesService,
-    bannedFeaturesRepository,
-    discordUserSyncService,
-    eventFilter,
-}: DiscordBotDeps): Promise<DiscordBot> => {
-    let client: Client;
+//Infrastructure: owns login/ready/shutdown of the Discord client. Knows nothing about features — those come in via `application`.
+export const createDiscordBot = ({ config, clientHandle, application, eventFilter }: DiscordBotDeps): DiscordBot => {
     let isReadyState = false;
-    let isClientDestroyed = false;
 
-    const createClient = (): Client => {
-        return new Client({
-            intents: [
-                GatewayIntentBits.Guilds,
-                GatewayIntentBits.GuildMessages,
-                GatewayIntentBits.MessageContent,
-                GatewayIntentBits.GuildMembers,
-                GatewayIntentBits.DirectMessages,
-                GatewayIntentBits.GuildVoiceStates,
-                GatewayIntentBits.GuildMessageReactions,
-            ],
-            partials: [Partials.User, Partials.GuildMember, Partials.ThreadMember, Partials.Channel, Partials.Message, Partials.Reaction],
-        });
-    };
-
-    const registerEventHandler = <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>): void => {
-        if (!client) {
+    const registerEventHandler: RegisterEventHandler = <K extends keyof ClientEvents>(event: K, handler: (...args: ClientEvents[K]) => void | Promise<void>): void => {
+        if (!clientHandle.hasClient()) {
             throw new Error("Discord client is not initialized. Call start() before registering event handlers.");
         }
 
-        if (isClientDestroyed) {
+        if (clientHandle.isDestroyed()) {
             throw new Error("Discord client has been destroyed. Cannot register new event handlers.");
         }
 
@@ -127,43 +50,15 @@ export const createDiscordBot = async ({
               }
             : handler;
 
-        client.on(event, wrappedHandler);
+        clientHandle.client.on(event, wrappedHandler);
     };
 
-    const setupEventHandlers = (): void => {
-        client.once(Events.ClientReady, async (readyClient: Client<true>) => {
-            client.user!.setStatus(PresenceUpdateStatus.Invisible);
+    const setupBaseEventHandlers = (client: Client): void => {
+        client.once(Events.ClientReady, (readyClient: Client<true>) => {
+            readyClient.user.setStatus(PresenceUpdateStatus.Invisible);
             console.log(`🤖 Discord bot ready! Logged in as ${readyClient.user.tag}`);
             console.log(`📊 Bot is in ${readyClient.guilds.cache.size} servers`);
             isReadyState = true;
-
-            if (!config.discord.skipCommandDeploymentOnStartup) {
-                try {
-                    console.log("⏱️  Deploying Discord commands...");
-                    const deployStart = Date.now();
-                    await deployCommands(
-                        voiceEventSoundsRepository,
-                        soundRepository,
-                        playedSoundsRepository,
-                        soundService,
-                        soundTagService,
-                        voiceService,
-                        reactionRepository,
-                        discordChatService,
-                        commandChoicesService,
-                        bannedFeaturesRepository,
-                        config.discord.token,
-                        config.discord.clientId,
-                        config.discord.serverId
-                    );
-                    console.log(`✅ Commands deployed in ${Date.now() - deployStart}ms`);
-                } catch (error) {
-                    console.warn("⚠️ Failed to deploy commands automatically:", error);
-                    console.log("💡 You can deploy commands manually with: pnpm discord:deploy-commands");
-                }
-            } else {
-                console.log("⏩ Skipping command deployment (skipCommandDeploymentOnStartup = true)");
-            }
         });
 
         client.on(Events.Error, (error: Error) => {
@@ -177,17 +72,6 @@ export const createDiscordBot = async ({
             console.log(`Retry after: ${rateLimitData.retryAfter}ms`);
             console.log(`Global: ${rateLimitData.global}`);
         });
-
-        registerCommands(voiceEventSoundsRepository, soundRepository, playedSoundsRepository, soundService, soundTagService, voiceService, reactionRepository, discordChatService, commandChoicesService, bannedFeaturesRepository, registerEventHandler);
-
-        registerDiscordUserSyncEvents(discordUserSyncService, registerEventHandler);
-        registerMessageArchiveEvents(messageArchiveService, registerEventHandler);
-        registerReactionArchiveEvents(reactionArchiveService, registerEventHandler);
-        registerLlmConversationServiceEventHandlers(llmConversationService, registerEventHandler);
-        registerSoundboardThreadEventHandlers(soundboardThreadService, registerEventHandler);
-        registerVoiceServiceEventHandlers(config, voiceService, registerEventHandler);
-        registerAutoReactionEvents(autoReactionService, registerEventHandler);
-        registerVoiceEventSoundsEventHandlers(voiceEventSoundsService, registerEventHandler);
     };
 
     const start = async (): Promise<void> => {
@@ -196,62 +80,28 @@ export const createDiscordBot = async ({
             const botStartTime = Date.now();
 
             console.log("⏱️  Creating Discord client...");
-            if (!client || isClientDestroyed) {
-                client = createClient();
-                isClientDestroyed = false;
-                setupEventHandlers();
+            if (!clientHandle.hasClient() || clientHandle.isDestroyed()) {
+                const client = clientHandle.create();
+                setupBaseEventHandlers(client);
+                application.registerEvents(registerEventHandler);
             }
-
             console.log(`✅ Client created in ${Date.now() - botStartTime}ms`);
 
             console.log("⏱️  Logging in to Discord...");
             const loginStart = Date.now();
+            const client = clientHandle.client;
             await client.login(config.discord.token);
-
             console.log(`✅ Discord login and ready in ${Date.now() - loginStart}ms`);
 
-            console.log("⏱️  Fetching guild and channels...");
+            console.log("⏱️  Fetching guild...");
             const guildStart = Date.now();
-            const guild = await client.guilds.fetch(config.discord.serverId!);
+            const guild = await client.guilds.fetch(config.discord.serverId);
             await guild.fetch();
-            const botChannel = (await guild.channels.fetch(config.discord.botChannelId)) as TextChannel;
-            console.log(`✅ Guild and channels fetched in ${Date.now() - guildStart}ms`);
+            console.log(`✅ Guild fetched in ${Date.now() - guildStart}ms`);
 
-            console.log("⏱️  Creating karma emotes...");
-            const emotesStart = Date.now();
-            await emoteRepository.createKarmaEmotes(guild);
-            console.log(`✅ Karma emotes created in ${Date.now() - emotesStart}ms`);
+            await application.onReady({ client: client as Client<true>, guild });
 
-            if (!config.discord.skipChannelProcessingOnStartup) {
-                const currentYear = new Date().getUTCFullYear();
-                console.log(`🔄 Processing messages for ${currentYear}`);
-                await messageArchiveService.processAllChannels(guild, currentYear);
-            }
-
-            if (!config.discord.skipUserProcessingOnStartup) {
-                console.log("⏱️  Syncing users...");
-                const userSyncStart = Date.now();
-                await discordUserSyncService.syncUsers(client, guild);
-                console.log(`✅ Users synced in ${Date.now() - userSyncStart}ms`);
-            }
-
-            await soundboardThreadService.findOrCreateSoundboardThread(guild);
-
-            client.user!.setStatus(PresenceUpdateStatus.Online);
-
-            if (config.server.environment === "production") {
-                const systemInstruction = await llmInstructionRepo.getInstruction("discordStatus");
-                const status = await geminiLlmService.generateStandaloneMessage(systemInstruction);
-                console.log(`✏ Setting Discord status to: "${status}"`);
-                client.user!.setActivity(status);
-
-                const description = `Version: ${process.env.GIT_TAG}\nCommit: ${process.env.GIT_COMMIT}\nhttps://github.com/ellman12/WingTechBot-MK3`;
-                console.log(`Setting Discord bot description to ${description}`);
-                await client.application!.edit({ description });
-
-                await botChannel.send("WTB3 online and ready");
-            }
-
+            client.user?.setStatus(PresenceUpdateStatus.Online);
             console.log(`✅ Discord bot fully started in ${Date.now() - botStartTime}ms`);
         } catch (error) {
             console.error("❌ Failed to start Discord bot:", error);
@@ -266,10 +116,11 @@ export const createDiscordBot = async ({
 
             await sleep(50);
 
-            client.user?.setStatus(PresenceUpdateStatus.Invisible);
+            if (clientHandle.hasClient() && !clientHandle.isDestroyed()) {
+                clientHandle.client.user?.setStatus(PresenceUpdateStatus.Invisible);
+            }
 
-            await client.destroy();
-            isClientDestroyed = true;
+            await clientHandle.destroy();
             console.log("✅ Discord bot stopped");
         } catch (error) {
             console.error("❌ Error stopping Discord bot:", error);
@@ -277,13 +128,11 @@ export const createDiscordBot = async ({
         }
     };
 
-    const isReady = (): boolean => isReadyState;
-
     return {
         get client() {
-            return client;
+            return clientHandle.client;
         },
-        isReady,
+        isReady: () => isReadyState,
         start,
         stop,
         registerEventHandler,

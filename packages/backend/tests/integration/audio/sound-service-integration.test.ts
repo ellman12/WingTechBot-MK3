@@ -1,18 +1,18 @@
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
-import { createFfmpegAudioProcessingService } from "@adapters/services/FfmpegAudioProcessingService.js";
+import { createFfmpegAudioProcessingService } from "@adapters/audio/FfmpegAudioProcessingService.js";
+import { createFsSoundFileStore } from "@adapters/filestore/FsSoundFileStore.js";
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream.js";
 import { createAudioStreamWithFormat } from "@core/entities/AudioStream.js";
 import type { Sound } from "@core/entities/Sound.js";
+import type { SoundRepository } from "@core/ports/repositories/SoundRepository.js";
 import type { AudioFetcherService } from "@core/services/AudioFetcherService.js";
 import { createSoundService } from "@core/services/SoundService.js";
 import { createFfmpegService } from "@infrastructure/ffmpeg/FfmpegService.js";
-import { createFileManager } from "@infrastructure/filestore/FileManager.js";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "fs";
 import assert from "node:assert";
 import { tmpdir } from "os";
 import { join } from "path";
 import { Readable } from "stream";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { getTestConfig } from "../../setup.js";
 
@@ -23,7 +23,6 @@ describe.concurrent("SoundService Integration Tests", () => {
 
         // Create fresh audio fetcher for this test to avoid shared state
         const mockAudioFetcher: AudioFetcherService = {
-            fetchSoundboardAudio: vi.fn(),
             fetchUrlAudio: async (url: string): Promise<AudioStreamWithMetadata> => {
                 // Return the test MP3 file as a stream for URL requests
                 if (url.startsWith("http")) {
@@ -86,14 +85,13 @@ describe.concurrent("SoundService Integration Tests", () => {
         // Create services
         const ffmpegService = createFfmpegService();
         const audioProcessor = createFfmpegAudioProcessingService({ ffmpeg: ffmpegService });
-        const fileManager = createFileManager();
+        const soundFileStore = createFsSoundFileStore({ config: testConfig });
 
         const soundService = createSoundService({
             audioFetcher: mockAudioFetcher,
             audioProcessor,
-            fileManager,
+            soundFileStore,
             soundRepository: mockSoundRepository,
-            config: testConfig,
         });
 
         return { soundService, tempDir, mockSoundRepository, mockAudioFetcher, testConfig };

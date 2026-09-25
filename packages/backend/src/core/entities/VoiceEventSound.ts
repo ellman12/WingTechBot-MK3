@@ -1,4 +1,6 @@
-import type { VoiceEventSoundType } from "@db/types.js";
+//Voice events that can trigger a sound. Canonical list; the DB enum must match (asserted in the adapter).
+export const voiceEventSoundTypes = ["UserJoin", "UserLeave"] as const;
+export type VoiceEventSoundType = (typeof voiceEventSoundTypes)[number];
 
 export type VoiceEventSound = {
     readonly userId: string;

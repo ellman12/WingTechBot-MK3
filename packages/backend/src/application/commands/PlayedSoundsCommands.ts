@@ -1,8 +1,8 @@
-import type { PlayedSoundsRepository } from "@adapters/repositories/PlayedSoundsRepository.js";
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
 import type { Command } from "@application/commands/Commands.js";
+import { type DiscordChatService } from "@application/discord/DiscordChat.js";
+import type { PlayedSoundsRepository } from "@core/ports/repositories/PlayedSoundsRepository.js";
+import type { SoundRepository } from "@core/ports/repositories/SoundRepository.js";
 import type { CommandChoicesService } from "@core/services/CommandChoicesService.js";
-import { type DiscordChatService } from "@core/services/DiscordChatService.js";
 import { formatTable } from "@core/utils/formatTable.js";
 import { format } from "date-fns";
 import { type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
@@ -39,7 +39,7 @@ export const createPlayedSoundsCommands = ({ soundRepository, playedSoundsReposi
             const parts = [`"${sound.name}" has been played`, `${playCount} times`, user && `by ${user.username}`, year && `for ${year}`];
             await interaction.reply(parts.filter(Boolean).join(" "));
         },
-        getAutocompleteChoices: commandChoicesService.getAutocompleteChoices,
+        getAutocompleteChoices: option => commandChoicesService.getAutocompleteChoices(option.name, String(option.value)),
     };
 
     const soundPlayCounts: Command = {

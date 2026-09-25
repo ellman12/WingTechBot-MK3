@@ -1,9 +1,13 @@
-import type { SoundRepository } from "@adapters/repositories/SoundRepository.js";
-import type { SoundTagRepository } from "@adapters/repositories/SoundTagRepository.js";
-import type { ApplicationCommandOptionChoiceData, AutocompleteFocusedOption } from "discord.js";
+import type { SoundRepository } from "@core/ports/repositories/SoundRepository.js";
+import type { SoundTagRepository } from "@core/ports/repositories/SoundTagRepository.js";
+
+export type AutocompleteChoice = {
+    readonly name: string;
+    readonly value: string;
+};
 
 export type CommandChoicesService = {
-    readonly getAutocompleteChoices: (focusedOption: AutocompleteFocusedOption) => Promise<ApplicationCommandOptionChoiceData[]>;
+    readonly getAutocompleteChoices: (fieldName: string, focusedValue: string) => Promise<AutocompleteChoice[]>;
 };
 
 export type CommandChoicesServiceDeps = {
@@ -12,7 +16,7 @@ export type CommandChoicesServiceDeps = {
 };
 
 export const createCommandChoicesService = ({ soundRepository, soundTagRepository }: CommandChoicesServiceDeps): CommandChoicesService => {
-    async function getAutocompleteChoices({ name: fieldName, value: focusedValue }: AutocompleteFocusedOption): Promise<ApplicationCommandOptionChoiceData[]> {
+    async function getAutocompleteChoices(fieldName: string, focusedValue: string): Promise<AutocompleteChoice[]> {
         const handlers: Record<string, () => Promise<{ name: string }[]>> = {
             "sound-name": () => (focusedValue === "" ? soundRepository.getAllSounds() : soundRepository.tryGetSoundsWithinDistance(focusedValue)),
             "audio-source": async () => {
