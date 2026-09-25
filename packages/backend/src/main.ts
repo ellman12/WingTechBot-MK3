@@ -66,7 +66,6 @@ export type App = {
     readonly config: Config;
 };
 
-//Composition root: the only place that knows about concrete adapters, infrastructure and application wiring together.
 export const createApplication = async (overrideConfig?: Config, schemaName?: string): Promise<App> => {
     await loadEnvironment();
     const config = overrideConfig ?? loadConfig();
@@ -83,13 +82,13 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
 
     const db = databaseConnection.getKysely();
 
-    //--- Infrastructure: process/tech wrappers
+    // Infrastructure
     const clientHandle = createDiscordClientHandle();
     const fileManager = createFileManager();
     const ffmpeg = createFfmpegService();
     const ffprobe = createFfprobeService({ config });
 
-    //--- Adapters: repositories (driven ports over Postgres / filesystem)
+    // Adapters
     const unitOfWork = createUnitOfWork(db);
     const userRepository = createUserRepository(db);
     const soundRepository = createSoundRepository(db);
@@ -106,14 +105,14 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
         await llmInstructionRepo.validateInstructions();
     }
 
-    //--- Adapters: external capabilities (driven ports over ffmpeg / yt-dlp / Gemini / Discord voice)
+    // Adapters
     const audioProbe = createFfprobeAudioProbe({ ffprobe });
     const audioFormatDetectionService = createAudioFormatDetectionService({ audioProbe });
     const audioProcessingService = createFfmpegAudioProcessingService({ ffmpeg });
     const youtubeService = createYtdlYoutubeService({ formatDetectionService: audioFormatDetectionService });
     const llmService = createGeminiLlmService({ config });
 
-    //--- Core: domain services (Discord-free)
+    // Core
     const audioCacheService = createAudioCacheService({ fileManager, config });
     const audioFetchService = createAudioFetcherService({ fileManager, soundRepository, youtubeService, cacheService: audioCacheService, formatDetectionService: audioFormatDetectionService });
     const soundService = createSoundService({ audioFetcher: audioFetchService, audioProcessor: audioProcessingService, fileManager, soundRepository, config });
@@ -129,7 +128,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
     const soundboardService = createSoundboardService({ config, soundRepository, voiceService, bannedFeaturesRepository });
     const voiceEventSoundsService = createVoiceEventSoundsService({ config, voiceEventSoundsRepository, voiceService });
 
-    //--- Application: Discord-facing features (driving side)
+    // Application
     const discordChatService = createDiscordChatService({ config });
     const commands = createCommands({ voiceEventSoundsRepository, soundRepository, playedSoundsRepository, soundService, soundTagService, voiceService, reactionRepository, discordChatService, commandChoicesService, bannedFeaturesRepository });
     const messageSync = createMessageSync({ messageArchiveService, fileManager });
@@ -148,7 +147,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
         features: { commands, messageSync, reactionArchive, userSync, llmConversation, autoReaction, soundboardThread, voiceAutoJoin, voiceEventSounds },
     });
 
-    //--- Infrastructure: host
+    // Infrastructure
     const discordBot = createDiscordBot({ config, clientHandle, application: discordApplication });
 
     let isReadyState = false;

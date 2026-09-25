@@ -1,7 +1,7 @@
 import rootConfig from "../../eslint.config.js";
 import localRules from "./eslint-local-rules.js";
 
-// Hexagonal layer boundaries. See ARCHITECTURE.md for the rationale behind each rule.
+// Hexagonal layer boundaries
 const restrict = patterns => ({ "no-restricted-imports": ["error", { patterns }] });
 
 const noBareAlias = { group: ["@/*"], message: "Use a layer alias (@core, @application, @adapters, @infrastructure) so the import shows which layer you are crossing into." };

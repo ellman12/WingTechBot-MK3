@@ -27,9 +27,6 @@ type VoiceState = {
 export const createDiscordVoiceService = ({ soundService, soundRepository, playedSoundsRepository, getClient }: DiscordVoiceServiceDeps): VoiceService => {
     const voiceStates = new Map<string, VoiceState>();
 
-    // Note: We no longer create AudioResources for individual streams
-    // Raw PCM streams are fed directly to the mixer
-
     const connect = async (serverId: string, channelId: string): Promise<void> => {
         console.log(`[DiscordVoiceService] Attempting to connect to channel ${channelId} in server ${serverId}`);
 

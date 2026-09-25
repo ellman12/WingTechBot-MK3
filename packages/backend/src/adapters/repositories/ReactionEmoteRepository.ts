@@ -73,7 +73,6 @@ export const createReactionEmoteRepository = (db: Kysely<DB>): ReactionEmoteRepo
     };
 
     //Adds the emotes from KarmaEmoteNames if they don't already exist.
-    //Creates the karma emotes with their default karma values if they don't already exist.
     const ensureKarmaEmotes = async (emotes: ReactionEmoteRef[]): Promise<void> => {
         for (const name of KarmaEmoteNames) {
             const found = emotes.find(e => e.name === name);
