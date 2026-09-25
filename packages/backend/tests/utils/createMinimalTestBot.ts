@@ -1,4 +1,4 @@
-import { createFileManager } from "@adapters/filestore/FileManager.js";
+import { createFsCheckpointStore } from "@adapters/filestore/FsCheckpointStore.js";
 import { createGeminiLlmService } from "@adapters/llm/GeminiLlmService.js";
 import { createBannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import { createUnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
@@ -70,8 +70,8 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
     const messageRepository = createMessageRepository(db);
     const reactionRepository = createReactionRepository(db);
     const emoteRepository = createReactionEmoteRepository(db);
-    const fileManager = createFileManager();
-    const llmInstructionRepo = createLlmInstructionRepository({ config, fileManager });
+    const checkpointStore = createFsCheckpointStore();
+    const llmInstructionRepo = createLlmInstructionRepository({ config });
     const bannedFeaturesRepository = createBannedFeaturesRepository(db);
 
     const allowedChannels = new Set<string>();
@@ -90,7 +90,7 @@ export async function createMinimalTestBot(config: Config, schemaName: string, o
     let messageSync: MessageSync | undefined;
     if (options.messageArchiveService || options.llmConversationService) {
         messageArchiveService = createMessageArchiveService({ unitOfWork, messageRepository });
-        messageSync = createMessageSync({ messageArchiveService, fileManager });
+        messageSync = createMessageSync({ messageArchiveService, checkpointStore });
     }
 
     let autoReactionService: AutoReactionService | undefined;

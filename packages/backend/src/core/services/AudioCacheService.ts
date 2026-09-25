@@ -1,15 +1,8 @@
 import type { Config } from "@core/config/Config.js";
 import type { AudioFormatInfo } from "@core/entities/AudioFormatInfo.js";
 import type { AudioStreamWithMetadata } from "@core/entities/AudioStream.js";
-import { createAudioStreamWithFormat } from "@core/entities/AudioStream.js";
-import type { FileManager } from "@core/ports/services/FileManager.js";
+import type { AudioCacheStore } from "@core/ports/repositories/AudioCacheStore.js";
 import crypto from "crypto";
-import { Readable } from "stream";
-
-export type AudioCacheMetadata = {
-    readonly formatInfo?: AudioFormatInfo;
-    readonly cachedAt: number;
-};
 
 export type AudioCacheService = {
     readonly getCached: (url: string) => Promise<AudioStreamWithMetadata | null>;
@@ -18,16 +11,15 @@ export type AudioCacheService = {
 };
 
 export type AudioCacheServiceDeps = {
-    readonly fileManager: FileManager;
+    readonly audioCacheStore: AudioCacheStore;
     readonly config: Config;
 };
 
-export const createAudioCacheService = ({ fileManager, config }: AudioCacheServiceDeps): AudioCacheService => {
-    const cachePath = config.cache.audioDownloadPath;
+export const createAudioCacheService = ({ audioCacheStore, config }: AudioCacheServiceDeps): AudioCacheService => {
     const ttlMs = config.cache.ttlHours * 60 * 60 * 1000;
     const maxSizeBytes = config.cache.maxSizeMb * 1024 * 1024;
 
-    console.log(`[AudioCacheService] Creating cache service with path: ${cachePath}, TTL: ${config.cache.ttlHours}h, Max Size: ${config.cache.maxSizeMb}MB`);
+    console.log(`[AudioCacheService] Creating cache service with TTL: ${config.cache.ttlHours}h, Max Size: ${config.cache.maxSizeMb}MB`);
 
     // Generate a cache key from a URL
     // For YouTube URLs, extract the video ID
@@ -44,78 +36,37 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
         return `url_${hash.substring(0, 16)}`;
     };
 
-    // Get the full cache file path for a URL
-    const getCacheFilePath = (url: string): string => {
-        const key = generateCacheKey(url);
-        return `${cachePath}/${key}.cache`;
-    };
+    const isExpired = (cachedAt: Date, now = Date.now()): boolean => now - cachedAt.getTime() > ttlMs;
 
-    // Get the metadata file path for a cached audio file
-    const getMetadataFilePath = (url: string): string => {
-        const key = generateCacheKey(url);
-        return `${cachePath}/${key}.meta.json`;
-    };
-
-    // Check if cache file exists and is not expired
+    // Return the cached audio if present and not expired
     const getCached = async (url: string): Promise<AudioStreamWithMetadata | null> => {
-        const filePath = getCacheFilePath(url);
-        const metadataPath = getMetadataFilePath(url);
+        const key = generateCacheKey(url);
 
         try {
-            const exists = await fileManager.fileExists(filePath);
-            if (!exists) {
+            const entry = await audioCacheStore.stat(key);
+            if (!entry) {
                 console.log(`[AudioCacheService] Cache miss for: ${url}`);
                 return null;
             }
 
-            // Check if cache is expired by reading file stats
-            const stats = await fileManager.getFileStats(filePath);
-            if (!stats) {
-                console.log(`[AudioCacheService] Cache file disappeared for: ${url}`);
-                return null;
-            }
-            const age = Date.now() - stats.mtime.getTime();
-            if (age > ttlMs) {
+            if (isExpired(entry.cachedAt)) {
+                const age = Date.now() - entry.cachedAt.getTime();
                 console.log(`[AudioCacheService] Cache expired for: ${url} (age: ${Math.round(age / 1000 / 60)}min, ttl: ${config.cache.ttlHours}h)`);
-                // Clean up expired cache and metadata
-                try {
-                    await fileManager.deleteFile(filePath);
-                    await fileManager.deleteFile(metadataPath);
-                } catch {
+                await audioCacheStore.delete(key).catch(() => {
                     // Ignore cleanup errors
-                }
+                });
                 return null;
             }
 
-            // Try to read metadata
-            let formatInfo: AudioFormatInfo | undefined;
-
-            try {
-                const metadataExists = await fileManager.fileExists(metadataPath);
-                if (metadataExists) {
-                    const metadataContent = await fileManager.readFile(metadataPath);
-                    const metadata: AudioCacheMetadata = JSON.parse(metadataContent.toString());
-                    formatInfo = metadata.formatInfo;
-
-                    if (formatInfo) {
-                        console.log(`[AudioCacheService] Loaded formatInfo for ${url}:`, formatInfo);
-                    }
-                } else {
-                    console.log(`[AudioCacheService] No metadata file found for ${url}, format will be auto-detected`);
-                }
-            } catch (metadataError) {
-                console.warn(`[AudioCacheService] Failed to read metadata for ${url}:`, metadataError);
-                // Continue without metadata - FFmpeg will try to auto-detect
+            const cached = await audioCacheStore.read(key);
+            if (cached.formatInfo) {
+                console.log(`[AudioCacheService] Loaded formatInfo for ${url}:`, cached.formatInfo);
+            } else {
+                console.log(`[AudioCacheService] No format info cached for ${url}, format will be auto-detected`);
             }
 
             console.log(`[AudioCacheService] Cache hit for: ${url}`);
-            const stream = fileManager.readStream(filePath);
-
-            if (formatInfo) {
-                return createAudioStreamWithFormat(stream, formatInfo);
-            } else {
-                return { stream };
-            }
+            return cached;
         } catch (error) {
             console.error(`[AudioCacheService] Error reading cache:`, error);
             return null;
@@ -124,27 +75,18 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
 
     // Save audio data to cache with format information
     const saveToCache = async (url: string, audioData: Uint8Array, formatInfo?: AudioFormatInfo): Promise<void> => {
-        const filePath = getCacheFilePath(url);
-        const metadataPath = getMetadataFilePath(url);
+        const key = generateCacheKey(url);
 
         try {
-            console.log(`[AudioCacheService] Saving to cache: ${url} -> ${filePath}`);
-            const stream = Readable.from(audioData);
-            await fileManager.writeStream(filePath, stream);
+            // Clean up expired entries
+            await cleanExpired();
 
-            if (formatInfo) {
-                const metadata: AudioCacheMetadata = {
-                    formatInfo,
-                    cachedAt: Date.now(),
-                };
-
-                console.log(`[AudioCacheService] Saving metadata: ${url} -> ${metadataPath}`, metadata);
-                await fileManager.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
-            }
-
+            // Save the audio data to the cache
+            console.log(`[AudioCacheService] Saving to cache: ${url} -> ${key}`, formatInfo ?? "");
+            await audioCacheStore.write(key, audioData, formatInfo);
             console.log(`[AudioCacheService] Successfully cached: ${url}`);
 
-            // Evict oldest files if cache size exceeds limit
+            // Evict oldest entries if cache size exceeds limit
             await evictIfNeeded();
         } catch (error) {
             console.error(`[AudioCacheService] Error saving to cache:`, error);
@@ -157,56 +99,29 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
         try {
             console.log(`[AudioCacheService] Starting cache cleanup`);
 
-            const cacheFiles = await fileManager.listFiles(cachePath);
             const now = Date.now();
-            // Run clean-up of expired files in parallel for speed
-            const expiredChecks = cacheFiles.map(async file => {
-                try {
-                    const stats = await fileManager.getFileStats(file);
-                    if (!stats) return 0;
-                    if (now - stats.mtime.getTime() > ttlMs) {
-                        await fileManager.deleteFile(file);
-                        return 1;
-                    }
-                } catch (error) {
-                    console.error(`[AudioCacheService] Error cleaning cache file ${file}:`, error);
+            const expired = (await audioCacheStore.list()).filter(entry => isExpired(entry.cachedAt, now));
+            const results = await Promise.allSettled(expired.map(entry => audioCacheStore.delete(entry.key)));
+
+            results.forEach((result, i) => {
+                if (result.status === "rejected") {
+                    console.error(`[AudioCacheService] Error cleaning cache entry ${expired[i]!.key}:`, result.reason);
                 }
-                return 0;
             });
 
-            const cleanedCounts = await Promise.all(expiredChecks);
-            const cleanedCount = cleanedCounts.reduce((a: number, b: number) => a + b, 0);
-
+            const cleanedCount = results.filter(result => result.status === "fulfilled").length;
             console.log(`[AudioCacheService] Cache cleanup complete. Removed ${cleanedCount} expired entries.`);
         } catch (error) {
             console.error(`[AudioCacheService] Error during cache cleanup:`, error);
         }
     };
 
-    // Evict oldest cache files if total size exceeds the limit
-    // Files are evicted based on oldest mtime (shortest TTL remaining)
+    // Evict oldest cache entries if total size exceeds the limit
+    // Entries are evicted based on oldest cachedAt (shortest TTL remaining)
     const evictIfNeeded = async (): Promise<void> => {
         try {
-            const cacheFiles = await fileManager.listFiles(cachePath);
-
-            // Calculate total cache size
-            let totalSize = 0;
-            const fileStats: Array<{ path: string; size: number; mtime: number }> = [];
-
-            for (const file of cacheFiles) {
-                try {
-                    const stats = await fileManager.getFileStats(file);
-                    if (!stats) continue;
-                    totalSize += stats.size;
-                    fileStats.push({
-                        path: file,
-                        size: stats.size,
-                        mtime: stats.mtime.getTime(),
-                    });
-                } catch (error) {
-                    console.error(`[AudioCacheService] Error getting stats for ${file}:`, error);
-                }
-            }
+            const entries = await audioCacheStore.list();
+            const totalSize = entries.reduce((sum, entry) => sum + entry.sizeBytes, 0);
 
             console.log(`[AudioCacheService] Current cache size: ${(totalSize / 1024 / 1024).toFixed(2)}MB / ${config.cache.maxSizeMb}MB`);
 
@@ -215,29 +130,28 @@ export const createAudioCacheService = ({ fileManager, config }: AudioCacheServi
                 return;
             }
 
-            // Sort files by mtime (oldest first - shortest TTL remaining)
-            fileStats.sort((a, b) => a.mtime - b.mtime);
+            const oldestFirst = [...entries].sort((a, b) => a.cachedAt.getTime() - b.cachedAt.getTime());
 
             let evictedCount = 0;
             let evictedSize = 0;
 
-            // Evict oldest files until we're under the limit
-            for (const file of fileStats) {
+            // Evict oldest entries until we're under the limit
+            for (const entry of oldestFirst) {
                 if (totalSize - evictedSize <= maxSizeBytes) {
                     break;
                 }
 
                 try {
-                    await fileManager.deleteFile(file.path);
-                    evictedSize += file.size;
+                    await audioCacheStore.delete(entry.key);
+                    evictedSize += entry.sizeBytes;
                     evictedCount++;
-                    console.log(`[AudioCacheService] Evicted: ${file.path} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+                    console.log(`[AudioCacheService] Evicted: ${entry.key} (${(entry.sizeBytes / 1024 / 1024).toFixed(2)}MB)`);
                 } catch (error) {
-                    console.error(`[AudioCacheService] Error evicting file ${file.path}:`, error);
+                    console.error(`[AudioCacheService] Error evicting entry ${entry.key}:`, error);
                 }
             }
 
-            console.log(`[AudioCacheService] Eviction complete. Removed ${evictedCount} files (${(evictedSize / 1024 / 1024).toFixed(2)}MB). New size: ${((totalSize - evictedSize) / 1024 / 1024).toFixed(2)}MB`);
+            console.log(`[AudioCacheService] Eviction complete. Removed ${evictedCount} entries (${(evictedSize / 1024 / 1024).toFixed(2)}MB). New size: ${((totalSize - evictedSize) / 1024 / 1024).toFixed(2)}MB`);
         } catch (error) {
             console.error(`[AudioCacheService] Error during cache eviction:`, error);
         }

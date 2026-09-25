@@ -4,7 +4,9 @@ import { createFfprobeAudioProbe } from "@adapters/audio/FfprobeAudioProbe.js";
 import { createYtdlYoutubeService } from "@adapters/audio/YtdlYoutubeAudioService.js";
 import { loadConfig } from "@adapters/config/ConfigAdapter.js";
 import { createDiscordVoiceService } from "@adapters/discord/DiscordVoiceService.js";
-import { createFileManager } from "@adapters/filestore/FileManager.js";
+import { createFsAudioCacheStore } from "@adapters/filestore/FsAudioCacheStore.js";
+import { createFsCheckpointStore } from "@adapters/filestore/FsCheckpointStore.js";
+import { createFsSoundFileStore } from "@adapters/filestore/FsSoundFileStore.js";
 import { createGeminiLlmService } from "@adapters/llm/GeminiLlmService.js";
 import { createBannedFeaturesRepository } from "@adapters/repositories/BannedFeaturesRepository.js";
 import { createUnitOfWork } from "@adapters/repositories/KyselyUnitOfWork.js";
@@ -84,7 +86,6 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
 
     // Infrastructure
     const clientHandle = createDiscordClientHandle();
-    const fileManager = createFileManager();
     const ffmpeg = createFfmpegService();
     const ffprobe = createFfprobeService({ config });
 
@@ -98,7 +99,10 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
     const messageRepository = createMessageRepository(db);
     const reactionRepository = createReactionRepository(db);
     const emoteRepository = createReactionEmoteRepository(db);
-    const llmInstructionRepo = createLlmInstructionRepository({ config, fileManager });
+    const llmInstructionRepo = createLlmInstructionRepository({ config });
+    const soundFileStore = createFsSoundFileStore({ config });
+    const audioCacheStore = createFsAudioCacheStore({ config });
+    const checkpointStore = createFsCheckpointStore();
     const bannedFeaturesRepository = createBannedFeaturesRepository(db);
 
     if (!process.env.CI) {
@@ -113,9 +117,9 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
     const llmService = createGeminiLlmService({ config });
 
     // Core
-    const audioCacheService = createAudioCacheService({ fileManager, config });
-    const audioFetchService = createAudioFetcherService({ fileManager, soundRepository, youtubeService, cacheService: audioCacheService, formatDetectionService: audioFormatDetectionService });
-    const soundService = createSoundService({ audioFetcher: audioFetchService, audioProcessor: audioProcessingService, fileManager, soundRepository, config });
+    const audioCacheService = createAudioCacheService({ audioCacheStore, config });
+    const audioFetchService = createAudioFetcherService({ youtubeService, cacheService: audioCacheService });
+    const soundService = createSoundService({ audioFetcher: audioFetchService, audioProcessor: audioProcessingService, soundFileStore, soundRepository });
     const voiceService = createDiscordVoiceService({ soundService, soundRepository, playedSoundsRepository, getClient: () => clientHandle.client });
     const soundTagService = createSoundTagService({ unitOfWork, soundRepository, soundTagRepository });
     const commandChoicesService = createCommandChoicesService({ soundRepository, soundTagRepository });
@@ -131,7 +135,7 @@ export const createApplication = async (overrideConfig?: Config, schemaName?: st
     // Application
     const discordChatService = createDiscordChatService({ config });
     const commands = createCommands({ voiceEventSoundsRepository, soundRepository, playedSoundsRepository, soundService, soundTagService, voiceService, reactionRepository, discordChatService, commandChoicesService, bannedFeaturesRepository });
-    const messageSync = createMessageSync({ messageArchiveService, fileManager });
+    const messageSync = createMessageSync({ messageArchiveService, checkpointStore });
     const reactionArchive = createReactionArchive({ reactionArchiveService });
     const userSync = createUserSync({ userSyncService });
     const llmConversation = createLlmConversation({ config, discordChatService, llmConversationService, bannedFeaturesRepository });

@@ -1,7 +1,7 @@
 import type { RegisterEventHandler } from "@application/discord/EventRegistrar.js";
 import type { CreateMessageData } from "@core/entities/Message.js";
 import type { ReactionEmoteRef } from "@core/entities/ReactionEmote.js";
-import type { FileManager } from "@core/ports/services/FileManager.js";
+import type { CheckpointStore } from "@core/ports/repositories/CheckpointStore.js";
 import type { ChannelSnapshotReaction, ChannelSnapshotSummary, MessageArchiveService } from "@core/services/MessageArchiveService.js";
 import { ChannelType, Events, type Guild, type Message, MessageFlags, type PartialMessage, type TextChannel } from "discord.js";
 import pRetry from "p-retry";
@@ -20,7 +20,7 @@ export type MessageSync = {
 
 export type MessageSyncDeps = {
     messageArchiveService: MessageArchiveService;
-    fileManager: FileManager;
+    checkpointStore: CheckpointStore;
 };
 
 type SyncProgress = {
@@ -197,13 +197,13 @@ const logSyncSummary = (channelName: string, summary: ChannelSnapshotSummary): v
     }
 };
 
-export const createMessageSync = ({ messageArchiveService, fileManager }: MessageSyncDeps): MessageSync => {
+export const createMessageSync = ({ messageArchiveService, checkpointStore }: MessageSyncDeps): MessageSync => {
     console.log("[MessageSync] Creating message sync");
 
-    const getChannelFetchCacheFilename = (channelId: string) => `channel-fetch-cache-${channelId}.json`;
+    const getChannelFetchCacheKey = (channelId: string) => `channel-fetch-cache-${channelId}`;
 
     async function loadChannelFetchCache(channelId: string): Promise<ChannelFetchCache | null> {
-        const cached = await fileManager.readCache<ChannelFetchCache>(getChannelFetchCacheFilename(channelId));
+        const cached = await checkpointStore.load<ChannelFetchCache>(getChannelFetchCacheKey(channelId));
         if (!cached) return null;
 
         return {
@@ -217,26 +217,26 @@ export const createMessageSync = ({ messageArchiveService, fileManager }: Messag
     }
 
     async function saveChannelFetchCache(channelId: string, cache: ChannelFetchCache): Promise<void> {
-        await fileManager.writeCache(getChannelFetchCacheFilename(channelId), cache);
+        await checkpointStore.save(getChannelFetchCacheKey(channelId), cache);
     }
 
     async function clearChannelFetchCache(channelId: string): Promise<void> {
-        await fileManager.deleteCache(getChannelFetchCacheFilename(channelId));
+        await checkpointStore.clear(getChannelFetchCacheKey(channelId));
     }
 
-    const getProgressFilename = (guildId: string) => `sync-progress-${guildId}.json`;
+    const getProgressKey = (guildId: string) => `sync-progress-${guildId}`;
 
     async function loadProgress(guildId: string): Promise<SyncProgress | null> {
-        return await fileManager.readCache<SyncProgress>(getProgressFilename(guildId));
+        return await checkpointStore.load<SyncProgress>(getProgressKey(guildId));
     }
 
     async function saveProgress(progress: SyncProgress): Promise<void> {
         progress.lastUpdatedAt = new Date().toISOString();
-        await fileManager.writeCache(getProgressFilename(progress.guildId), progress);
+        await checkpointStore.save(getProgressKey(progress.guildId), progress);
     }
 
     async function clearProgress(guildId: string): Promise<void> {
-        await fileManager.deleteCache(getProgressFilename(guildId));
+        await checkpointStore.clear(getProgressKey(guildId));
     }
 
     // Generic helper to fetch reactions in batches with progress tracking and periodic persistence
@@ -290,8 +290,7 @@ export const createMessageSync = ({ messageArchiveService, fileManager }: Messag
                     };
 
                     await saveChannelFetchCache(channelId, cached);
-                    const cachePath = fileManager.getCachePath(getChannelFetchCacheFilename(channelId));
-                    console.log(`💾 Persisted reactions progress to cache: ${cachePath} (reactions=${totalReactionsFetched}, processedMessages=${processedMessages})`);
+                    console.log(`💾 Persisted reactions progress to checkpoint ${getChannelFetchCacheKey(channelId)} (reactions=${totalReactionsFetched}, processedMessages=${processedMessages})`);
 
                     reactionsSinceLastPersist = 0;
                 }
@@ -413,8 +412,7 @@ export const createMessageSync = ({ messageArchiveService, fileManager }: Messag
 
         // Update cache with reactions
         await saveChannelFetchCache(channelId, { discordMessages, emotes, fetchedAt: new Date().toISOString() });
-        const cachePath = fileManager.getCachePath(getChannelFetchCacheFilename(channelId));
-        console.log(`💾 Updated cache with reactions: ${cachePath}`);
+        console.log(`💾 Updated checkpoint ${getChannelFetchCacheKey(channelId)} with reactions`);
 
         return { discordMessages, emotes };
     }
@@ -463,8 +461,7 @@ export const createMessageSync = ({ messageArchiveService, fileManager }: Messag
 
         // Save everything to cache
         await saveChannelFetchCache(channelId, { discordMessages, emotes, fetchedAt: new Date().toISOString() });
-        const cachePath = fileManager.getCachePath(getChannelFetchCacheFilename(channelId));
-        console.log(`💾 Saved to cache: ${cachePath}`);
+        console.log(`💾 Saved to checkpoint ${getChannelFetchCacheKey(channelId)}`);
 
         return { discordMessages, emotes };
     }

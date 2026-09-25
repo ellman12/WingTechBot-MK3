@@ -1,7 +1,6 @@
-import type { Config } from "@core/config/Config.js";
+import type { SoundFileStore } from "@core/ports/repositories/SoundFileStore.js";
 import type { SoundRepository } from "@core/ports/repositories/SoundRepository.js";
 import type { AudioProcessingService } from "@core/ports/services/AudioProcessingService.js";
-import type { FileManager } from "@core/ports/services/FileManager.js";
 import { createRepeatedPcmStream } from "@core/utils/audio/pcmRepeater.js";
 import { createPreBufferedStream, readStreamToBytes } from "@core/utils/streamUtils.js";
 import { Readable } from "stream";
@@ -19,14 +18,11 @@ export type SoundService = {
 export type SoundServiceDeps = {
     readonly audioFetcher: AudioFetcherService;
     readonly audioProcessor: AudioProcessingService;
-    readonly fileManager: FileManager;
+    readonly soundFileStore: SoundFileStore;
     readonly soundRepository: SoundRepository;
-    readonly config: Config;
 };
 
-export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, soundRepository, config }: SoundServiceDeps): SoundService => {
-    const AUDIO_FILE_STORE_PATH = config.sounds.storagePath;
-
+export const createSoundService = ({ audioFetcher, audioProcessor, soundFileStore, soundRepository }: SoundServiceDeps): SoundService => {
     // Cache for temporary repeated sounds
     const repeatedSoundCache = new Map<string, Readable>();
 
@@ -49,8 +45,7 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                         return null;
                     }
 
-                    const soundPath = `${AUDIO_FILE_STORE_PATH}${sound.path}`;
-                    return fileManager.readStream(soundPath);
+                    return soundFileStore.read(sound.path);
                 }
                 case "url":
                 case "youtube": {
@@ -82,10 +77,7 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                     const processedAudio = await audioProcessor.deepProcessAudio(audio, audioStream.formatInfo?.format, audioStream.formatInfo?.container);
 
                     const path = `/${name}.pcm`;
-                    const fullPath = `${AUDIO_FILE_STORE_PATH}${path}`;
-
-                    const binaryAudioStream = Readable.from(processedAudio);
-                    await fileManager.writeStream(fullPath, binaryAudioStream);
+                    await soundFileStore.write(path, processedAudio);
                     await soundRepository.addSound({ name, path });
 
                     console.log(`[SoundService] Added sound: ${name} (${processedAudio.length} bytes)`);
@@ -137,8 +129,7 @@ export const createSoundService = ({ audioFetcher, audioProcessor, fileManager, 
                     throw new Error(`Sound with name ${name} not found`);
                 }
 
-                const fullPath = `${AUDIO_FILE_STORE_PATH}${sound.path}`;
-                await fileManager.deleteFile(fullPath);
+                await soundFileStore.delete(sound.path);
                 await soundRepository.deleteSound(sound.name);
 
                 console.log(`[SoundService] Deleted sound: ${name}`);
